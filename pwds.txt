@@ -1,0 +1,4 @@
+(MOVISTAR_8CE2) WiFi SSID
+(JWm4k8Ko6W24G87Z24uv) WiFi Password
+(6) WiFi Channel
+(4) Maximal STA connections

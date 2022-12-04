@@ -1606,6 +1606,8 @@ static esp_err_t start_web_server(const char *base_path, uint16_t server_port)
     esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_AP_DEF"), &ip_info);
     snprintf(s_web_redirect_url, redirect_url_sz, "http://"IPSTR"%s", IP2STR(&ip_info.ip), ESP_BRIDGE_WEB_ROOT_DIR_DEFAULT);
     
+    printf("DEBUG KOS => web_server.c s_web_redirect_url: %s\n",s_web_redirect_url);
+    
     httpd_register_err_handler(s_server, HTTPD_404_NOT_FOUND, http_common_error_handler);
     httpd_register_err_handler(s_server, HTTPD_414_URI_TOO_LONG, http_common_error_handler);
     httpd_register_err_handler(s_server, HTTPD_405_METHOD_NOT_ALLOWED, http_common_error_handler);
@@ -1716,6 +1718,7 @@ static esp_err_t esp_web_start(uint16_t server_port)
     if (s_server == NULL) {
         /*AT web can use fatfs to storge html or use embeded file to storge html.If use fatfs, we should enable AT FS Command support*/
 #ifdef CONFIG_WEB_USE_FATFS
+        printf("DEBUG KOS => CONFIG_WEB_USE_FATFS is Enabled!");
         err = esp_web_fatfs_spiflash_init();
         if (err != ESP_OK) {
             return err;
@@ -1726,6 +1729,7 @@ static esp_err_t esp_web_start(uint16_t server_port)
             return err;
         }
 #ifdef CONFIG_WEB_CAPTIVE_PORTAL_ENABLE
+		printf("DEBUG KOS => CONFIG_WEB_CAPTIVE_PORTAL_ENABLE is Enabled!");
         at_dns_server_start();
         esp_log_level_set("httpd_uri", ESP_LOG_ERROR);
         esp_log_level_set("httpd_txrx", ESP_LOG_ERROR);
