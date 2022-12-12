@@ -1,0 +1,38 @@
+<html>
+<head>
+<title>Welcome To ESP-KOS-BRIDGE</title>
+<script>
+function qS(s) {return document.querySelector(s);}
+function Fetch( opt ) {
+	var href="";
+	if( typeof(opt)!='undefined' && typeof(opt['href'])!='undefined' ) {
+		href = opt.href;
+	}
+	else return;
+	//
+	fetch(href+(href.match(/\?/i)?"&":"?"), {  
+	    method :'GET',
+	    cache:'no-store',
+	    headers:new Headers({'content-type': 'application/json'}), 
+    }).then(function (data) {
+		return data.json();
+	}).then(function(json) {
+		console.info("response",json);
+		//
+		if( typeof(opt)!='undefined' && typeof(opt["onDone"])=='function' ) {
+			opt.onDone( json );
+		}
+		else {
+			console.info("Fetch() opt.onDone() not defined!",json);
+		}
+	}).catch(function(E) {
+		console.warn("Fetch() ERROR: ",E);
+		// What to do on ERROR ? We will see...
+	});
+}
+</script>
+</head>
+<body>
+test <button onclick="alert('ole!');Fetch({href:'?whatsapp=123',onDone:function(json){console.info('onDone() done...',json);},});">test click</button>
+</body>
+</html>

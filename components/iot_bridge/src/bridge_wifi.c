@@ -37,7 +37,10 @@
 static const char *TAG = "bridge_wifi";
 static bool esp_bridge_softap_dhcps = false;
 static EventGroupHandle_t s_wifi_event_group = NULL;
-
+//
+//static char OVERRIDE_AP_SSID[128];
+//static char OVERRIDE_AP_PWD[128];
+//
 #if CONFIG_MESH_LITE_ENABLE
 #include "esp_mesh_lite.h"
 #endif
@@ -143,17 +146,18 @@ static void wifi_event_ap_start_handler(void *arg, esp_event_base_t event_base,
     }
 }
 
-static void wifi_event_ap_staconnected_handler(void *arg, esp_event_base_t event_base,
+/*static void wifi_event_ap_staconnected_handler(void *arg, esp_event_base_t event_base,
                                                int32_t event_id, void *event_data)
 {
-    ESP_LOGI(TAG, "STA Connecting to the AP again...");
-}
+	wifi_event_ap_staconnected_t* event = (wifi_event_ap_staconnected_t*) event_data;
+    ESP_LOGI(TAG, "STA Connecting to the AP "MACSTR" join, AID=%d",MAC2STR(event->mac), event->aid);
+}*/
 
-static void wifi_event_ap_stadisconnected_handler(void *arg, esp_event_base_t event_base,
+/*static void wifi_event_ap_stadisconnected_handler(void *arg, esp_event_base_t event_base,
                                                   int32_t event_id, void *event_data)
 {
     ESP_LOGE(TAG, "STA Disconnect to the AP");
-}
+}*/
 
 static esp_err_t esp_bridge_wifi_init(void)
 {
@@ -223,6 +227,13 @@ esp_netif_t* esp_bridge_create_station_netif(esp_netif_ip_info_t* ip_info, uint8
         ESP_LOGI(TAG, "Found password %s", (const char*) router_config.password);
         esp_wifi_connect();
     }
+    /* Get Wi-Fi Station ssid trough t3ch_config.h ;) */
+    /*if( strlen(OVERRIDE_AP_SSID) && strlen(OVERRIDE_AP_PWD) ) {
+		ESP_LOGI("t3ch","bridge_wifi.c->esp_bridge_create_station_netif() Overriding ssid: %s & pwd: %s.", OVERRIDE_AP_SSID, OVERRIDE_AP_PWD);
+		strcpy(router_config.ssid,OVERRIDE_AP_SSID);
+		strcpy(router_config.password,OVERRIDE_AP_PWD);
+		esp_wifi_connect();
+	}*/
 #endif /* CONFIG_MESH_LITE_ENABLE */
 
     /* Register our event handler for Wi-Fi, IP and Provisioning related events */
@@ -278,8 +289,8 @@ esp_netif_t* esp_bridge_create_softap_netif(esp_netif_ip_info_t* ip_info, uint8_
 
     /* Register our event handler for Wi-Fi, IP and Provisioning related events */
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, WIFI_EVENT_AP_START, &wifi_event_ap_start_handler, NULL, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, WIFI_EVENT_AP_STACONNECTED, &wifi_event_ap_staconnected_handler, NULL, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, WIFI_EVENT_AP_STADISCONNECTED, &wifi_event_ap_stadisconnected_handler, NULL, NULL));
+    //ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, WIFI_EVENT_AP_STACONNECTED, &wifi_event_ap_staconnected_handler, NULL, NULL));
+    //ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, WIFI_EVENT_AP_STADISCONNECTED, &wifi_event_ap_stadisconnected_handler, NULL, NULL));
 #ifdef CONFIG_MESH_LITE_ENABLE
     ESP_ERROR_CHECK(esp_event_handler_instance_register(ESP_MESH_LITE_EVENT, ESP_EVENT_ANY_ID, &esp_mesh_lite_event_ip_changed_handler, NULL, NULL));
 #endif

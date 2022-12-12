@@ -67,6 +67,12 @@ esp_netif_t* esp_bridge_create_eth_netif(esp_netif_ip_info_t* ip_info, uint8_t m
 #endif
 
 #if defined(CONFIG_BRIDGE_DATA_FORWARDING_NETIF_SOFTAP)
+
+//--
+//
+//
+static char OVERRIDE_AP_SSID[128];
+static char OVERRIDE_AP_PWD[128];
 /**
 * @brief Create softap netif for bridge.
 *

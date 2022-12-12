@@ -1745,7 +1745,33 @@ static void esp_web_got_ip_cb(void* arg, esp_event_base_t event_base, int32_t ev
     esp_web_update_sta_got_ip_flag(true);
 }
 
-esp_err_t StartWebServer(void)
+void StartSTA(const char *ssid, const char *pwd) {
+	printf("ConfigSTA() starting...\n");
+	//wifi_sta_connection_info_t wifi_connection_info = {0};
+    wifi_sta_connection_info_t *connection_info = esp_web_get_sta_connection_info();
+	wifi_sta_connect_config_t *connect_config = esp_web_get_sta_connect_config();
+	//connect_config->ssid     = ssid;
+	strncpy(connect_config->ssid, (uint8_t*)ssid, strlen(ssid)+1);
+	//connect_config->password = pwd;
+	strncpy(connect_config->password, (uint8_t*)pwd, strlen(pwd)+1);
+	printf("ConfigSTA() ssid: %s, pwd: %s\n",(char *)connect_config->ssid, (char *)connect_config->password);
+	//at_dns_server_start();
+	
+	ESP_LOGI(TAG, "Use SSID %s direct connect", (char *)connect_config->ssid);
+	esp_err_t ret = esp_web_try_connect(connect_config->ssid, connect_config->password, NULL, NULL);
+	if (ret != ESP_OK) {
+		ESP_LOGE(TAG, "Apply connect fail");
+	} else {
+		ESP_LOGI(TAG, "Apply connect success");
+		connection_info->config_status = ESP_BRIDGE_WIFI_STA_CONNECTING;
+		esp_web_update_sta_connection_info(&connection_info);
+		// send a message to MCU
+		// esp_at_port_write_data((uint8_t*)s_wifi_start_connect_response, strlen(s_wifi_start_connect_response));
+		printf("%s\r\n", s_wifi_start_connect_response);
+	}
+}
+
+/*esp_err_t StartWebServer(void)
 {
     esp_err_t ret;
     esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &esp_web_got_ip_cb, NULL, NULL);
@@ -1758,4 +1784,4 @@ esp_err_t StartWebServer(void)
         printf("at web start fail, err = %d\r\n", ret);
         return ESP_FAIL;
     }
-}
+}*/

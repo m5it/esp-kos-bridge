@@ -30,6 +30,24 @@
 #if defined(CONFIG_BRIDGE_USE_WIFI_PROVISIONING_OVER_BLE)
 #include "wifi_prov_mgr.h"
 #endif
+//--
+//
+#include "t3ch_config.h"
+//-- 
+// Includes for console & ping
+#include "esp_mac.h"              // contain MAC2STR()
+#include "esp_console.h"
+#include "t3ch_console.h"
+//--
+// HTTPD
+//#include "t3ch_httpd.h"
+//--
+// Includes for DHT sensor
+#include "dht.h"
+#include <esp_http_server.h>
+//--
+//
+static esp_console_repl_t *s_repl = NULL;
 
 #define BUTTON_NUM            1
 #define BUTTON_SW1            CONFIG_GPIO_BUTTON_SW1
@@ -106,8 +124,10 @@ static void esp_bridge_create_button(void)
     iot_button_register_cb(g_btns[0], BUTTON_LONG_PRESS_START, button_long_press_start_cb, 0);
 }
 
+
 void app_main(void)
 {
+	//printf("DEBUG AP_SSID: %s, PWD: %s\n",AP_SSID, AP_PWD);
     esp_log_level_set("*", ESP_LOG_INFO);
 
     esp_storage_init();
@@ -115,14 +135,53 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
+    esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
+    // install console REPL environment
+#if CONFIG_ESP_CONSOLE_UART
+	ESP_LOGI(TAG,"DEBUG console d1");
+    esp_console_dev_uart_config_t uart_config = ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_console_new_repl_uart(&uart_config, &repl_config, &s_repl));
+#elif CONFIG_ESP_CONSOLE_USB_CDC
+	ESP_LOGI(TAG,"DEBUG console d2");
+    esp_console_dev_usb_cdc_config_t cdc_config = ESP_CONSOLE_DEV_CDC_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_console_new_repl_usb_cdc(&cdc_config, &repl_config, &s_repl));
+#elif CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
+	ESP_LOGI(TAG,"DEBUG console d3");
+    esp_console_dev_usb_serial_jtag_config_t usbjtag_config = ESP_CONSOLE_DEV_USB_SERIAL_JTAG_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_console_new_repl_usb_serial_jtag(&usbjtag_config, &repl_config, &repl));
+#endif
+
+    //--
+    //
+    //ESP_LOGI(TAG,"SETTING DHT_gpio: %i",DHT_gpio);
+    //setDHTgpio( DHT_gpio );
+    //gpio_set_pull_mode(26, GPIO_PULLUP_ONLY);
+    //-- Register Additional console commands
+    //
+    register_free();
+    register_reset();
+    register_list();
+    register_test();
+    register_dht();
+    // Start console REPL
+    ESP_ERROR_CHECK(esp_console_start_repl(s_repl));
+    //--
+    t3ch_events_init();
+    //
     esp_bridge_create_all_netif();
+    // configure sta from t3ch_config or console or web
+    StartSTA(STA_SSID, STA_PWD);
+    //
+    StartWeb();
+    
+    
+    //esp_bridge_create_button();
 
-    esp_bridge_create_button();
+//#if defined(CONFIG_BRIDGE_USE_WEB_SERVER)
+//    StartWebServer();
+//#endif // CONFIG_BRIDGE_USE_WEB_SERVER 
+//#if defined(CONFIG_BRIDGE_USE_WIFI_PROVISIONING_OVER_BLE)
+//    esp_bridge_wifi_prov_mgr();
+//#endif // CONFIG_BRIDGE_USE_WIFI_PROVISIONING_OVER_BLE
 
-#if defined(CONFIG_BRIDGE_USE_WEB_SERVER)
-    StartWebServer();
-#endif /* CONFIG_BRIDGE_USE_WEB_SERVER */
-#if defined(CONFIG_BRIDGE_USE_WIFI_PROVISIONING_OVER_BLE)
-    esp_bridge_wifi_prov_mgr();
-#endif /* CONFIG_BRIDGE_USE_WIFI_PROVISIONING_OVER_BLE */
 }

@@ -21,6 +21,7 @@ extern "C"
 {
 #endif
 
+void StartSTA(const char *ssid, const char *pwd);
 esp_err_t StartWebServer(void);
 
 #ifdef __cplusplus
