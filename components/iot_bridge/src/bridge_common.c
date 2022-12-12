@@ -300,10 +300,10 @@ esp_netif_t* esp_bridge_create_netif(esp_netif_config_t* config, esp_netif_ip_in
     return netif;
 }
 
-void esp_wifi_ap_login(const char *ssid, const char *pwd) {
+/*void esp_wifi_ap_login(const char *ssid, const char *pwd) {
 	strcpy(OVERRIDE_AP_SSID,ssid);
 	strcpy(OVERRIDE_AP_PWD,pwd);
-}
+}*/
 
 void esp_bridge_create_all_netif(void)
 {

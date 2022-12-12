@@ -107,7 +107,8 @@ static const httpd_uri_t dht_get = {
 //
 static esp_err_t reset_get_handler(httpd_req_t *req)
 {
-	esp_mesh_lite_erase_rtc_store();
+	//-- undefined reference to `esp_mesh_lite_erase_rtc_store'
+	//esp_mesh_lite_erase_rtc_store();
     nvs_flash_erase();
     esp_restart();
     return ESP_OK;

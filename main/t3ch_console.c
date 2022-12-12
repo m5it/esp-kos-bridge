@@ -50,7 +50,8 @@ esp_err_t register_free(void) {
 //
 static int do_cmd_reset(int argc, char **argv) {
 	printf("do_cmd_reset() started.");
-    esp_mesh_lite_erase_rtc_store();
+	//-- undefined reference to `esp_mesh_lite_erase_rtc_store'
+    //esp_mesh_lite_erase_rtc_store();
     nvs_flash_erase();
     esp_restart();
 	printf("do_cmd_reset() ended.");
