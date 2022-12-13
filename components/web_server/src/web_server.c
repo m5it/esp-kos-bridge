@@ -1713,12 +1713,12 @@ static esp_err_t esp_web_fatfs_spiflash_deinit(void)
 }
 #endif
 
-static esp_err_t esp_web_start(uint16_t server_port)
+/*static esp_err_t esp_web_start(uint16_t server_port)
 {
     esp_err_t err;
 
     if (s_server == NULL) {
-        /*AT web can use fatfs to storge html or use embeded file to storge html.If use fatfs, we should enable AT FS Command support*/
+        //AT web can use fatfs to storge html or use embeded file to storge html.If use fatfs, we should enable AT FS Command support
 #ifdef CONFIG_WEB_USE_FATFS
         printf("DEBUG KOS => CONFIG_WEB_USE_FATFS is Enabled!");
         err = esp_web_fatfs_spiflash_init();
@@ -1740,7 +1740,7 @@ static esp_err_t esp_web_start(uint16_t server_port)
     }
 
     return ESP_OK;
-}
+}*/
 
 static void esp_web_got_ip_cb(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
