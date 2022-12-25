@@ -260,6 +260,7 @@ esp_err_t esp_bridge_netif_network_segment_conflict_update(esp_netif_t* esp_neti
 
 esp_netif_t* esp_bridge_create_netif(esp_netif_config_t* config, esp_netif_ip_info_t* custom_ip_info, uint8_t custom_mac[6], bool enable_dhcps)
 {
+	printf("DEBUG esp_bridge_create_netif() starting.");
     esp_netif_ip_info_t allocate_ip_info = { 0 };
     uint8_t allocate_mac[6] = { 0 };
     esp_netif_t* netif = esp_netif_new(config);

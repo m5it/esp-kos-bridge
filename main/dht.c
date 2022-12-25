@@ -223,11 +223,11 @@ esp_err_t dht_read_data(dht_sensor_type_t sensor_type, gpio_num_t pin,
     if (result != ESP_OK)
         return result;
 
-    if (data[4] != ((data[0] + data[1] + data[2] + data[3]) & 0xFF))
+    /*if (data[4] != ((data[0] + data[1] + data[2] + data[3]) & 0xFF))
     {
         ESP_LOGE(TAG, "Checksum failed, invalid data received from sensor");
         return ESP_ERR_INVALID_CRC;
-    }
+    }*/
 
     if (humidity)
         *humidity = dht_convert_data(sensor_type, data[0], data[1]);

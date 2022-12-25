@@ -126,6 +126,7 @@ bool wifi_provision_in_progress(void)
 
 esp_err_t __attribute__((weak)) wifi_prov_wifi_connect(wifi_sta_config_t *conf)
 {
+	printf("DEBUG wifi_prov_mgr.c -> wifi_prov_wifi_connect() starting.");
     esp_wifi_set_storage(WIFI_STORAGE_FLASH);
     esp_err_t ret = esp_wifi_set_config(ESP_IF_WIFI_STA, (wifi_config_t*)conf);
     esp_wifi_set_storage(WIFI_STORAGE_RAM);

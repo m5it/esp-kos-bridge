@@ -129,11 +129,26 @@ void app_main(void)
 	//printf("DEBUG AP_SSID: %s, PWD: %s\n",AP_SSID, AP_PWD);
     esp_log_level_set("*", ESP_LOG_INFO);
 
+	printf("Initializing storage.");
     esp_storage_init();
-
+    
+    //--
+    // Additional storage for our needs. (ap ssid, pwd...)
+    printf("Initializing nvs flash.");
+    esp_err_t err = nvs_flash_init();
+    if( err==ESP_ERR_NVS_NO_FREE_PAGES||err==ESP_ERR_NVS_NEW_VERSION_FOUND ) {
+		printf("app_main() nvs_flash_init() error: %ld\n",err);
+		//
+		ESP_ERROR_CHECK( nvs_flash_erase() );
+		err = nvs_flash_init();
+	}
+	ESP_ERROR_CHECK( err );
+    
+    printf("Initializing network interfaces.");
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
+	printf("Preparing console.");
     esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
     // install console REPL environment
 #if CONFIG_ESP_CONSOLE_UART
@@ -170,6 +185,7 @@ void app_main(void)
     esp_bridge_create_all_netif();
     // configure sta from t3ch_config or console or web
     StartSTA(STA_SSID, STA_PWD);
+    //StartScan();
     //
     StartWeb();
     

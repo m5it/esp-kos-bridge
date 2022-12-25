@@ -182,6 +182,7 @@ static uint8_t esp_web_get_mac_match_len(uint8_t *mac1, uint8_t *mac2, uint8_t m
 
 esp_err_t __attribute__((weak)) esp_web_wifi_connect(wifi_sta_config_t *conf)
 {
+	printf("DEBUG esp_web_wifi_connect() starting.\n");
     esp_wifi_set_storage(WIFI_STORAGE_FLASH);
     esp_err_t ret = esp_wifi_set_config(ESP_IF_WIFI_STA, (wifi_config_t*)conf);
     esp_wifi_set_storage(WIFI_STORAGE_RAM);
@@ -205,6 +206,7 @@ esp_err_t __attribute__((weak)) esp_web_wifi_connect(wifi_sta_config_t *conf)
  */
 static esp_err_t esp_web_try_connect(uint8_t *ssid, uint8_t *password, uint8_t *bssid, EventGroupHandle_t connect_event)
 {
+	printf("DEBUG esp_web_try_connect() starting.\n");
     esp_err_t ret;
     EventBits_t bits;
     char temp_ssid[ESP_BRIDGE_WEB_WIFI_SSID_LEN_DEFAULT + 1] = {0};
@@ -212,6 +214,8 @@ static esp_err_t esp_web_try_connect(uint8_t *ssid, uint8_t *password, uint8_t *
     memcpy(sta.ssid, ssid, sizeof(sta.ssid));
     memcpy(sta.password, password, sizeof(sta.password));
     memcpy(temp_ssid, ssid, sizeof(sta.ssid));
+
+	printf("DEBUG esp_web_try_connect() using ssId: %s\n",sta.ssid);
 
     if (bssid != NULL) {
         sta.bssid_set = 1;
@@ -259,6 +263,7 @@ static esp_err_t esp_web_try_connect(uint8_t *ssid, uint8_t *password, uint8_t *
  */
 static esp_err_t esp_web_get_mobile_phone_mac(uint8_t *mobile_phone_mac)
 {
+	printf("DEBUG esp_web_get_mobile_phone_mac() starting.\n");
     esp_err_t err;
     wifi_sta_list_t sta_list;
 
@@ -423,6 +428,10 @@ check_err:
  */
 static esp_err_t esp_web_start_scan_filter(uint8_t *phone_mac, uint8_t *password, int32_t max_connect_time, EventGroupHandle_t connect_event)
 {
+	//
+	printf("DEBUG web_server.c->esp_err_t esp_web_start_scan_filter() starting. phone_mac: %s, pwd: %s, mct: %i\n",
+	    (const char*)phone_mac, (const char*)password, max_connect_time);
+	//
     esp_err_t ret = ESP_FAIL;
     router_obj_t *last = NULL;
     uint8_t try_connect_count = 0;
@@ -479,6 +488,10 @@ static esp_err_t esp_web_start_scan_filter(uint8_t *phone_mac, uint8_t *password
                 ESP_LOGE(TAG, "router malloc fail");
                 break;
             }
+            
+            printf("DEBUG web_server.c->esp_err_t esp_web_start_scan_filter() ssid: %s, bssid: %s, rssid: %s\n",
+                (const char*)ap_info[loop].ssid, (const char*)ap_info[loop].bssid, (const char*)ap_info[loop].rssi);
+            
             memset(item, 0x0, sizeof(router_obj_t));
             // copy mac
             memcpy(item->mac, ap_info[loop].bssid, sizeof(item->mac));
@@ -1565,7 +1578,7 @@ static esp_err_t http_common_error_handler(httpd_req_t *req, httpd_err_code_t er
 }
 #endif
 
-static esp_err_t start_web_server(const char *base_path, uint16_t server_port)
+/*static esp_err_t start_web_server(const char *base_path, uint16_t server_port)
 {
     ESP_BRIDGE_WEB_SERVER_CHECK(base_path, "wrong base path", err);
     s_web_context = calloc(1, sizeof(web_server_context_t));
@@ -1578,7 +1591,7 @@ static esp_err_t start_web_server(const char *base_path, uint16_t server_port)
     config.server_port = server_port;
 
 #ifdef CONFIG_WEB_CAPTIVE_PORTAL_ENABLE
-    /* this is an important option that isn't set up by default.*/
+    // this is an important option that isn't set up by default.
     config.lru_purge_enable = true;
 #endif
 
@@ -1601,7 +1614,7 @@ static esp_err_t start_web_server(const char *base_path, uint16_t server_port)
         }
     }
 #ifdef CONFIG_WEB_CAPTIVE_PORTAL_ENABLE
-    size_t redirect_url_sz = ESP_BRIDGE_WEB_REDIRECT_URL_PREFIX_LEN + strlen(ESP_BRIDGE_WEB_ROOT_DIR_DEFAULT) + 1; /* strlen(http://255.255.255.255) + strlen("/") + 1 for \0 */
+    size_t redirect_url_sz = ESP_BRIDGE_WEB_REDIRECT_URL_PREFIX_LEN + strlen(ESP_BRIDGE_WEB_ROOT_DIR_DEFAULT) + 1; // strlen(http://255.255.255.255) + strlen("/") + 1 for \0 
     s_web_redirect_url = malloc(sizeof(char) * redirect_url_sz);
     *s_web_redirect_url = '\0';
     esp_netif_ip_info_t ip_info;
@@ -1621,7 +1634,7 @@ err_start:
 err:
     return ESP_FAIL;
 }
-
+*/
 #ifdef CONFIG_WEB_USE_FATFS 
 static esp_err_t esp_web_fatfs_spiflash_mount(const char *base_path,
     const char *partition_label,
@@ -1747,19 +1760,29 @@ static void esp_web_got_ip_cb(void* arg, esp_event_base_t event_base, int32_t ev
     esp_web_update_sta_got_ip_flag(true);
 }
 
+void StartScan() {
+	wifi_sta_connection_info_t *connection_info = esp_web_get_sta_connection_info();
+	wifi_sta_connect_config_t *connect_config = esp_web_get_sta_connect_config();
+	s_wifi_sta_connect_event_group = xEventGroupCreate();
+	int32_t reconnnect_timeout = esp_web_get_sta_reconnect_timeout();
+	// Calculate the max connect time,unit: s
+    int32_t connect_timeout = reconnnect_timeout - ESP_BRIDGE_WEB_BROADCAST_TIMES_DEFAULT * ESP_BRIDGE_WEB_BROADCAST_INTERVAL_DEFAULT / 1000000;
+    //
+	esp_err_t ret = esp_web_start_scan_filter(s_mobile_phone_mac, connect_config->password, connect_timeout, s_wifi_sta_connect_event_group);
+}
+
 void StartSTA(const char *ssid, const char *pwd) {
 	printf("ConfigSTA() starting...\n");
 	//wifi_sta_connection_info_t wifi_connection_info = {0};
     wifi_sta_connection_info_t *connection_info = esp_web_get_sta_connection_info();
 	wifi_sta_connect_config_t *connect_config = esp_web_get_sta_connect_config();
-	//connect_config->ssid     = ssid;
+	//
 	strncpy(connect_config->ssid, (uint8_t*)ssid, strlen(ssid)+1);
-	//connect_config->password = pwd;
 	strncpy(connect_config->password, (uint8_t*)pwd, strlen(pwd)+1);
-	printf("ConfigSTA() ssid: %s, pwd: %s\n",(char *)connect_config->ssid, (char *)connect_config->password);
-	//at_dns_server_start();
 	
-	ESP_LOGI(TAG, "Use SSID %s direct connect", (char *)connect_config->ssid);
+	printf("ConfigSTA() ssid: %s, pwd: %s\n",(char *)connect_config->ssid, (char *)connect_config->password);
+	
+	//
 	esp_err_t ret = esp_web_try_connect(connect_config->ssid, connect_config->password, NULL, NULL);
 	if (ret != ESP_OK) {
 		ESP_LOGE(TAG, "Apply connect fail");

@@ -13,9 +13,14 @@
 //#include "sdkconfig.h"
 #include "esp32/himem.h"
 #include "dht.h"
+//
+#include "nvs.h"
+#include "nvs_flash.h"
 
 //--
 static const char *TAG = "T3CH_CONSOLE";
+nvs_handle_t nvsh;
+esp_err_t nvse;
 
 //-- free Command aka space, memory
 //
@@ -50,9 +55,14 @@ esp_err_t register_free(void) {
 //
 static int do_cmd_reset(int argc, char **argv) {
 	printf("do_cmd_reset() started.");
+	
 	//-- undefined reference to `esp_mesh_lite_erase_rtc_store'
     //esp_mesh_lite_erase_rtc_store();
-    nvs_flash_erase();
+    
+    //-- lets add option like "hard reset" when erasing flash memory
+    //nvs_flash_erase();
+    
+    //--
     esp_restart();
 	printf("do_cmd_reset() ended.");
 	return 0;
@@ -165,6 +175,11 @@ esp_err_t register_dht(void) {
 //--
 // test arguments
 static struct {
+	//
+	struct arg_str *nvsOpen;
+	struct arg_str *nvsRead;
+	struct arg_str *nvsWrite;
+	//
     struct arg_int *testInt;
     struct arg_dbl *testDouble;
     struct arg_str *testString;
@@ -172,7 +187,7 @@ static struct {
 } test_args;
 //
 static int do_cmd_test(int argc, char **argv) {
-	ESP_LOGI(TAG,"do_cmd_test() START Hello world by test!!! :)");
+	ESP_LOGI(TAG,"do_cmd_test() START Hello world by test!!! :)\n");
 	
 	int nerrors = arg_parse(argc, argv, (void **)&test_args);
     if (nerrors != 0) {
@@ -180,18 +195,55 @@ static int do_cmd_test(int argc, char **argv) {
         return 1;
     }
     
+    //--
+    //
+    if( test_args.nvsOpen->count>0 ) {
+		char *tmp = test_args.nvsOpen->sval[0];
+		printf("nvsOpen starting, tmp: %s\n",tmp);
+		nvse = nvs_open("storage",NVS_READWRITE,&nvsh);
+		if(nvse!=ESP_OK) {
+			printf("nvsOpen failed!\n");
+		}
+		else {
+			printf("nvsOpen success!\n");
+		}
+	}
+	//
+    if( test_args.nvsRead->count>0 ) {
+		char *tmp = test_args.nvsRead->sval[0];
+		printf("nvsRead starting, tmp: %s\n",tmp);
+		char nvsout[256];
+		size_t rs;
+		nvs_get_str(nvsh,"testnvs",NULL,&rs);
+		esp_err_t tmperr = nvs_get_str(nvsh,"testnvs",nvsout,&rs);
+		
+		if(tmperr!=ESP_OK) printf("nvsRead Failed!\n");
+		else printf("nvsRead Success, data: %s\n",nvsout);
+		//printf("nvsRead data: %s\n",nvsout);
+	}
+	//
+    if( test_args.nvsWrite->count>0 ) {
+		char *tmp = test_args.nvsWrite->sval[0];
+		printf("nvsWrite starting, tmp: %s\n",tmp);
+		esp_err_t tmperr = nvs_set_str(nvsh,"testnvs",tmp);
+		if(tmperr!=ESP_OK) printf("nvsWrite Failed!\n");
+		else printf("nvsWrite Success!\n");
+		tmperr = nvs_commit( nvsh );
+		if(tmperr!=ESP_OK) printf("nvsWrite commit Failed!\n");
+		else printf("nvsWrite commit Success!\n");
+	}
+    //--
+    //
     if (test_args.testInt->count > 0) {
         int tmp = (uint32_t)(test_args.testInt->ival[0]);
-        ESP_LOGI(TAG,"do_cmd_test() debug argument testInt: %i", tmp);
+        ESP_LOGI(TAG,"do_cmd_test() debug argument testInt: %i\n", tmp);
     }
     if (test_args.testDouble->count > 0) {
         double tmp = test_args.testDouble->dval[0];
-        //ESP_LOGI(TAG,"do_cmd_test() debug argument testInt: %d",tmp);
         printf("do_cmd_test() debug argument testInt: %f\n",tmp);
     }
     if (test_args.testString->count > 0) {
         char *tmp = test_args.testString->sval[0];
-        //ESP_LOGI(TAG,"do_cmd_test() debug argument testInt: %s", tmp);
         printf("do_cmd_test() debug argument testString: %s\n",tmp);
     }
     
@@ -201,11 +253,15 @@ static int do_cmd_test(int argc, char **argv) {
 }
 //
 esp_err_t register_test(void) {
-	//
+	// nvs options
+	test_args.nvsOpen    = arg_str1("o","nvsOpen","<s>","Open nvs");
+	test_args.nvsRead    = arg_str1("r","nvsRead","<s>","Read from nvs");
+	test_args.nvsWrite   = arg_str1("w","nvsWrite","<s>","Write to nvs");
+	// default options
 	test_args.testInt    = arg_int0("i", "testInteger", "<n>", "Test integer argument");
 	test_args.testDouble = arg_dbl0("d", "testDouble", "<n>", "Test double argument");
 	test_args.testString = arg_str1("s", "testString", "<s>", "Test string argument");
-	test_args.end     = arg_end(1);
+	test_args.end     = arg_end(0);
 	//
 	esp_console_cmd_t command = {
         .command = "test",

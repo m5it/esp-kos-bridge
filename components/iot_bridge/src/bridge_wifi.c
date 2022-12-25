@@ -55,6 +55,8 @@ esp_err_t esp_bridge_wifi_set(wifi_mode_t mode,
                               const char *bssid)
 //git >>>>>>> master
 {
+	printf("DEBUG esp_bridge_wifi_set() starting, ssid: %s, pwd: %s\n",ssid, password);
+	
     ESP_PARAM_CHECK(ssid);
     ESP_PARAM_CHECK(password);
 
@@ -121,6 +123,8 @@ static void ip_event_sta_got_ip_handler(void *arg, esp_event_base_t event_base,
 static void wifi_event_ap_start_handler(void *arg, esp_event_base_t event_base,
                                         int32_t event_id, void *event_data)
 {
+	printf("DEBUG wifi_event_ap_start_handler() starting.");
+	//
     esp_netif_t* netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
 
     if (netif) {
@@ -156,6 +160,7 @@ static void wifi_event_ap_start_handler(void *arg, esp_event_base_t event_base,
 
 static esp_err_t esp_bridge_wifi_init(void)
 {
+	printf("DEBUG esp_bridge_wifi_init() starting.");
     if (s_wifi_event_group) {
         return ESP_OK;
     }
@@ -236,6 +241,31 @@ esp_netif_t* esp_bridge_create_softap_netif(esp_netif_ip_info_t* ip_info, uint8_
 
     esp_bridge_wifi_init();
 
+     wifi_ap_config_t ap_config;
+    /* Get WiFi ap configuration */
+    esp_wifi_get_config(WIFI_IF_AP, (wifi_config_t*)&ap_config);
+    ESP_LOGI(TAG, "AP ssid %s",     (const char*)ap_config.ssid);
+    ESP_LOGI(TAG, "AP password %s", (const char*)ap_config.password);
+
+    wifi_config_t wifi_config_ap = {
+        .ap = {
+            .ssid = "t3ch_ap",
+            .ssid_len = strlen("t3ch_ap"),
+            .channel = 6,
+            .password = "t3ch_ap1",
+            .max_connection = 4,
+            .authmode = WIFI_AUTH_WPA_WPA2_PSK,
+            .pmf_cfg = {
+                    .required = false,
+            },
+        },
+    };
+    
+    
+    //esp_wifi_stop();
+    //vTaskDelay(3000/portTICK_PERIOD_MS);
+    //esp_wifi_start();
+
     wifi_netif = esp_netif_create_default_wifi_ap();
 
     ESP_ERROR_CHECK(esp_netif_dhcps_stop(wifi_netif));
@@ -270,6 +300,9 @@ esp_netif_t* esp_bridge_create_softap_netif(esp_netif_ip_info_t* ip_info, uint8_
     esp_wifi_get_mode(&mode);
     mode |= WIFI_MODE_AP;
     ESP_ERROR_CHECK(esp_wifi_set_mode(mode));
+
+	printf("DEBUG -> Setting new config AP.");
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config_ap));
 
     return wifi_netif;
 }
