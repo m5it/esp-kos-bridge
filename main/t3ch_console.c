@@ -16,11 +16,20 @@
 //
 #include "nvs.h"
 #include "nvs_flash.h"
-
+//
+#include "driver/gpio.h"
 //--
 static const char *TAG = "T3CH_CONSOLE";
+
+//--
+// nvs variables used in "test" command
 nvs_handle_t nvsh;
 esp_err_t nvse;
+
+//--
+// nvs variables used in "ap" command
+nvs_handle_t ap_nvsh;
+esp_err_t ap_nvse;
 
 //-- free Command aka space, memory
 //
@@ -173,15 +182,85 @@ esp_err_t register_dht(void) {
 }
 
 //--
+// AP arguments
+static struct {
+    struct arg_str *set_ssid; //
+    struct arg_str *set_password; //
+    //struct arg_lit *reset;
+    struct arg_end *end;
+} ap_args;
+//
+static int do_cmd_ap(int argc, char **argv) {
+	int nerrors = arg_parse(argc, argv, (void **)&ap_args);
+    if (nerrors != 0) {
+        arg_print_errors(stderr, ap_args.end, argv[0]);
+        return 1;
+    }
+    // set_ssid
+    if (ap_args.set_ssid->count > 0) {
+        char *tmp = ap_args.set_ssid->sval[0];
+        //
+        esp_err_t tmperr = nvs_set_str(ap_nvsh,"ssid",tmp);
+		if(tmperr!=ESP_OK) printf("nvsWrite set_ssid Failed!\n");
+		else printf("nvsWrite set_ssid Success!\n");
+		//
+		tmperr = nvs_commit( ap_nvsh );
+		if(tmperr!=ESP_OK) printf("nvsWrite set_ssid commit Failed!\n");
+		else printf("nvsWrite set_ssid commit Success!\n");
+    }
+    // set_password
+    if (ap_args.set_password->count > 0) {
+        char *tmp = ap_args.set_password->sval[0];
+        //
+        esp_err_t tmperr = nvs_set_str(ap_nvsh,"pwd",tmp);
+		if(tmperr!=ESP_OK) printf("nvsWrite set_password Failed!\n");
+		else printf("nvsWrite set_password Success!\n");
+		//
+		tmperr = nvs_commit( ap_nvsh );
+		if(tmperr!=ESP_OK) printf("nvsWrite set_password commit Failed!\n");
+		else printf("nvsWrite set_password commit Success!\n");
+    }
+	return 0;
+}
+//
+esp_err_t register_ap(void) {
+	//
+	ap_args.set_ssid     = arg_str1("s", "set_ssid","<n>","Set gpio pin if not set");
+	ap_args.set_password = arg_str1("p", "set_password","<n>","Set gpio pin if not set");
+	ap_args.end          = arg_end(0);
+	//
+	esp_console_cmd_t command = {
+        .command = "ap",
+        .help = "AP Router",
+        .hint = NULL,
+        .func = &do_cmd_ap,
+        .argtable = &ap_args
+    };
+    // open nvs storage and retrive handle
+    ap_nvse = nvs_open("ap_storage",NVS_READWRITE,&ap_nvsh);
+	if(nvse!=ESP_OK) {
+		printf("nvsOpen failed!\n");
+	}
+	else {
+		printf("nvsOpen success!\n");
+	}
+	
+	// register command
+    return esp_console_cmd_register(&command);
+}
+
+
+//--
 // test arguments
 static struct {
 	//
-	struct arg_str *testWifi;
+	struct arg_int *testGpio;
 	//
 	struct arg_str *nvsOpen;
 	struct arg_str *nvsRead;
 	struct arg_str *nvsWrite;
 	//
+	struct arg_lit *testTime;
     struct arg_int *testInt;
     struct arg_dbl *testDouble;
     struct arg_str *testString;
@@ -199,11 +278,10 @@ static int do_cmd_test(int argc, char **argv) {
     
     //--
     //
-    if( test_args.testWifi->count>0 ) {
-		char *tmp = test_args.testWifi->sval[0];
-		printf("testWifi renaming ap to %s\n",tmp);
-		const char AP_PWD[] = "ABCDEFGHI";
-		PrepareAP(tmp, AP_PWD);
+    if( test_args.testGpio->count>0 ) {
+		int tmp = (uint32_t)(test_args.testGpio->ival[0]);
+		printf("testGpio tmp %i\n",tmp);
+		gpio_set_level(GPIO_NUM_26,tmp);
 	}
     //--
     //
@@ -243,6 +321,15 @@ static int do_cmd_test(int argc, char **argv) {
 		else printf("nvsWrite commit Success!\n");
 	}
     //--
+    if (test_args.testTime->count > 0) {
+		time_t now;
+		struct tm timeinfo;
+		char strftime_buf[64];
+		time(&now);
+	    localtime_r(&now, &timeinfo);
+        strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+	    ESP_LOGI(TAG, "The current date/time is: %s", strftime_buf);
+    }
     //
     if (test_args.testInt->count > 0) {
         int tmp = (uint32_t)(test_args.testInt->ival[0]);
@@ -264,16 +351,19 @@ static int do_cmd_test(int argc, char **argv) {
 //
 esp_err_t register_test(void) {
 	//
-	test_args.testWifi    = arg_str1("t","testWifi","<s>","Test wifi");
+	test_args.testGpio    = arg_int0("t","testGpio","<i>","Test gpio");
 	// nvs options
 	test_args.nvsOpen    = arg_str1("o","nvsOpen","<s>","Open nvs");
 	test_args.nvsRead    = arg_str1("r","nvsRead","<s>","Read from nvs");
 	test_args.nvsWrite   = arg_str1("w","nvsWrite","<s>","Write to nvs");
 	// default options
+	test_args.testTime   = arg_lit0("T", "testTime", "Test time");
 	test_args.testInt    = arg_int0("i", "testInteger", "<n>", "Test integer argument");
 	test_args.testDouble = arg_dbl0("d", "testDouble", "<n>", "Test double argument");
 	test_args.testString = arg_str1("s", "testString", "<s>", "Test string argument");
 	test_args.end     = arg_end(0);
+	//
+	gpio_set_direction(GPIO_NUM_26, GPIO_MODE_OUTPUT);
 	//
 	esp_console_cmd_t command = {
         .command = "test",

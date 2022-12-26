@@ -21,6 +21,7 @@
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_timer.h"
+#include "esp_sntp.h"
 #include "esp_system.h"
 #include "esp_event.h"
 
@@ -47,6 +48,10 @@
 #include <esp_http_server.h>
 //--
 //
+time_t now;
+struct tm timeinfo;
+char strftime_buf[64];
+//
 static esp_console_repl_t *s_repl = NULL;
 
 #define BUTTON_NUM            1
@@ -64,8 +69,6 @@ static esp_err_t esp_storage_init(void)
     esp_err_t ret = nvs_flash_init();
 
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        // NVS partition was truncated and needs to be erased
-        // Retry nvs_flash_init
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
     }
@@ -73,7 +76,7 @@ static esp_err_t esp_storage_init(void)
     return ret;
 }
 
-static void button_press_up_cb(void *hardware_data, void *usr_data)
+/*static void button_press_up_cb(void *hardware_data, void *usr_data)
 {
     ESP_LOGI(TAG, "BTN: BUTTON_PRESS_UP");
     if (button_long_press) {
@@ -122,34 +125,50 @@ static void esp_bridge_create_button(void)
     iot_button_register_cb(g_btns[0], BUTTON_PRESS_REPEAT, button_press_repeat_cb, 0);
     iot_button_register_cb(g_btns[0], BUTTON_LONG_PRESS_START, button_long_press_start_cb, 0);
 }
+*/
+void time_sync_notification_cb(struct timeval *tv)
+{
+    ESP_LOGI(TAG, "Notification of a time synchronization event");
+}
 
+void app_sntp_init(void) {
+	sntp_servermode_dhcp(1);      // accept NTP offers from DHCP server, if any
+    sntp_setoperatingmode(SNTP_OPMODE_POLL);
+    sntp_setservername(1, "pool.ntp.org");
+    sntp_set_time_sync_notification_cb(time_sync_notification_cb);
+	sntp_set_sync_mode(SNTP_SYNC_MODE_SMOOTH);
+	sntp_init();
+}
+
+void app_sntp_update(void) {
+	int retry = 0;
+    const int retry_count = 15;
+    while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && ++retry < retry_count) {
+        ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+    }
+    time(&now);
+    localtime_r(&now, &timeinfo);
+}
 
 void app_main(void)
 {
-	//printf("DEBUG AP_SSID: %s, PWD: %s\n",AP_SSID, AP_PWD);
     esp_log_level_set("*", ESP_LOG_INFO);
 
+	//
 	printf("Initializing storage.");
-    esp_storage_init();
-    
-    //--
-    // Additional storage for our needs. (ap ssid, pwd...)
-    printf("Initializing nvs flash.");
-    esp_err_t err = nvs_flash_init();
-    if( err==ESP_ERR_NVS_NO_FREE_PAGES||err==ESP_ERR_NVS_NEW_VERSION_FOUND ) {
-		printf("app_main() nvs_flash_init() error: %ld\n",err);
-		//
-		ESP_ERROR_CHECK( nvs_flash_erase() );
-		err = nvs_flash_init();
-	}
+    esp_err_t err = esp_storage_init();
 	ESP_ERROR_CHECK( err );
     
+    //
     printf("Initializing network interfaces.");
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
+	//
 	printf("Preparing console.");
     esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
+    
     // install console REPL environment
 #if CONFIG_ESP_CONSOLE_UART
 	ESP_LOGI(TAG,"DEBUG console d1");
@@ -165,11 +184,6 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_console_new_repl_usb_serial_jtag(&usbjtag_config, &repl_config, &repl));
 #endif
 
-    //--
-    //
-    //ESP_LOGI(TAG,"SETTING DHT_gpio: %i",DHT_gpio);
-    //setDHTgpio( DHT_gpio );
-    //gpio_set_pull_mode(26, GPIO_PULLUP_ONLY);
     //-- Register Additional console commands
     //
     register_free();
@@ -177,6 +191,7 @@ void app_main(void)
     register_list();
     register_test();
     register_dht();
+    register_ap();
     // Start console REPL
     ESP_ERROR_CHECK(esp_console_start_repl(s_repl));
     //--
@@ -187,30 +202,60 @@ void app_main(void)
     //--
     //
     //PrepareAP(AP_SSID, AP_PWD);
-    // configure sta from t3ch_config or console or web
-    StartSTA(STA_SSID, STA_PWD);
     //StartScan();
     //
     StartWeb();
     
+    //--
+    // Try retrive AP ssid & pwd from nvs storage
+    bool tmpAP_success = false;
+	nvs_handle_t nvsh;
+	char tmpAP_SSID[128] = {0};
+	char tmpAP_PWD[128] = {0};
+	err = nvs_open("ap_storage",NVS_READWRITE,&nvsh);
+	if( err==ESP_OK ) {
+		char nvsout[256]={0};
+		size_t rs;
+		nvs_get_str(nvsh,"ssid",NULL,&rs);
+		err = nvs_get_str(nvsh,"ssid",nvsout,&rs);
+		if( err==ESP_OK ) {
+			printf("esp_bridge_create_softap_netif() configuring ssid: %s from nvs!\n",nvsout);
+			strncpy(tmpAP_SSID, (uint8_t*)nvsout, strlen(nvsout)+1);
+			tmpAP_success = true;
+		}
+		else printf("esp_bridge_create_softap_netif() get ap_ssid from nvs failed.\n");
+		
+		nvsout[256];
+		nvs_get_str(nvsh,"pwd",NULL,&rs);
+		err = nvs_get_str(nvsh,"pwd",nvsout,&rs);
+		if( err==ESP_OK ) {
+			printf("esp_bridge_create_softap_netif() configuring pwd: %s from nvs!\n",nvsout);
+			strncpy(tmpAP_PWD, (uint8_t*)nvsout, strlen(nvsout)+1);
+		}
+		else {
+			printf("esp_bridge_create_softap_netif() get ap_ssid from nvs failed.\n");
+			tmpAP_success = false;
+		}
+	}
+	else printf("esp_bridge_create_softap_netif() open of storage nvs failed.\n");
+    esp_bridge_wifi_set(WIFI_MODE_AP, (tmpAP_success?tmpAP_SSID:AP_SSID), (tmpAP_success?tmpAP_PWD:AP_PWD), NULL);
+    // configure sta from t3ch_config or console or web
+    StartSTA(STA_SSID, STA_PWD);
     
-    //esp_bridge_create_button();
-
-//<<<<<<< HEAD
-//#if defined(CONFIG_BRIDGE_USE_WEB_SERVER)
-//    StartWebServer();
-//#endif // CONFIG_BRIDGE_USE_WEB_SERVER 
-//#if defined(CONFIG_BRIDGE_USE_WIFI_PROVISIONING_OVER_BLE)
-//    esp_bridge_wifi_prov_mgr();
-//#endif // CONFIG_BRIDGE_USE_WIFI_PROVISIONING_OVER_BLE
-//=======
-//#if defined(CONFIG_BRIDGE_DATA_FORWARDING_NETIF_SOFTAP)
-//    esp_bridge_wifi_set(WIFI_MODE_AP, CONFIG_ESP_BRIDGE_SOFTAP_SSID, CONFIG_ESP_BRIDGE_SOFTAP_PASSWORD, NULL);
-//#endif
-//#if defined(CONFIG_BRIDGE_EXTERNAL_NETIF_STATION)
-//    esp_wifi_connect();
-//#endif
-//    esp_bridge_create_button();
-//>>>>>>> master
-
+    //--
+    // prepare time
+    setenv("TZ", "CST-0", 1);
+    tzset();
+    time(&now);
+    localtime_r(&now, &timeinfo);
+    //
+    app_sntp_init();
+    // Is time set? If not, tm_year will be (1970 - 1900).
+    if (timeinfo.tm_year < (2016 - 1900)) {
+        ESP_LOGI(TAG, "Time is not set yet. Connecting to WiFi and getting time over NTP.");
+	    app_sntp_update();
+    }
+    //
+    strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+    ESP_LOGI(TAG, "The current date/time is: %s", strftime_buf);
 }

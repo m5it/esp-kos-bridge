@@ -249,32 +249,6 @@ esp_netif_t* esp_bridge_create_softap_netif(esp_netif_ip_info_t* ip_info, uint8_
     esp_wifi_get_config(WIFI_IF_AP, (wifi_config_t*)&ap_config);
     ESP_LOGI(TAG, "AP ssid %s",     (const char*)ap_config.ssid);
     ESP_LOGI(TAG, "AP password %s", (const char*)ap_config.password);
-
-	//--
-	// Try retrive AP ssid & pwd from nvs storage
-	/*nvs_handle_t nvsh;
-	esp_err_t err = nvs_open("storage",NVS_READWRITE,&nvsh);
-	if( err==ESP_OK ) {
-		char nvsout[256]={0};
-		size_t rs;
-		nvs_get_str(nvsh,"ap_ssid",NULL,&rs);
-		err = nvs_get_str(nvsh,"ap_ssid",nvsout,&rs);
-		if( err==ESP_OK ) {
-			printf("esp_bridge_create_softap_netif() configuring ssid: %s from nvs!\n",nvsout);
-			strncpy(ap_config.ssid, (uint8_t*)nvsout, strlen(nvsout)+1);
-		}
-		else printf("esp_bridge_create_softap_netif() get ap_ssid from nvs failed.\n");
-		
-		nvsout[256]={0};
-		nvs_get_str(nvsh,"ap_pwd",NULL,&rs);
-		err = nvs_get_str(nvsh,"ap_pwd",nvsout,&rs);
-		if( err==ESP_OK ) {
-			printf("esp_bridge_create_softap_netif() configuring pwd: %s from nvs!\n",nvsout);
-			strncpy(ap_config.password, (uint8_t*)nvsout, strlen(nvsout)+1);
-		}
-		else printf("esp_bridge_create_softap_netif() get ap_ssid from nvs failed.\n");
-	}
-	else printf("esp_bridge_create_softap_netif() open of storage nvs failed.\n");*/
 	
 	//
 	if( strlen(OVERRIDE_AP_SSID)>0 ) {
