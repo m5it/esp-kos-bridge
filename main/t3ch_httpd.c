@@ -1,4 +1,5 @@
 #include "t3ch_httpd.h"
+//#include "t3ch_time.h"
 #include "dht.h"
 
 //--
@@ -120,11 +121,30 @@ static const httpd_uri_t reset_get = {
     .handler   = reset_get_handler,
 };
 
+//-- TIME
+//
+static esp_err_t time_get_handler(httpd_req_t *req)
+{
+	char res[128];
+	char strftime_buf[64];
+	t3ch_time_get(&strftime_buf);
+	sprintf(res,"{\"success\":true,\"data\":\"%s\"}",strftime_buf);
+	httpd_resp_send(req, res, strlen(res));
+    return ESP_OK;
+}
+//
+static const httpd_uri_t time_get = {
+    .uri       = "/time",
+    .method    = HTTP_GET,
+    .handler   = time_get_handler,
+};
+
+//-- FREE
 //
 static esp_err_t free_get_handler(httpd_req_t *req)
 {
-	char res[256];
-	sprintf(res,"Free memory: %d<br>\n",heap_caps_get_free_size(MALLOC_CAP_8BIT));
+	char res[64];
+	sprintf(res,"{\"success\":true,\"data\":\"%d\"}",heap_caps_get_free_size(MALLOC_CAP_8BIT));
 	httpd_resp_send(req, res, strlen(res));
     return ESP_OK;
 }
@@ -162,6 +182,7 @@ void StartWeb(void) {
         httpd_register_uri_handler(server, &dht_get);
         httpd_register_uri_handler(server, &reset_get);
         httpd_register_uri_handler(server, &free_get);
+        httpd_register_uri_handler(server, &time_get);
         httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, httpd_error);
     }
 }

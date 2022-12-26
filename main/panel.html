@@ -29,9 +29,20 @@ function Fetch( opt ) {
 		console.warn("Fetch() ERROR: ",E);
 	});
 }
+//
+function timeLoop() {
+	Fetch({});
+	setTimeout(function() { timeLoop(); },5000);
+}
+//
+document.onload = function() {
+	console.warn("Document loaded!");
+}
 </script>
 </head>
 <body>
-test <button onclick="alert('ole!');Fetch({href:'?whatsapp=123',onDone:function(json){console.info('onDone() done...',json);},});">test click</button>
+
+<div id="displayTime"></div>
+
 </body>
 </html>

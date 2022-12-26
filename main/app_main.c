@@ -21,7 +21,6 @@
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_timer.h"
-#include "esp_sntp.h"
 #include "esp_system.h"
 #include "esp_event.h"
 
@@ -40,17 +39,10 @@
 #include "esp_console.h"
 #include "t3ch_console.h"
 //--
-// HTTPD
-//#include "t3ch_httpd.h"
-//--
 // Includes for DHT sensor
 #include "dht.h"
 #include <esp_http_server.h>
 //--
-//
-time_t now;
-struct tm timeinfo;
-char strftime_buf[64];
 //
 static esp_console_repl_t *s_repl = NULL;
 
@@ -126,30 +118,8 @@ static void esp_bridge_create_button(void)
     iot_button_register_cb(g_btns[0], BUTTON_LONG_PRESS_START, button_long_press_start_cb, 0);
 }
 */
-void time_sync_notification_cb(struct timeval *tv)
-{
-    ESP_LOGI(TAG, "Notification of a time synchronization event");
-}
 
-void app_sntp_init(void) {
-	sntp_servermode_dhcp(1);      // accept NTP offers from DHCP server, if any
-    sntp_setoperatingmode(SNTP_OPMODE_POLL);
-    sntp_setservername(1, "pool.ntp.org");
-    sntp_set_time_sync_notification_cb(time_sync_notification_cb);
-	sntp_set_sync_mode(SNTP_SYNC_MODE_SMOOTH);
-	sntp_init();
-}
 
-void app_sntp_update(void) {
-	int retry = 0;
-    const int retry_count = 15;
-    while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && ++retry < retry_count) {
-        ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
-    }
-    time(&now);
-    localtime_r(&now, &timeinfo);
-}
 
 void app_main(void)
 {
@@ -243,19 +213,9 @@ void app_main(void)
     StartSTA(STA_SSID, STA_PWD);
     
     //--
-    // prepare time
-    setenv("TZ", "CST-0", 1);
-    tzset();
-    time(&now);
-    localtime_r(&now, &timeinfo);
-    //
-    app_sntp_init();
-    // Is time set? If not, tm_year will be (1970 - 1900).
-    if (timeinfo.tm_year < (2016 - 1900)) {
-        ESP_LOGI(TAG, "Time is not set yet. Connecting to WiFi and getting time over NTP.");
-	    app_sntp_update();
-    }
-    //
-    strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-    ESP_LOGI(TAG, "The current date/time is: %s", strftime_buf);
+    t3ch_time_sntp_init();
+    if( t3ch_time_sntp_updated()==false ) {
+		ESP_LOGI(TAG, "Time is not set yet. Updating trough NTP.");
+		t3ch_time_sntp_update();
+	}
 }

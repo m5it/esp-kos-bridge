@@ -372,12 +372,16 @@ static int do_cmd_test(int argc, char **argv) {
 	    ESP_ERROR_CHECK(ledc_stop(LEDC_MODE, LEDC_CHANNEL, 0));
 	}
     if (test_args.testTime->count > 0) {
-		time_t now;
+		printf("test time starting...");
+		/*time_t now;
 		struct tm timeinfo;
 		char strftime_buf[64];
 		time(&now);
 	    localtime_r(&now, &timeinfo);
-        strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+        strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);*/
+        //char *strftime_buf = get_time_str();
+        char strftime_buf[64];
+        t3ch_time_get(&strftime_buf);
 	    ESP_LOGI(TAG, "The current date/time is: %s", strftime_buf);
     }
     //
