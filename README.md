@@ -1,12 +1,8 @@
 # ESP-KOS-BRIDGE modified from ESP-IOT-Bridge Smart Gateway Solution
 #---------------
-# Meaning of this copy is to make code lighter, to work only as wifi extender and other parts going to be
-#   removed.
-#-
-# Differences you can see in directory main/
-# files that start with t3ch_*... are our additions.
-#-
-# So slowly we will achive this and learn how to fix our problem when configuring device as NAT service.
+
+This version of esp-iot-bridge is focused on wifi extender.
+
 #-
 # Here is original esp-iot-bridge README.md and location https://github.com/espressif/esp-iot-bridge
 #-

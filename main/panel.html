@@ -31,12 +31,24 @@ function Fetch( opt ) {
 }
 //
 function timeLoop() {
-	Fetch({});
+	Fetch({href:document.location.origin+"/time",onDone:function(json) {
+		qS("#displayTime>div").innerText = json.data;
+	},});
 	setTimeout(function() { timeLoop(); },5000);
 }
 //
 document.onload = function() {
 	console.warn("Document loaded!");
+}
+//
+window.onload = function() {
+	console.warn("Window loaded!");
+	ready();
+}
+//
+function ready() {
+	//
+	timeLoop();
 }
 </script>
 </head>

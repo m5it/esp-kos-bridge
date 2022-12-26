@@ -1,0 +1,28 @@
+#!/bin/bash
+#-------------------------
+#-- gitp is:
+#- quick push to dev. works only if not master.
+#- ex. usage: ./gitp
+#------------------------
+
+#-- const vars
+#GITDIR="/Users/t3ch/Projects/drdave/lokkal/alpha.lokkal.com/.git/"
+#WORKTREE="/Users/t3ch/Projects/drdave/lokkal/alpha.lokkal.com/"
+
+#--
+cbranch=$(git rev-parse --abbrev-ref HEAD)
+lastcommit=$(git log -n1 --pretty="format:%s")
+
+#--
+if [ "$cbranch" == "master" ]; then
+    echo "gitp: You are in master branch. Quiting..."
+    exit 1
+fi
+
+#--
+echo "gitp: Using branch: "$cbranch
+
+#--
+git add .
+git commit -m "$lastcommit"
+git push github
