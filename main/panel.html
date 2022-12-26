@@ -1,6 +1,15 @@
 <html>
 <head>
 <title>Welcome To ESP-KOS-BRIDGE</title>
+<style>
+label {
+	font-weight:bolder;
+}
+label:after {
+	clear:both;
+	display:block;
+}
+</style>
 <script>
 function qS(s) {return document.querySelector(s);}
 function Fetch( opt ) {
@@ -37,24 +46,20 @@ function timeLoop() {
 	setTimeout(function() { timeLoop(); },5000);
 }
 //
-document.onload = function() {
-	console.warn("Document loaded!");
-}
-//
 window.onload = function() {
-	console.warn("Window loaded!");
 	ready();
 }
 //
 function ready() {
 	//
 	timeLoop();
+	//
 }
 </script>
 </head>
 <body>
 
-<div id="displayTime"></div>
+<div id="displayTime"><label>Server time</label><div></div></div>
 
 </body>
 </html>
