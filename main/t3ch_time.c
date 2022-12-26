@@ -47,7 +47,7 @@ bool t3ch_time_sntp_updated(void) {
 }
 
 void t3ch_time_get(char * buf) {
-	ESP_LOGI(TAG, "t3ch_time_get() starting.");
+	//ESP_LOGI(TAG, "t3ch_time_get() starting.");
 	time(&now);
     localtime_r(&now, &timeinfo);
 	strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);

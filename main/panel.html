@@ -1,6 +1,7 @@
 <html>
 <head>
 <title>Welcome To ESP-KOS-BRIDGE</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 label {
 	font-weight:bolder;
@@ -9,6 +10,11 @@ label:after {
 	clear:both;
 	display:block;
 }
+
+.clearfix:after {clear: both;content: ".";display: block;font-size: 0;height: 0;line-height: 0;visibility: hidden;}
+.clearfix { display: inline-block; }
+* html .clearfix { height: 1%; }
+.clearfix { display: block; }
 </style>
 <script>
 function qS(s) {return document.querySelector(s);}
@@ -60,6 +66,28 @@ function ready() {
 <body>
 
 <div id="displayTime"><label>Server time</label><div></div></div>
+
+<div>
+    <div>
+        <div>
+			<label>Define gpio</label>
+			<div><input type="text" id="" value=""> Define GPIO for 5W Led.</div>
+		</div>
+        <div>
+			<div style="width:50%;float:left;box-sizing:border-box;">
+				<label>Start hour</label>
+		        <div>
+		        </div>
+	        </div>
+	        <div style="width:50%;float:left;box-sizing:border-box;">
+				<label>End hour</label>
+		        <div>
+		        </div>
+	        </div>
+	        <div class="clearfix"></div>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>

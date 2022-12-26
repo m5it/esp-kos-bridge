@@ -1760,18 +1760,6 @@ static void esp_web_got_ip_cb(void* arg, esp_event_base_t event_base, int32_t ev
     esp_web_update_sta_got_ip_flag(true);
 }
 
-void PrepareAP(const char *ssid, const char *pwd) {
-	printf("web_server.c -> PrepareAP() starting.");
-	esp_bridge_wifi_set(WIFI_MODE_AP,
-                              ssid,
-                              pwd,
-                              NULL);
-     //OVERRIDE_AP_SSID = ssid;
-     //OVERRIDE_AP_PWD  = pwd;
-     //strcpy(OVERRIDE_AP_SSID, ssid);
-     //strcpy(OVERRIDE_AP_PWD, pwd);
-}
-
 void StartScan() {
 	wifi_sta_connection_info_t *connection_info = esp_web_get_sta_connection_info();
 	wifi_sta_connect_config_t *connect_config = esp_web_get_sta_connect_config();

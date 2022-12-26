@@ -33,8 +33,8 @@ static const char *TAG = "T3CH_CONSOLE";
 
 //--
 // nvs variables used in "test" command
-nvs_handle_t nvsh;
-esp_err_t nvse;
+static nvs_handle_t nvsh;
+static esp_err_t nvse;
 
 //--
 // nvs variables used in "ap" command
@@ -370,6 +370,7 @@ static int do_cmd_test(int argc, char **argv) {
 		printf("pause ledc starting.");
 	    //ESP_ERROR_CHECK(ledc_timer_pause(LEDC_MODE, LEDC_TIMER));
 	    ESP_ERROR_CHECK(ledc_stop(LEDC_MODE, LEDC_CHANNEL, 0));
+	    //ESP_ERROR_CHECK(gpio_reset_pin( LEDC_OUTPUT_IO ));
 	}
     if (test_args.testTime->count > 0) {
 		printf("test time starting...");
