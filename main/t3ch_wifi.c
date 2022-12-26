@@ -7,9 +7,9 @@
 static const char *TAG = "T3CH_WIFI";
 // Try retrive AP ssid & pwd from nvs storage
 static bool tmpAP_success = false;
-static nvs_handle_t nvsh;
 static char tmpAP_SSID[128] = {0};
 static char tmpAP_PWD[128] = {0};
+static nvs_handle_t nvsh;
 static esp_err_t err;
 
 //
@@ -47,4 +47,5 @@ void t3ch_wifi_start_ap(void) {
 	}
 	else printf("esp_bridge_create_softap_netif() open of storage nvs failed.\n");
     esp_bridge_wifi_set(WIFI_MODE_AP, (tmpAP_success?tmpAP_SSID:AP_SSID), (tmpAP_success?tmpAP_PWD:AP_PWD), NULL);
+    nvs_close(nvsh);
 }

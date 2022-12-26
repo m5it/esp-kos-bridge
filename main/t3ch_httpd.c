@@ -1,10 +1,18 @@
 #include "t3ch_httpd.h"
+#include "t3ch_nvs.h"
 //#include "t3ch_time.h"
 #include "dht.h"
 
 //--
 static const char *TAG = "T3CH_HTTPD";
-
+static nvs_handle_t nvsh;
+static esp_err_t err;
+//
+static struct stats {
+    int restart_count;
+    char *start_time;
+    char *restart_time;
+} s;
 // An HTTP GET handler
 static esp_err_t home_get_handler(httpd_req_t *req)
 {
@@ -144,7 +152,20 @@ static const httpd_uri_t time_get = {
 static esp_err_t free_get_handler(httpd_req_t *req)
 {
 	char res[64];
-	sprintf(res,"{\"success\":true,\"data\":\"%d\"}",heap_caps_get_free_size(MALLOC_CAP_8BIT));
+	/*char tmp_start_time[8];
+	char tmp_restart_time[8];
+	char tmp_restart_count[8];
+	// append additional statistics: start_time, restart_time, restart_count
+	nvs_open("httpd_storage",NVS_READWRITE,&nvsh);
+	t3ch_nvs_get_str(nvsh,"start_time",tmp_start_time);
+	t3ch_nvs_get_str(nvsh,"restart_time",tmp_restart_time);
+	t3ch_nvs_get_str(nvsh,"restart_count",tmp_restart_count);*/
+	//
+	//sprintf(res,"{\"success\":true,\"data\":\"%d\",\"start_time\":\"%s\",\"restart_time\":\"%s\",\"restart_count\":\"%s\"}", heap_caps_get_free_size(MALLOC_CAP_8BIT), tmp_start_time, tmp_restart_time, tmp_restart_count);
+	sprintf(res,"{\"success\":true,\"data\":\"%d\"}", heap_caps_get_free_size(MALLOC_CAP_8BIT));
+	//
+	//nvs_close( nvsh );
+	//
 	httpd_resp_send(req, res, strlen(res));
     return ESP_OK;
 }
@@ -170,11 +191,12 @@ esp_err_t httpd_error(httpd_req_t *req, httpd_err_code_t err)
     return ESP_FAIL;
 }
 
-void StartWeb(void) {
+bool StartWeb(void) {
 	httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     //config.lru_purge_enable = true;
 
+	//--
     // Start the httpd server
     ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
     if (httpd_start(&server, &config) == ESP_OK) {
@@ -185,4 +207,52 @@ void StartWeb(void) {
         httpd_register_uri_handler(server, &time_get);
         httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, httpd_error);
     }
+    
+    //-- Save some data into nvs for statistics
+    //
+    err = nvs_open("httpd_storage",NVS_READWRITE,&nvsh);
+    if( err!=ESP_OK ) return false;
+    //
+    char nvsout[128];
+    char timeout[64];
+    t3ch_time_get(timeout);
+    
+    // START TIME
+    err = t3ch_nvs_get_str(nvsh,"start_time",nvsout);
+    if( err!=ESP_OK ) { // start_time dont exists. lets set it.
+		err = nvs_set_str(nvsh,"start_time",timeout);
+		if( err==ESP_OK ) {
+			ESP_LOGI(TAG, "start_time is set: %s",timeout);
+		}
+	}
+	
+	// RESTART TIME
+	err = t3ch_nvs_get_str(nvsh,"restart_time",nvsout);
+    if( err!=ESP_OK ) { //
+		ESP_LOGI(TAG, "restart_time not set, setting to: %s",timeout);
+	}
+	else {
+		ESP_LOGI(TAG, "restart_time was set: %s",nvsout);
+	}
+	err = nvs_set_str(nvsh,"restart_time",timeout);
+	if( err!=ESP_OK ) {
+		ESP_LOGI(TAG, "Failed setting restart_time");
+	}
+	
+	// RESTART COUNT
+	err = t3ch_nvs_get_str(nvsh,"restart_count",nvsout);
+    if( err!=ESP_OK ) { //
+		ESP_LOGI(TAG, "restart_count not set, setting to 1");
+		nvs_set_str(nvsh,"restart_count","1");
+	}
+	else {
+		int restart_count = strtol( nvsout, (char**)NULL, 10);
+		restart_count += 1;
+		ESP_LOGI(TAG, "restart_count increasing: %i",restart_count);
+		char tmp[3];
+		sprintf(tmp,"%i",restart_count);
+		nvs_set_str(nvsh,"restart_count",tmp);
+	}
+	nvs_commit( nvsh );
+	nvs_close( nvsh );
 }

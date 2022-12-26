@@ -3,8 +3,8 @@
 //--
 static const char *TAG = "T3CH_TIME";
 //
-time_t now;
-struct tm timeinfo;
+static time_t now;
+static struct tm timeinfo;
 char strftime_buf[64];
 
 void time_sync_notification_cb(struct timeval *tv) {
@@ -31,7 +31,10 @@ void t3ch_time_sntp_update(void) {
 	int retry = 0;
     const int retry_count = 15;
     while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && ++retry < retry_count) {
-        ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
+        ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d/%d)", retry, retry_count,timeinfo.tm_year);
+        time(&now);
+	    localtime_r(&now, &timeinfo);
+	    if( t3ch_time_sntp_updated() ) break;
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
     time(&now);
@@ -46,6 +49,26 @@ bool t3ch_time_sntp_updated(void) {
 	return true;
 }
 
+//
+void t3ch_time_tm( struct tm * TimeInfo ) {
+	//time(&now);
+    localtime_r(&now, &TimeInfo);
+}
+
+//
+bool t3ch_time_chk( struct tm starttime, struct tm endtime ) {
+    //
+	ESP_LOGI(TAG, "t3ch_time_chk() starting, starttime %i:%i, endtime %i:%i",
+	    starttime.tm_hour, starttime.tm_min, endtime.tm_hour, endtime.tm_min );
+	//
+	int startsec = ((starttime.tm_hour*60)*60) + (starttime.tm_min*60) + starttime.tm_sec;
+	int endsec   = ((endtime.tm_hour*60)*60) + (endtime.tm_min*60) + endtime.tm_sec;
+	int cursec   = ((timeinfo.tm_hour*60)*60) + (timeinfo.tm_min*60) + timeinfo.tm_sec;
+	ESP_LOGI(TAG, "t3ch_time_chk() startsec: %i, endsec: %i, cursec: %i", startsec, endsec, cursec);
+	if( startsec<=cursec && endsec>=cursec ) return true;
+	return false;
+}
+//
 void t3ch_time_get(char * buf) {
 	//ESP_LOGI(TAG, "t3ch_time_get() starting.");
 	time(&now);

@@ -45,11 +45,18 @@ function Fetch( opt ) {
 	});
 }
 //
-function timeLoop() {
+function infoLoop() {
+	//
 	Fetch({href:document.location.origin+"/time",onDone:function(json) {
 		qS("#displayTime>div").innerText = json.data;
 	},});
-	setTimeout(function() { timeLoop(); },5000);
+	//
+	Fetch({href:document.location.origin+"/free",onDone:function(json) {
+		//qS("#displayFree>div").innerText = json.data+" | "+json.start_time+" | "+json.restart_time+" | "+json.restart_count;
+		qS("#displayFree>div").innerText = json.data;
+	},});
+	//
+	setTimeout(function() { infoLoop(); },5000);
 }
 //
 window.onload = function() {
@@ -58,15 +65,16 @@ window.onload = function() {
 //
 function ready() {
 	//
-	timeLoop();
+	infoLoop();
 	//
 }
 </script>
 </head>
 <body>
 
-<div id="displayTime"><label>Server time</label><div></div></div>
-
+<div id="displayTime" style="float:left;"><label>Server Time</label><div></div></div>
+<div id="displayFree" style="float:right;"><label>Server Free</label><div></div></div>
+<div class="clearfix"></div>
 <div>
     <div>
         <div>
