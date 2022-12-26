@@ -176,6 +176,8 @@ esp_err_t register_dht(void) {
 // test arguments
 static struct {
 	//
+	struct arg_str *testWifi;
+	//
 	struct arg_str *nvsOpen;
 	struct arg_str *nvsRead;
 	struct arg_str *nvsWrite;
@@ -195,6 +197,14 @@ static int do_cmd_test(int argc, char **argv) {
         return 1;
     }
     
+    //--
+    //
+    if( test_args.testWifi->count>0 ) {
+		char *tmp = test_args.testWifi->sval[0];
+		printf("testWifi renaming ap to %s\n",tmp);
+		const char AP_PWD[] = "ABCDEFGHI";
+		PrepareAP(tmp, AP_PWD);
+	}
     //--
     //
     if( test_args.nvsOpen->count>0 ) {
@@ -253,6 +263,8 @@ static int do_cmd_test(int argc, char **argv) {
 }
 //
 esp_err_t register_test(void) {
+	//
+	test_args.testWifi    = arg_str1("t","testWifi","<s>","Test wifi");
 	// nvs options
 	test_args.nvsOpen    = arg_str1("o","nvsOpen","<s>","Open nvs");
 	test_args.nvsRead    = arg_str1("r","nvsRead","<s>","Read from nvs");

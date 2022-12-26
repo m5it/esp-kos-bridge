@@ -21,7 +21,11 @@ extern "C"
 {
 #endif
 
+//
+void StartScan();
+void PrepareAP(const char *ssid, const char *pwd);
 void StartSTA(const char *ssid, const char *pwd);
+//
 esp_err_t StartWebServer(void);
 
 #ifdef __cplusplus

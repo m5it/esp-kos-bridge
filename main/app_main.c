@@ -183,6 +183,10 @@ void app_main(void)
     t3ch_events_init();
     //
     esp_bridge_create_all_netif();
+    
+    //--
+    //
+    //PrepareAP(AP_SSID, AP_PWD);
     // configure sta from t3ch_config or console or web
     StartSTA(STA_SSID, STA_PWD);
     //StartScan();

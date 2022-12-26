@@ -17,6 +17,11 @@
 #if defined(CONFIG_BRIDGE_EXTERNAL_NETIF_STATION) || defined(CONFIG_BRIDGE_DATA_FORWARDING_NETIF_SOFTAP)
 #include "esp_wifi_types.h"
 
+//
+static char OVERRIDE_AP_SSID[128]={0};
+static char OVERRIDE_AP_PWD[128]={0};
+
+//
 esp_err_t esp_bridge_wifi_set(wifi_mode_t mode,
                               const char *ssid,
                               const char *password,

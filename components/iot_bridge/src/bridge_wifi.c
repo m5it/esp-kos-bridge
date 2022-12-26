@@ -39,23 +39,20 @@ static bool esp_bridge_softap_dhcps = false;
 static EventGroupHandle_t s_wifi_event_group = NULL;
 //<<<<<<< HEAD
 //
-//static char OVERRIDE_AP_SSID[128];
-//static char OVERRIDE_AP_PWD[128];
+OVERRIDE_AP_SSID[128]={0};
+OVERRIDE_AP_PWD[128]={0};
 //
 #if CONFIG_MESH_LITE_ENABLE
 #include "esp_mesh_lite.h"
 #endif
 
 //static esp_err_t esp_bridge_wifi_set(wifi_mode_t mode, const char *ssid, const char *password, const char *bssid)
-//=======
-
 esp_err_t esp_bridge_wifi_set(wifi_mode_t mode,
                               const char *ssid,
                               const char *password,
                               const char *bssid)
-//git >>>>>>> master
 {
-	printf("DEBUG esp_bridge_wifi_set() starting, ssid: %s, pwd: %s\n",ssid, password);
+	printf("bridge_wifi.c ->  esp_bridge_wifi_set() starting, ssid: %s, pwd: %s\n",ssid, password);
 	
     ESP_PARAM_CHECK(ssid);
     ESP_PARAM_CHECK(password);
@@ -64,6 +61,7 @@ esp_err_t esp_bridge_wifi_set(wifi_mode_t mode,
     memset(&wifi_cfg, 0x0, sizeof(wifi_config_t));
 
     if (mode & WIFI_MODE_STA) {
+		printf("bridge_wifi.c -> esp_bridge_wifi_set() MODE_STA!");
         memcpy((char *)wifi_cfg.sta.ssid, ssid, sizeof(wifi_cfg.sta.ssid));
         strlcpy((char *)wifi_cfg.sta.password, password, sizeof(wifi_cfg.sta.password));
         if (bssid != NULL) {
@@ -78,6 +76,8 @@ esp_err_t esp_bridge_wifi_set(wifi_mode_t mode,
     }
 
     if (mode & WIFI_MODE_AP) {
+		printf("bridge_wifi.c ->  esp_bridge_wifi_set() MODE_AP!");
+		//
         char softap_ssid[ESP_BRIDGE_SSID_MAX_LEN + 1];
         memcpy(softap_ssid, ssid, sizeof(softap_ssid));
 #if CONFIG_ESP_BRIDGE_SOFTAP_SSID_END_WITH_THE_MAC
@@ -160,7 +160,7 @@ static void wifi_event_ap_start_handler(void *arg, esp_event_base_t event_base,
 
 static esp_err_t esp_bridge_wifi_init(void)
 {
-	printf("DEBUG esp_bridge_wifi_init() starting.");
+	printf("bridge_wifi.c -> esp_bridge_wifi_init() starting.");
     if (s_wifi_event_group) {
         return ESP_OK;
     }
@@ -228,6 +228,9 @@ static esp_err_t softap_netif_dhcp_status_change_cb(esp_ip_addr_t *ip_info)
     return ret;
 }
 
+//
+
+//
 esp_netif_t* esp_bridge_create_softap_netif(esp_netif_ip_info_t* ip_info, uint8_t mac[6], bool data_forwarding, bool enable_dhcps)
 {
     esp_netif_ip_info_t netif_ip;
@@ -247,12 +250,46 @@ esp_netif_t* esp_bridge_create_softap_netif(esp_netif_ip_info_t* ip_info, uint8_
     ESP_LOGI(TAG, "AP ssid %s",     (const char*)ap_config.ssid);
     ESP_LOGI(TAG, "AP password %s", (const char*)ap_config.password);
 
+	//--
+	// Try retrive AP ssid & pwd from nvs storage
+	/*nvs_handle_t nvsh;
+	esp_err_t err = nvs_open("storage",NVS_READWRITE,&nvsh);
+	if( err==ESP_OK ) {
+		char nvsout[256]={0};
+		size_t rs;
+		nvs_get_str(nvsh,"ap_ssid",NULL,&rs);
+		err = nvs_get_str(nvsh,"ap_ssid",nvsout,&rs);
+		if( err==ESP_OK ) {
+			printf("esp_bridge_create_softap_netif() configuring ssid: %s from nvs!\n",nvsout);
+			strncpy(ap_config.ssid, (uint8_t*)nvsout, strlen(nvsout)+1);
+		}
+		else printf("esp_bridge_create_softap_netif() get ap_ssid from nvs failed.\n");
+		
+		nvsout[256]={0};
+		nvs_get_str(nvsh,"ap_pwd",NULL,&rs);
+		err = nvs_get_str(nvsh,"ap_pwd",nvsout,&rs);
+		if( err==ESP_OK ) {
+			printf("esp_bridge_create_softap_netif() configuring pwd: %s from nvs!\n",nvsout);
+			strncpy(ap_config.password, (uint8_t*)nvsout, strlen(nvsout)+1);
+		}
+		else printf("esp_bridge_create_softap_netif() get ap_ssid from nvs failed.\n");
+	}
+	else printf("esp_bridge_create_softap_netif() open of storage nvs failed.\n");*/
+	
+	//
+	if( strlen(OVERRIDE_AP_SSID)>0 ) {
+		printf("bridge_wifi.c -> esp_bridge_create_softap_netif() overriding SSID: %s & PWD: %s\n", OVERRIDE_AP_SSID, OVERRIDE_AP_PWD);
+		strncpy(ap_config.ssid, (uint8_t*)OVERRIDE_AP_SSID, strlen(OVERRIDE_AP_SSID)+1);
+		strncpy(ap_config.ssid, (uint8_t*)OVERRIDE_AP_PWD, strlen(OVERRIDE_AP_PWD)+1);
+	}
+	
+	//
     wifi_config_t wifi_config_ap = {
         .ap = {
-            .ssid = "t3ch_ap",
-            .ssid_len = strlen("t3ch_ap"),
+            .ssid = (const char*)ap_config.ssid,
+            .ssid_len = strlen( (const char*)ap_config.ssid ),
             .channel = 6,
-            .password = "t3ch_ap1",
+            .password = (const char*)ap_config.password,
             .max_connection = 4,
             .authmode = WIFI_AUTH_WPA_WPA2_PSK,
             .pmf_cfg = {
@@ -290,7 +327,7 @@ esp_netif_t* esp_bridge_create_softap_netif(esp_netif_ip_info_t* ip_info, uint8_
     //ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, WIFI_EVENT_AP_STACONNECTED, &wifi_event_ap_staconnected_handler, NULL, NULL));
     //ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, WIFI_EVENT_AP_STADISCONNECTED, &wifi_event_ap_stadisconnected_handler, NULL, NULL));
 #ifdef CONFIG_MESH_LITE_ENABLE
-    printf("DEBUG NEW OPTION LITE_ENABLE STARTING!!!!");
+    printf("bridge_wifi.c -> esp_bridge_create_softap_netif() NEW OPTION LITE_ENABLE STARTING!!!!");
     ESP_ERROR_CHECK(esp_event_handler_instance_register(ESP_MESH_LITE_EVENT, ESP_EVENT_ANY_ID, &esp_mesh_lite_event_ip_changed_handler, NULL, NULL));
 #endif
 //=======
@@ -301,8 +338,8 @@ esp_netif_t* esp_bridge_create_softap_netif(esp_netif_ip_info_t* ip_info, uint8_
     mode |= WIFI_MODE_AP;
     ESP_ERROR_CHECK(esp_wifi_set_mode(mode));
 
-	printf("DEBUG -> Setting new config AP.");
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config_ap));
+	//printf("bridge_wifi.c -> esp_bridge_create_softap_netif() Setting new config AP.");
+    //ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config_ap));
 
     return wifi_netif;
 }
