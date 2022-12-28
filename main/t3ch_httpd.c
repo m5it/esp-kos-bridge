@@ -1,3 +1,5 @@
+#include "esp_wifi.h"
+
 #include "t3ch_httpd.h"
 #include "t3ch_nvs.h"
 #include "t3ch_time.h"
@@ -126,8 +128,42 @@ static const httpd_uri_t reset_get = {
 //
 static esp_err_t wifi_get_handler(httpd_req_t *req)
 {
-	char res[128];
-	sprintf(res,"{\"success\":true,\"ap_ssid\":\"apssid\",\"ap_pwd\":\"appwd\",\"sta_ssid\":\"stassid\",\"sta_pwd\":\"stapwd\"}");
+	char res[128]={0};
+	char ap_ssid[32]={0};
+	char ap_pwd[64]={0};
+	char sta_ssid[32]={0};
+	char sta_pwd[64]={0};
+	//
+	wifi_ap_config_t cap;
+	wifi_sta_config_t csta;
+	//
+	esp_wifi_get_config(WIFI_IF_AP, (wifi_config_t*)&cap);
+	esp_wifi_get_config(WIFI_IF_STA, (wifi_config_t*)&csta);
+
+    //
+    if (strlen((const char*)cap.ssid)) {
+        strcpy(ap_ssid,(const char*) cap.ssid);
+        strcpy(ap_pwd,(const char*) cap.password);
+    }
+    else {
+		printf("wifi_get_handler() cap.ssid not set!?");
+	}
+	
+	//
+    if (strlen((const char*)csta.ssid)) {
+        strcpy(sta_ssid,(const char*) csta.ssid);
+        strcpy(sta_pwd,(const char*) csta.password);
+    }
+    else {
+		printf("wifi_get_handler() csta.ssid not set!");
+		strcpy(sta_ssid,"Not set");
+		strcpy(sta_pwd,"Not set");
+	}
+	
+	//
+	sprintf(res,"{\"success\":true,\"ap_ssid\":\"%s\",\"ap_pwd\":\"%s\",\"sta_ssid\":\"%s\",\"sta_pwd\":\"%s\"}",
+	    ap_ssid, ap_pwd, sta_ssid, sta_pwd);
+	//
 	httpd_resp_send(req, res, strlen(res));
     return ESP_OK;
 }
