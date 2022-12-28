@@ -11,6 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// AND BY KOS
 
 #include <stdio.h>
 #include <string.h>
@@ -42,6 +44,8 @@
 // Includes for DHT sensor
 #include "dht.h"
 #include <esp_http_server.h>
+//
+//#include "cJSON.h"
 //--
 //
 static esp_console_repl_t *s_repl = NULL;
@@ -119,8 +123,6 @@ static void esp_bridge_create_button(void)
 }
 */
 
-//const char *timer_start = "17:30";
-//const char *timer_end   = "23:00";
 //
 static struct mytimer {
     //
@@ -206,14 +208,13 @@ void app_main(void)
     register_dht();
     register_ap();
     // Start console REPL
+    repl_config.prompt = "kos>";
     ESP_ERROR_CHECK(esp_console_start_repl(s_repl));
     //--
     t3ch_events_init();
     //
-    esp_bridge_create_all_netif();
+    //esp_bridge_create_all_netif();
     
-    //--
-    //StartScan();
     //
     StartWeb();
     
@@ -223,12 +224,22 @@ void app_main(void)
     t3ch_wifi_start_sta();
     
     //--
-    t3ch_time_sntp_init();
+    //StartScan();
+    
+    //--
+    /*t3ch_time_sntp_init();
     if( t3ch_time_sntp_updated()==false ) {
 		ESP_LOGI(TAG, "Time is not set yet. Updating trough NTP.");
 		t3ch_time_sntp_update();
-	}
+	}*/
 	
+	//--
+	//
+	/*char *json_string = "[{\"id\":\"25139\",\"date\":\"2016-10-27\",\"name\":\"Komfy Switch With Camera DKZ-201S\\/W Password Disclosure\"},{\"id\":\"25117\",\"date\":\"2016-10-24\",\"name\":\"NETDOIT weak password Vulnerability\"}]";
+	cJSON *root = cJSON_Parse(json_string);
+	int n = cJSON_GetArraySize(root);
+	printf("DEBUG JSON...: %i\n",n);
+	*/
 	//--
 	//
 	//t3ch_time_tm(&myt[0].start_time);
@@ -257,12 +268,12 @@ void app_main(void)
 	myt[1].running            = false;
 	
 	// START TIMER
-	xTaskCreate(
+	/*xTaskCreate(
 		TEMPOLARY_TIMER,
 		"TEMPTIMER",
 		3000,
 		&ucptp_myt,
 		tskIDLE_PRIORITY, 
 		&h_myt
-	);
+	);*/
 }

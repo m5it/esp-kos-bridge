@@ -61,7 +61,7 @@ esp_err_t esp_bridge_wifi_set(wifi_mode_t mode,
     memset(&wifi_cfg, 0x0, sizeof(wifi_config_t));
 
     if (mode & WIFI_MODE_STA) {
-		printf("bridge_wifi.c -> esp_bridge_wifi_set() MODE_STA!");
+		printf("bridge_wifi.c -> esp_bridge_wifi_set() MODE_STA!\n");
         memcpy((char *)wifi_cfg.sta.ssid, ssid, sizeof(wifi_cfg.sta.ssid));
         strlcpy((char *)wifi_cfg.sta.password, password, sizeof(wifi_cfg.sta.password));
         if (bssid != NULL) {
@@ -76,7 +76,7 @@ esp_err_t esp_bridge_wifi_set(wifi_mode_t mode,
     }
 
     if (mode & WIFI_MODE_AP) {
-		printf("bridge_wifi.c ->  esp_bridge_wifi_set() MODE_AP!");
+		printf("bridge_wifi.c ->  esp_bridge_wifi_set() MODE_AP!\n");
 		//
         char softap_ssid[ESP_BRIDGE_SSID_MAX_LEN + 1];
         memcpy(softap_ssid, ssid, sizeof(softap_ssid));
@@ -103,6 +103,7 @@ esp_err_t esp_bridge_wifi_set(wifi_mode_t mode,
 static void wifi_event_sta_disconnected_handler(void *arg, esp_event_base_t event_base,
                                                 int32_t event_id, void *event_data)
 {
+	printf("DEBUG wifi_event_sta_disconnected_handler() STARTING.\n");
 #if !CONFIG_BRIDGE_STATION_CANCEL_AUTO_CONNECT_WHEN_DISCONNECTED
     ESP_LOGE(TAG, "Disconnected. Connecting to the AP again...");
     esp_wifi_connect();
@@ -123,12 +124,14 @@ static void ip_event_sta_got_ip_handler(void *arg, esp_event_base_t event_base,
 static void wifi_event_ap_start_handler(void *arg, esp_event_base_t event_base,
                                         int32_t event_id, void *event_data)
 {
-	printf("DEBUG wifi_event_ap_start_handler() starting.");
+	printf("DEBUG wifi_event_ap_start_handler() STARTING.\n");
 	//
     esp_netif_t* netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
 
     if (netif) {
+		printf("DEBUG wifi_event_ap_start_handler() netif Looks OK!\n");
         if (esp_bridge_softap_dhcps) {
+			printf("DEBUG wifi_event_ap_start_handler() STARTING dhcps!\n");
             esp_netif_dhcps_stop(netif);
             esp_netif_dns_info_t dns;
             dns.ip.u_addr.ip4.addr = ESP_IP4TOADDR(114, 114, 114, 114);
@@ -160,19 +163,28 @@ static void wifi_event_ap_start_handler(void *arg, esp_event_base_t event_base,
 
 static esp_err_t esp_bridge_wifi_init(void)
 {
-	printf("bridge_wifi.c -> esp_bridge_wifi_init() starting.");
+	printf("bridge_wifi.c -> esp_bridge_wifi_init() STARTING.\n");
     if (s_wifi_event_group) {
+		printf("bridge_wifi.c -> esp_bridge_wifi_init() LooKS OK.\n");
         return ESP_OK;
     }
 
     s_wifi_event_group = xEventGroupCreate();
 
+	printf("bridge_wifi.c -> esp_bridge_wifi_init() STARTING WIFI_INIT_CONFIG_DEFAULT().\n");
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    esp_err_t err = esp_wifi_init(&cfg);
+    if( err!=ESP_OK ) {
+		printf("bridge_wifi.c -> esp_bridge_wifi_init() FAILED!\n");
+	}
+    ESP_ERROR_CHECK(err);
 
+	printf("bridge_wifi.c -> esp_bridge_wifi_init() STARTING esp_wifi_set_storage...\n");
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+    printf("bridge_wifi.c -> esp_bridge_wifi_init() STARTING esp_wifi_set_mode(WIFI_MODE_NULL)!\n");
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
 
+	printf("bridge_wifi.c -> esp_bridge_wifi_init() STARTING esp_wifi_start()!\n");
     esp_wifi_start();
 
     return ESP_OK;
@@ -183,10 +195,12 @@ static esp_err_t esp_bridge_wifi_init(void)
 
 esp_netif_t* esp_bridge_create_station_netif(esp_netif_ip_info_t* ip_info, uint8_t mac[6], bool data_forwarding, bool enable_dhcps)
 {
+	printf("bridge_wifi.c -> esp_bridge_create_station_netif() STARTING\n");
     esp_netif_t *wifi_netif = NULL;
     wifi_mode_t mode = WIFI_MODE_NULL;
 
     if (data_forwarding || enable_dhcps) {
+		printf("DEBUG esp_bridge_create_station_netif() returning NULL!\n");
         return wifi_netif;
     }
 
@@ -233,6 +247,7 @@ static esp_err_t softap_netif_dhcp_status_change_cb(esp_ip_addr_t *ip_info)
 //
 esp_netif_t* esp_bridge_create_softap_netif(esp_netif_ip_info_t* ip_info, uint8_t mac[6], bool data_forwarding, bool enable_dhcps)
 {
+	printf("bridge_wifi.c -> esp_bridge_create_softap_netif() STARTING\n");
     esp_netif_ip_info_t netif_ip;
     esp_netif_ip_info_t allocate_ip_info;
     esp_netif_t *wifi_netif = NULL;
@@ -242,13 +257,14 @@ esp_netif_t* esp_bridge_create_softap_netif(esp_netif_ip_info_t* ip_info, uint8_
         return wifi_netif;
     }
 
+	printf("bridge_wifi.c -> esp_bridge_create_softap_netif() STARTING esp_bridge_wifi_init()\n");
     esp_bridge_wifi_init();
 
      wifi_ap_config_t ap_config;
     /* Get WiFi ap configuration */
     esp_wifi_get_config(WIFI_IF_AP, (wifi_config_t*)&ap_config);
-    ESP_LOGI(TAG, "AP ssid %s",     (const char*)ap_config.ssid);
-    ESP_LOGI(TAG, "AP password %s", (const char*)ap_config.password);
+    printf("bridge_wifi.c -> esp_bridge_create_softap_netif() AP ssid %s\n",     (const char*)ap_config.ssid);
+    printf("bridge_wifi.c -> esp_bridge_create_softap_netif() AP password %s\n", (const char*)ap_config.password);
 	
 	//
 	if( strlen(OVERRIDE_AP_SSID)>0 ) {
@@ -276,21 +292,28 @@ esp_netif_t* esp_bridge_create_softap_netif(esp_netif_ip_info_t* ip_info, uint8_
     //esp_wifi_stop();
     //vTaskDelay(3000/portTICK_PERIOD_MS);
     //esp_wifi_start();
-
+	//ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config_ap));
+	
+	printf("bridge_wifi.c -> esp_bridge_create_softap_netif() STARTING esp_netif_create_default_wifi_ap()\n");
     wifi_netif = esp_netif_create_default_wifi_ap();
-
-    ESP_ERROR_CHECK(esp_netif_dhcps_stop(wifi_netif));
+	vTaskDelay(3000/portTICK_PERIOD_MS);
+	esp_err_t err = esp_netif_dhcps_stop(wifi_netif);
+	if( err!=ESP_OK ) {
+		printf("bridge_wifi.c -> esp_bridge_create_softap_netif() FAILED esp_netif_create_default_wifi_ap()\n");
+	}
+    ESP_ERROR_CHECK(err);
 
     if (ip_info) {
         ESP_ERROR_CHECK(esp_netif_set_ip_info(wifi_netif, ip_info));
     } else {
         if (enable_dhcps) {
+			printf("bridge_wifi.c -> esp_bridge_create_softap_netif() STARTING esp_bridge_netif_request_ip()\n");
             esp_bridge_netif_request_ip(&allocate_ip_info);
             ESP_ERROR_CHECK(esp_netif_set_ip_info(wifi_netif, &allocate_ip_info));
         }
     }
     ESP_ERROR_CHECK(esp_netif_get_ip_info(wifi_netif, &netif_ip));
-    ESP_LOGI(TAG, "IP Address:" IPSTR, IP2STR(&netif_ip.ip));
+    printf("bridge_wifi.c -> esp_bridge_create_softap_netif() got IP Address:" IPSTR"\n", IP2STR(&netif_ip.ip));
     esp_bridge_netif_list_add(wifi_netif, softap_netif_dhcp_status_change_cb);
 
     esp_bridge_softap_dhcps = enable_dhcps;
@@ -301,7 +324,7 @@ esp_netif_t* esp_bridge_create_softap_netif(esp_netif_ip_info_t* ip_info, uint8_
     //ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, WIFI_EVENT_AP_STACONNECTED, &wifi_event_ap_staconnected_handler, NULL, NULL));
     //ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, WIFI_EVENT_AP_STADISCONNECTED, &wifi_event_ap_stadisconnected_handler, NULL, NULL));
 #ifdef CONFIG_MESH_LITE_ENABLE
-    printf("bridge_wifi.c -> esp_bridge_create_softap_netif() NEW OPTION LITE_ENABLE STARTING!!!!");
+    printf("bridge_wifi.c -> esp_bridge_create_softap_netif() NEW OPTION LITE_ENABLE STARTING!!!!\n");
     ESP_ERROR_CHECK(esp_event_handler_instance_register(ESP_MESH_LITE_EVENT, ESP_EVENT_ANY_ID, &esp_mesh_lite_event_ip_changed_handler, NULL, NULL));
 #endif
 //=======
@@ -312,7 +335,10 @@ esp_netif_t* esp_bridge_create_softap_netif(esp_netif_ip_info_t* ip_info, uint8_
     mode |= WIFI_MODE_AP;
     ESP_ERROR_CHECK(esp_wifi_set_mode(mode));
 
-	//printf("bridge_wifi.c -> esp_bridge_create_softap_netif() Setting new config AP.");
+	printf("bridge_wifi.c -> esp_bridge_create_softap_netif() DONE!\n");
+	if( wifi_netif==NULL ) {
+		printf("bridge_wifi.c -> esp_bridge_create_softap_netif() wifi_netif is NULL!\n");
+	}
     //ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config_ap));
 
     return wifi_netif;

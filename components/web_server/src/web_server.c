@@ -391,21 +391,21 @@ static esp_err_t esp_web_check_ap_info(wifi_ap_record_t *ap_info)
     }
     // check ssid
     if (strlen((const char *)ap_info->ssid) == 0) {
-        ESP_LOGD(TAG, "Ignore hidden ssid");
+        ESP_LOGI(TAG, "Ignore hidden ssid");
         goto check_err;
     }
     // check encryption
     if (ap_info->authmode > 5) {
-        ESP_LOGD(TAG, "error encryption %d, ssid: %s", ap_info->authmode, ap_info->ssid);
+        ESP_LOGI(TAG, "error encryption %d, ssid: %s", ap_info->authmode, ap_info->ssid);
         goto check_err;
     }
     if (ap_info->authmode < 2) {
-        ESP_LOGD(TAG, "Ignore unsafe password, ssid: %s", ap_info->ssid);
+        ESP_LOGI(TAG, "Ignore unsafe password, ssid: %s", ap_info->ssid);
         goto check_err;
     }
     // check rssi
     if (ap_info->rssi < ESP_BRIDGE_WEB_SCAN_RSSI_THRESHOLD) {
-        ESP_LOGD(TAG, "Ignore low rssi, ssid: %s", ap_info->ssid);
+        ESP_LOGI(TAG, "Ignore low rssi, ssid: %s", ap_info->ssid);
         goto check_err;
     }
     return ESP_OK;

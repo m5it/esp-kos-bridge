@@ -1,21 +1,59 @@
 #include "t3ch_httpd.h"
 #include "t3ch_nvs.h"
+#include "t3ch_time.h"
 //#include "t3ch_time.h"
 #include "dht.h"
-
+//
+//#include "cJSON.h"
 //--
 static const char *TAG = "T3CH_HTTPD";
 static nvs_handle_t nvsh;
 static esp_err_t err;
+//
+static struct tm timeinfo;
 //
 static struct stats {
     int restart_count;
     char *start_time;
     char *restart_time;
 } s;
+
+
+//-- FUnctioNS
+//-------------
+// check if any request attribute exists
+size_t t3ch_httpd_get_param(httpd_req_t *req, const char *key, char *paramout) {
+	size_t buf_len = httpd_req_get_url_query_len(req) + 1;
+    if (buf_len > 1) {
+		char *buf = malloc(buf_len);
+        if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
+            ESP_LOGI(TAG, "Found URL query(%i) => %s", strlen(buf),buf);
+            int x = chrat(buf,'=');
+            ESP_LOGI(TAG, "Found separator(%i) at %i", strlen(buf)-x, x);
+            if (httpd_query_key_value(buf, key, paramout, strlen(buf)-x) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => %s => %s", key, paramout);
+            }
+		}
+		return buf_len;
+	}
+	return 0;
+}
+
+
+//-- REQUESTS - RESPONSES
 // An HTTP GET handler
 static esp_err_t home_get_handler(httpd_req_t *req)
 {
+	/*char out[256]={0};
+	size_t test = t3ch_httpd_get_param(req, "test", &out);
+	if( test > 0 ) {
+		ESP_LOGI(TAG, "home_get_handler() d1 got param( %d ) => %s", test, out);
+	}
+	test = t3ch_httpd_get_param(req, "test2", &out);
+	if( test > 0 ) {
+		ESP_LOGI(TAG, "home_get_handler() d2 got param( %d ) => %s", test, out);
+	}*/
+	
     /*char*  buf;
     size_t buf_len;
 
@@ -29,62 +67,17 @@ static esp_err_t home_get_handler(httpd_req_t *req)
             ESP_LOGI(TAG, "Found header => Host: %s", buf);
         }
         free(buf);
-    }
+    }*/
 
-    buf_len = httpd_req_get_hdr_value_len(req, "Test-Header-2") + 1;
-    if (buf_len > 1) {
-        buf = malloc(buf_len);
-        if (httpd_req_get_hdr_value_str(req, "Test-Header-2", buf, buf_len) == ESP_OK) {
-            ESP_LOGI(TAG, "Found header => Test-Header-2: %s", buf);
-        }
-        free(buf);
-    }
-
-    buf_len = httpd_req_get_hdr_value_len(req, "Test-Header-1") + 1;
-    if (buf_len > 1) {
-        buf = malloc(buf_len);
-        if (httpd_req_get_hdr_value_str(req, "Test-Header-1", buf, buf_len) == ESP_OK) {
-            ESP_LOGI(TAG, "Found header => Test-Header-1: %s", buf);
-        }
-        free(buf);
-    }
-
-    // Read URL query string length and allocate memory for length + 1,
-    // extra byte for null termination
-    buf_len = httpd_req_get_url_query_len(req) + 1;
-    if (buf_len > 1) {
-        buf = malloc(buf_len);
-        if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
-            ESP_LOGI(TAG, "Found URL query => %s", buf);
-            char param[32];
-            // Get value of expected key from query string
-            if (httpd_query_key_value(buf, "query1", param, sizeof(param)) == ESP_OK) {
-                ESP_LOGI(TAG, "Found URL query parameter => query1=%s", param);
-            }
-            if (httpd_query_key_value(buf, "query3", param, sizeof(param)) == ESP_OK) {
-                ESP_LOGI(TAG, "Found URL query parameter => query3=%s", param);
-            }
-            if (httpd_query_key_value(buf, "query2", param, sizeof(param)) == ESP_OK) {
-                ESP_LOGI(TAG, "Found URL query parameter => query2=%s", param);
-            }
-        }
-        free(buf);
-    }
+    
 
     // Set some custom headers
-    httpd_resp_set_hdr(req, "Custom-Header-1", "Custom-Value-1");
-    httpd_resp_set_hdr(req, "Custom-Header-2", "Custom-Value-2");
+    //httpd_resp_set_hdr(req, "Custom-Header-1", "Custom-Value-1");
+    //httpd_resp_set_hdr(req, "Custom-Header-2", "Custom-Value-2");
+    //const char* resp_str = (const char*) req->user_ctx;
+    //httpd_resp_send(req, resp_str, HTTPD_RESP_USE_STRLEN);
 
-    // Send response with custom headers and body set as the
-    // string passed in user context
-    const char* resp_str = (const char*) req->user_ctx;
-    httpd_resp_send(req, resp_str, HTTPD_RESP_USE_STRLEN);
 
-    // After sending the HTTP response the old HTTP request
-    // headers are lost. Check if HTTP request headers can be read now.
-    if (httpd_req_get_hdr_value_len(req, "Host") == 0) {
-        ESP_LOGI(TAG, "Request headers lost");
-    }*/
     httpd_resp_send(req, HTTP_PANEL, strlen(HTTP_PANEL));
     return ESP_OK;
 }
@@ -129,23 +122,100 @@ static const httpd_uri_t reset_get = {
     .handler   = reset_get_handler,
 };
 
-//-- TIME
+//-- WIFI INFO
 //
-static esp_err_t time_get_handler(httpd_req_t *req)
+static esp_err_t wifi_get_handler(httpd_req_t *req)
 {
 	char res[128];
+	sprintf(res,"{\"success\":true,\"ap_ssid\":\"apssid\",\"ap_pwd\":\"appwd\",\"sta_ssid\":\"stassid\",\"sta_pwd\":\"stapwd\"}");
+	httpd_resp_send(req, res, strlen(res));
+    return ESP_OK;
+}
+//
+static const httpd_uri_t wifi_get = {
+    .uri       = "/wifi",
+    .method    = HTTP_GET,
+    .handler   = wifi_get_handler,
+};
+
+//-- TIME
+//
+static esp_err_t time_get_handler(httpd_req_t *req) {
+	//
 	char strftime_buf[64];
+	char res[128]={0};
+	char out[128]={0};
+	// settm should be JSON generated object
+	size_t chk = t3ch_httpd_get_param(req, "settm", &out);
+	// set new settings
+	if( chk > 0 ) {
+		printf("timetm_get_handler() settm(%ld) => %s\n", chk, out);
+		
+		char tm_hour[4]={0};
+		char tm_min[4]={0};
+		char tm_sec[4]={0};
+		char tm_year[4]={0};
+		char tm_mon[4]={0};
+		char tm_mday[4]={0};
+		
+		//
+		chk = t3ch_httpd_get_param(req, "tm_hour", &tm_hour);
+		if(chk<=0) strcpy(tm_hour,"23");//tm_hour = "23";
+		chk = t3ch_httpd_get_param(req, "tm_min", &tm_min);
+		if(chk<=0) strcpy(tm_min,"0");//tm_min = "0";
+		chk = t3ch_httpd_get_param(req, "tm_sec", &tm_sec);
+		if(chk<=0) strcpy(tm_sec,"0");//tm_sec = "0";
+		//
+		chk = t3ch_httpd_get_param(req, "tm_year", &tm_year);
+		printf("tm_year chk: %i\n",chk);
+		if(chk<=0) strcpy(tm_year,"2022");//tm_year = "2022";
+		
+		chk = t3ch_httpd_get_param(req, "tm_mon", &tm_mon);
+		printf("tm_mon chk: %i\n",chk);
+		if(chk<=0) strcpy(tm_mon,"12");//tm_mon = "12";
+		
+		chk = t3ch_httpd_get_param(req, "tm_mday", &tm_mday);
+		printf("tm_mday chk: %i\n",chk);
+		if(chk<=0) strcpy(tm_mday,"1");//tm_mday = "1";
+		
+		printf("timetm_get_handler() tm_hour(%ld) => %s:%s:%s\n", chk, tm_hour, tm_min, tm_sec);
+		//
+		int tmhour = strtol(tm_hour, (char**)NULL, 10);
+		int tmmin  = strtol(tm_min, (char**)NULL, 10);
+		int tmsec  = strtol(tm_sec, (char**)NULL, 10);
+		//
+		int tmyear = strtol(tm_year, (char**)NULL, 10);
+		int tmmon  = strtol(tm_mon, (char**)NULL, 10);
+		int tmmday = strtol(tm_mday, (char**)NULL, 10);
+		printf("timetm_get_handler() tmhour:tmmin:tmsec => %i:%i:%i\n", tmhour, tmmin, tmsec);
+		printf("timetm_get_handler() tmyear:tmmon:tmmday => %i:%i:%i\n", tmyear, tmmon, tmmday);
+		//
+		struct tm tm;
+	    tm.tm_year = tmyear - 1900;
+	    tm.tm_mon  = tmmon;
+	    tm.tm_mday = tmmday;
+	    tm.tm_hour = tmhour;
+	    tm.tm_min  = tmmin;
+	    tm.tm_sec  = tmsec;
+		
+		printf("timetm_get_handler() setting time...\n");
+		t3ch_time_set_tm( tm );
+	}
+	
+	//
 	t3ch_time_get(&strftime_buf);
 	sprintf(res,"{\"success\":true,\"data\":\"%s\"}",strftime_buf);
+	//
 	httpd_resp_send(req, res, strlen(res));
     return ESP_OK;
 }
 //
 static const httpd_uri_t time_get = {
-    .uri       = "/time",
+    .uri       = "/time/",
     .method    = HTTP_GET,
     .handler   = time_get_handler,
 };
+
 
 //-- FREE
 //
@@ -205,6 +275,7 @@ bool StartWeb(void) {
         httpd_register_uri_handler(server, &reset_get);
         httpd_register_uri_handler(server, &free_get);
         httpd_register_uri_handler(server, &time_get);
+        httpd_register_uri_handler(server, &wifi_get);
         httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, httpd_error);
     }
     

@@ -65,7 +65,7 @@ esp_err_t _esp_bridge_netif_list_add(esp_netif_t* netif, dhcps_change_cb_t dhcps
         ESP_LOGE(TAG, "netif list add fail");
         return ESP_ERR_NO_MEM;
     }
-    printf("Add netif %s with %s(commit id)\r\n", esp_netif_get_desc(netif), commit_id);
+    printf("Add netif %s with %s(commit id)\n", esp_netif_get_desc(netif), commit_id);
     new->netif = netif;
     new->dhcps_change_cb = dhcps_change_cb;
     new->next = NULL;
@@ -260,7 +260,7 @@ esp_err_t esp_bridge_netif_network_segment_conflict_update(esp_netif_t* esp_neti
 
 esp_netif_t* esp_bridge_create_netif(esp_netif_config_t* config, esp_netif_ip_info_t* custom_ip_info, uint8_t custom_mac[6], bool enable_dhcps)
 {
-	printf("DEBUG esp_bridge_create_netif() starting.");
+	printf("DEBUG esp_bridge_create_netif() starting.\n");
     esp_netif_ip_info_t allocate_ip_info = { 0 };
     uint8_t allocate_mac[6] = { 0 };
     esp_netif_t* netif = esp_netif_new(config);
@@ -308,8 +308,10 @@ esp_netif_t* esp_bridge_create_netif(esp_netif_config_t* config, esp_netif_ip_in
 
 void esp_bridge_create_all_netif(void)
 {
+	printf("bridge_common.c -> esp_bridge_create_All_netif() STARTING\n");
 #if defined(CONFIG_BRIDGE_DATA_FORWARDING_NETIF_SOFTAP)
-    esp_bridge_create_softap_netif(NULL, NULL, true, true);
+	printf("bridge_common.c -> esp_bridge_create_all_netif() SKIPPING esp_bridge_create_softap_netif()...\n");
+    //esp_bridge_create_softap_netif(NULL, NULL, true, true);
 #endif
 
 #if defined(CONFIG_BRIDGE_DATA_FORWARDING_NETIF_USB)
@@ -335,7 +337,8 @@ void esp_bridge_create_all_netif(void)
 #endif
 
 #if defined(CONFIG_BRIDGE_EXTERNAL_NETIF_STATION)
-    esp_bridge_create_station_netif(NULL, NULL, false, false);
+    printf("bridge_common.c -> esp_bridge_create_all_netif() SKIPPING esp_bridge_create_station_netif()...\n");
+    //esp_bridge_create_station_netif(NULL, NULL, false, false);
 #endif
 
 //<<<<<<< HEAD

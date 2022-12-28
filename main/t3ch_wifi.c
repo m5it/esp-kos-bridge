@@ -9,18 +9,30 @@ static const char *TAG = "T3CH_WIFI";
 static bool tmpAP_success = false;
 static char tmpAP_SSID[128] = {0};
 static char tmpAP_PWD[128] = {0};
-static nvs_handle_t nvsh;
-static esp_err_t err;
 
 //
 void t3ch_wifi_start_sta(void) {
-	printf("ConfigSTA() starting...\n");
+	printf("t3ch_wifi_start_sta() STARTING\n");
+	
+	//
+	nvs_handle_t nvsh;
+	esp_err_t err;
+	//
+	esp_bridge_create_station_netif(NULL, NULL, false, false);
+	//
 	StartSTA(STA_SSID, STA_PWD);
 }
 
 //
 void t3ch_wifi_start_ap(void) {
+	//
+	nvs_handle_t nvsh;
+	esp_err_t err;
+	//
+	esp_bridge_create_softap_netif(NULL, NULL, true, true);
+	//
 	err = nvs_open("ap_storage",NVS_READWRITE,&nvsh);
+	//
 	if( err==ESP_OK ) {
 		char nvsout[256]={0};
 		size_t rs;
@@ -46,6 +58,9 @@ void t3ch_wifi_start_ap(void) {
 		}
 	}
 	else printf("esp_bridge_create_softap_netif() open of storage nvs failed.\n");
+	//
     esp_bridge_wifi_set(WIFI_MODE_AP, (tmpAP_success?tmpAP_SSID:AP_SSID), (tmpAP_success?tmpAP_PWD:AP_PWD), NULL);
+    //
+    //
     nvs_close(nvsh);
 }

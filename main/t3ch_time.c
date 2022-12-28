@@ -6,6 +6,7 @@ static const char *TAG = "T3CH_TIME";
 static time_t now;
 static struct tm timeinfo;
 char strftime_buf[64];
+//struct tm * ti;
 
 void time_sync_notification_cb(struct timeval *tv) {
     ESP_LOGI(TAG, "Notification of a time synchronization event");
@@ -17,6 +18,7 @@ void t3ch_time_sntp_init(void) {
     tzset();
     time(&now);
     localtime_r(&now, &timeinfo);
+    //ti = localtime(&now);
     
 	sntp_servermode_dhcp(1);      // accept NTP offers from DHCP server, if any
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
@@ -34,6 +36,7 @@ void t3ch_time_sntp_update(void) {
         ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d/%d)", retry, retry_count,timeinfo.tm_year);
         time(&now);
 	    localtime_r(&now, &timeinfo);
+	    //ti = localtime(&now);
 	    if( t3ch_time_sntp_updated() ) break;
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
@@ -50,11 +53,28 @@ bool t3ch_time_sntp_updated(void) {
 }
 
 //
-void t3ch_time_tm( struct tm * TimeInfo ) {
-	//time(&now);
+void t3ch_time_get_tm( struct tm TimeInfo ) {
+	time(&now);
     localtime_r(&now, &TimeInfo);
 }
-
+//
+void t3ch_time_set_tm( struct tm TimeInfo ) {
+	printf("t3ch_time.c -> t3ch_time_set_tm() started, %s\n",&TimeInfo);
+	
+	/*struct tm tm;
+    tm.tm_year = 2017 - 1900;
+    tm.tm_mon = 11;
+    tm.tm_mday = 8;
+    tm.tm_hour = 19;
+    tm.tm_min = 51;
+    tm.tm_sec = 10;*/
+    time_t t = mktime(&TimeInfo);
+    struct timeval tnow = { .tv_sec = t };
+    settimeofday(&tnow, NULL);
+    //
+    localtime_r(&t, &timeinfo);
+    printf("t3ch_time.c -> t3ch_time_set_tm() d2 %s", asctime(&timeinfo));
+}
 //
 bool t3ch_time_chk( struct tm starttime, struct tm endtime ) {
     //
@@ -71,8 +91,17 @@ bool t3ch_time_chk( struct tm starttime, struct tm endtime ) {
 //
 void t3ch_time_get(char * buf) {
 	//ESP_LOGI(TAG, "t3ch_time_get() starting.");
+	
+	printf("t3ch_time.c -> t3ch_time_get() d1 timeinfo: %s\n", asctime(&timeinfo));
+	//printf("t3ch_time.c -> t3ch_time_get() d1 ti: %s\n", asctime(ti));
+	
 	time(&now);
     localtime_r(&now, &timeinfo);
+    
+    printf("t3ch_time.c -> t3ch_time_get() d2 timeinfo: %s\n", asctime(&timeinfo));
+    
 	strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+	printf("t3ch_time.c -> t3ch_time_get() d3 strftime_buf: %s\n", strftime_buf);
+	
 	strcpy(buf,strftime_buf);
 }

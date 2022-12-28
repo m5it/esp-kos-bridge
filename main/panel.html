@@ -5,6 +5,7 @@
 <style>
 label {
 	font-weight:bolder;
+	padding:3px 5px;
 }
 label:after {
 	clear:both;
@@ -18,6 +19,16 @@ label:after {
 </style>
 <script>
 function qS(s) {return document.querySelector(s);}
+function Stringify( cssSelector, opt ) {
+	var ret={};
+	//var a = document.querySelectorAll("#tm [name]");
+	var a = document.querySelectorAll( cssSelector );
+	for(var i=0; i<a.length; i++) {
+	    var elm = a[i];
+	    ret[ elm.name ] = elm.value;
+	}
+	return JSON.stringify( [ret] );
+}
 function Fetch( opt ) {
 	var href="";
 	if( typeof(opt)!='undefined' && typeof(opt['href'])!='undefined' ) {
@@ -47,7 +58,7 @@ function Fetch( opt ) {
 //
 function infoLoop() {
 	//
-	Fetch({href:document.location.origin+"/time",onDone:function(json) {
+	Fetch({href:document.location.origin+"/time/",onDone:function(json) {
 		qS("#displayTime>div").innerText = json.data;
 	},});
 	//
@@ -55,7 +66,7 @@ function infoLoop() {
 		//qS("#displayFree>div").innerText = json.data+" | "+json.start_time+" | "+json.restart_time+" | "+json.restart_count;
 		qS("#displayFree>div").innerText = json.data;
 	},});
-	//
+	// Repeat loop in 5s
 	setTimeout(function() { infoLoop(); },5000);
 }
 //
@@ -66,15 +77,95 @@ window.onload = function() {
 function ready() {
 	//
 	infoLoop();
+	// fire once, retrive wifi info
+	Fetch({href:document.location.origin+"/wifi",onDone:function(json) {
+		console.info("wifi",json);
+		qS("#displayAPSSID").innerText = json.ap_ssid;
+		qS("#displayAPPWD").innerText = json.ap_pwd;
+		qS("#displaySTASSID").innerText = json.sta_ssid;
+		qS("#displaySTAPWD").innerText = json.sta_pwd;
+	},});
+	
 	//
+	qS("#tm_submit").addEventListener("click",function(e) {
+		e.preventDefault();
+		
+		var q = document.location.origin+"/time/?settm=1"+
+		    "&tm_hour="+qS("#tm input[name='tm_hour']").value+
+		    "&tm_min="+qS("#tm input[name='tm_min']").value+
+		    "&tm_sec="+qS("#tm input[name='tm_sec']").value+
+		    //
+		    "&tm_year="+qS("#tm input[name='tm_year']").value+
+		    "&tm_mday="+qS("#tm input[name='tm_mday']").value+
+		    "&tm_mon="+qS("#tm input[name='tm_mon']").value;
+		//
+		Fetch({href:q,onDone:function(json){
+			console.info("timetm response",json);
+		},});
+		
+		e.stopPropagation();
+		return false;
+	});
+	
+	//
+	qS("input[name='tm_year']").value  = (new Date()).getFullYear();
+	qS("input[name='tm_mon']").value   = (new Date()).getMonth();
+	qS("input[name='tm_mday']").value  = (new Date()).getDate();
 }
 </script>
 </head>
 <body>
 
-<div id="displayTime" style="float:left;"><label>Server Time</label><div></div></div>
-<div id="displayFree" style="float:right;"><label>Server Free</label><div></div></div>
-<div class="clearfix"></div>
+<div>
+	<div id="displayTime" style="float:left;"><label>Server Time</label><div></div></div>
+	<div id="displayFree" style="float:right;"><label>Server Free</label><div></div></div>
+	<div class="clearfix"></div>
+</div>
+
+<hr>
+
+<div>
+	<label>WiFi Informations</label>
+	<div>
+		<label>AP SSID</label>
+		<div id="displayAPSSID"></div>
+	</div>
+	<div>
+		<label>AP PWD</label>
+		<div id="displayAPPWD"></div>
+	</div>
+	<div>
+		<label>STA SSID</label>
+		<div id="displaySTASSID"></div>
+	</div>
+	<div>
+		<label>STA PWD</label>
+		<div id="displaySTAPWD"></div>
+	</div>
+</div>
+
+<hr>
+
+<div>
+	<label>Set Server/Timer Time ( struct tm )</label>
+	<div><form id="tm">
+		<!-- struct tm -->
+		<div><label>TM HOUR</label><input type="text" name="tm_hour" value=""></div>
+		<div><label>TM MIN</label><input type="text" name="tm_min" value=""></div>
+		<div><label>TM SEC</label><input type="text" name="tm_sec" value=""></div>
+		
+		<div><label>TM YEAR</label><input type="text" name="tm_year" value=""></div>
+		<div><label>TM MDAY</label><input type="text" name="tm_mday" value=""></div>
+		<div><label>TM WDAY</label><input type="text" name="tm_wday" value="" disabled=disabled></div>
+		<div><label>TM YDAY</label><input type="text" name="tm_yday" value="" disabled=disabled></div>
+		<div><label>TM MON</label><input type="text" name="tm_mon" value=""></div>
+		<div><label>TM ISDST</label><input type="text" name="tm_isdst" value="" disabled=disabled></div>
+	
+		<div><button name="submit" id="tm_submit">set</button></div>
+	</form></div>
+</div>
+
+<hr>
 <div>
     <div>
         <div>
