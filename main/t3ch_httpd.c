@@ -252,7 +252,6 @@ static const httpd_uri_t time_get = {
     .handler   = time_get_handler,
 };
 
-
 //-- FREE
 //
 static esp_err_t free_get_handler(httpd_req_t *req)

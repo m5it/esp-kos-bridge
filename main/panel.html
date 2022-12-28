@@ -80,10 +80,10 @@ function ready() {
 	// fire once, retrive wifi info
 	Fetch({href:document.location.origin+"/wifi",onDone:function(json) {
 		console.info("wifi",json);
-		qS("#displayAPSSID").innerText = json.ap_ssid;
-		qS("#displayAPPWD").innerText = json.ap_pwd;
-		qS("#displaySTASSID").innerText = json.sta_ssid;
-		qS("#displaySTAPWD").innerText = json.sta_pwd;
+		qS("#displayAPSSID > input").value = json.ap_ssid;
+		qS("#displayAPPWD>input").value    = json.ap_pwd;
+		qS("#displaySTASSID>input").value  = json.sta_ssid;
+		qS("#displaySTAPWD>input").value   = json.sta_pwd;
 	},});
 	
 	//
@@ -128,19 +128,26 @@ function ready() {
 	<label>WiFi Informations</label>
 	<div>
 		<label>AP SSID</label>
-		<div id="displayAPSSID"></div>
+		<div id="displayAPSSID"><input name="displayAPSSID" value=""></div>
 	</div>
 	<div>
 		<label>AP PWD</label>
-		<div id="displayAPPWD"></div>
+		<div id="displayAPPWD"><input name="displayAPPWD" value=""></div>
 	</div>
+	<div style="margin:13px;">
+		<button id="updateSTA">Update AP</button>
+	</div>
+	
 	<div>
 		<label>STA SSID</label>
-		<div id="displaySTASSID"></div>
+		<div id="displaySTASSID"><input name="displaySTASSID" value=""></div>
 	</div>
 	<div>
 		<label>STA PWD</label>
-		<div id="displaySTAPWD"></div>
+		<div id="displaySTAPWD"><input name="displaySTAPWD" value=""></div>
+	</div>
+	<div style="margin:13px;">
+		<button id="updateSTA">Update STA & Restart</button>
 	</div>
 </div>
 
