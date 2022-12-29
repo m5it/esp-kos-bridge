@@ -95,6 +95,18 @@ int time_timer_get(char *out) {
 	return jsonlen;
 }
 //
+void time_timer_del(int pos) {
+	struct mytimer tmp[2];
+	for(int i=0; i<time_timer_pos(); i++) {
+		if(i!=pos) tmp[i] = myt[i];
+		else myt_pos--;
+	}
+	myt[2];
+	for(int i=0; i<myt_pos; i++) {
+		myt[i] = tmp[i];
+	}
+}
+//
 bool time_timer_add(int startHour, int startMin, int endHour, int endMin) {
 	if( myt_pos>=time_timer_size() ) {
 		printf("time_timer_add() Failed, timer full.");
@@ -107,7 +119,7 @@ bool time_timer_add(int startHour, int startMin, int endHour, int endMin) {
 	myt[myt_pos].end_time.tm_hour   = endHour;
 	myt[myt_pos].end_time.tm_min    = endMin;
 	//
-	myt[myt_pos].running            = true;
+	myt[myt_pos].running            = false;
 	myt_pos++;
 	return true;
 }

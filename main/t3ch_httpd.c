@@ -162,18 +162,23 @@ static esp_err_t timer_get_handler(httpd_req_t *req)
 		int eHour = strtol(endHour, (char**)NULL, 10);
 		int eMin  = strtol(endMin, (char**)NULL, 10);
 		bool suc = time_timer_add(sHour, sMin, eHour, eMin);
-		sprintf(res,"{\"success\":%s,\"size\":\"%i\", \"pos\":\"%i\"}",(suc?"true":"false"),time_timer_size(),time_timer_pos());
+		sprintf(res,"{\"success\":true,\"size\":\"%i\", \"pos\":\"%i\",\"running\":%s}",time_timer_size(),time_timer_pos(),(time_timer_running()?"true":"false"));
 	}
 	else if( strlen(opt_del)>0 ) {
 		printf("timer_get_handler() starting DEL\n");
+		int pos = strtol(opt_del, (char**)NULL, 10);
+		time_timer_del( pos );
+		sprintf(res,"{\"success\":true,\"size\":\"%i\", \"pos\":\"%i\",\"running\":%s}",time_timer_size(),time_timer_pos(),(time_timer_running()?"true":"false"));
 	}
 	else if( strlen(opt_start)>0 ) {
 		printf("timer_get_handler() starting START\n");
 		time_timer_start();
+		sprintf(res,"{\"success\":true}");
 	}
 	else if( strlen(opt_stop)>0 ) {
 		printf("timer_get_handler() starting STOP\n");
 		time_timer_stop();
+		sprintf(res,"{\"success\":true}");
 	}
 	else {
 		printf("timer_get_handler() retriving json of timers.\n");
