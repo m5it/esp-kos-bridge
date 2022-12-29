@@ -123,48 +123,6 @@ static void esp_bridge_create_button(void)
 }
 */
 
-//
-static struct mytimer {
-    //
-    struct tm start_time;
-    struct tm end_time;
-    //
-    bool running;
-};
-//
-struct mytimer myt[2];
-TaskHandle_t h_myt;
-static uint8_t ucptp_myt;
-
-void TEMPOLARY_TIMER(void * pvp) {
-	while(true) {
-		for(int i=0; i<2; i++) {
-			//
-			if( !myt[i].running && t3ch_time_chk( myt[i].start_time, myt[i].end_time ) ) {
-				printf("Temporary timer at %i not running, Starting.\n",i);
-				
-				bool chk = t3ch_time_chk( myt[i].start_time, myt[i].end_time );
-				printf("Temporary timer is true: %s\n", (chk?"YES":"NO") );
-				myt[i].running = true;
-				gpio_set_level(GPIO_NUM_26,1);
-			}
-			else if( myt[i].running && !t3ch_time_chk( myt[i].start_time, myt[i].end_time ) ) {
-				printf("Temporary timer at %i running, Shutting down.\n",i);
-				myt[i].running = false;
-				gpio_set_level(GPIO_NUM_26,0);
-			}
-			else if( myt[i].running ) {
-				printf("Temporary timer at %i running...\n",i);
-			}
-			else {
-				printf("Temporary timer at %i not running...\n",i);
-			}
-		}
-		
-		vTaskDelay(5000 / portTICK_PERIOD_MS);
-	}
-}
-
 void app_main(void)
 {
     esp_log_level_set("*", ESP_LOG_INFO);
@@ -240,40 +198,4 @@ void app_main(void)
 	int n = cJSON_GetArraySize(root);
 	printf("DEBUG JSON...: %i\n",n);
 	*/
-	//--
-	//
-	//t3ch_time_tm(&myt[0].start_time);
-	//t3ch_time_tm(&myt[0].end_time);
-	//time_t tmptime;
-    //time( &tmptime );
-	//localtime_r(&tmptime,&myt[0].start_time);
-	//localtime_r(&tmptime,&myt[0].end_time);
-	myt[0].start_time.tm_hour = 17;
-	myt[0].start_time.tm_min  = 30;
-	//
-	myt[0].end_time.tm_hour   = 23;
-	myt[0].end_time.tm_min    = 0;
-	//
-	myt[0].running            = false;
-	//--
-	//
-	//t3ch_time_tm(&myt[1].start_time);
-	//t3ch_time_tm(&myt[1].end_time);
-	myt[1].start_time.tm_hour = 4;
-	myt[1].start_time.tm_min  = 0;
-	//
-	myt[1].end_time.tm_hour   = 8;
-	myt[1].end_time.tm_min    = 0;
-	//
-	myt[1].running            = false;
-	
-	// START TIMER
-	/*xTaskCreate(
-		TEMPOLARY_TIMER,
-		"TEMPTIMER",
-		3000,
-		&ucptp_myt,
-		tskIDLE_PRIORITY, 
-		&h_myt
-	);*/
 }

@@ -42,7 +42,9 @@ size_t t3ch_httpd_get_param(httpd_req_t *req, const char *key, char *paramout) {
 
 
 //-- REQUESTS - RESPONSES
-// An HTTP GET handler
+//
+//-- HOME
+//
 static esp_err_t home_get_handler(httpd_req_t *req)
 {
 	/*char out[256]={0};
@@ -112,7 +114,7 @@ static esp_err_t reset_get_handler(httpd_req_t *req)
 {
 	//-- undefined reference to `esp_mesh_lite_erase_rtc_store'
 	//esp_mesh_lite_erase_rtc_store();
-    nvs_flash_erase();
+    //nvs_flash_erase();
     esp_restart();
     return ESP_OK;
 }
@@ -121,6 +123,73 @@ static const httpd_uri_t reset_get = {
     .uri       = "/reset",
     .method    = HTTP_GET,
     .handler   = reset_get_handler,
+};
+
+//-- TIMER
+//
+static esp_err_t timer_get_handler(httpd_req_t *req)
+{
+	printf("timer_get_handler() STARTING.\n");
+	char res[512]={0};
+	char opt_stat[4]={0};
+	char opt_add[4]={0};
+	char opt_del[4]={0};
+	char opt_start[4]={0};
+	char opt_stop[4]={0};
+	
+	t3ch_httpd_get_param(req, "stat", &opt_stat);
+	t3ch_httpd_get_param(req, "add", &opt_add);
+	t3ch_httpd_get_param(req, "del", &opt_del);
+	t3ch_httpd_get_param(req, "start", &opt_start);
+	t3ch_httpd_get_param(req, "stop", &opt_stop);
+	
+	if( strlen(opt_stat)>0 ) {
+		printf("timer_get_handler() retriving stat.\n");
+		sprintf(res,"{\"success\":true,\"size\":\"%i\", \"pos\":\"%i\",\"running\":%s}",time_timer_size(),time_timer_pos(),(time_timer_running()?"true":"false"));
+	}
+	else if( strlen(opt_add)>0 ) {
+		printf("timer_get_handler() starting ADD.\n");
+		char startHour[2]={0};
+		char startMin[2]={0};
+		char endHour[2]={0};
+		char endMin[2]={0};
+		t3ch_httpd_get_param(req, "startHour", &startHour);
+		t3ch_httpd_get_param(req, "startMin", &startMin);
+		t3ch_httpd_get_param(req, "endHour", &endHour);
+		t3ch_httpd_get_param(req, "endMin", &endMin);
+		int sHour = strtol(startHour, (char**)NULL, 10);
+		int sMin  = strtol(startMin, (char**)NULL, 10);
+		int eHour = strtol(endHour, (char**)NULL, 10);
+		int eMin  = strtol(endMin, (char**)NULL, 10);
+		bool suc = time_timer_add(sHour, sMin, eHour, eMin);
+		sprintf(res,"{\"success\":%s,\"size\":\"%i\", \"pos\":\"%i\"}",(suc?"true":"false"),time_timer_size(),time_timer_pos());
+	}
+	else if( strlen(opt_del)>0 ) {
+		printf("timer_get_handler() starting DEL\n");
+	}
+	else if( strlen(opt_start)>0 ) {
+		printf("timer_get_handler() starting START\n");
+		time_timer_start();
+	}
+	else if( strlen(opt_stop)>0 ) {
+		printf("timer_get_handler() starting STOP\n");
+		time_timer_stop();
+	}
+	else {
+		printf("timer_get_handler() retriving json of timers.\n");
+		char tmp[256]={0};
+		int len = time_timer_get(tmp);
+		printf("timeer_get_handler tmp(%i/%i): %s\n",len,strlen(tmp),tmp);
+		strcpy(res,tmp);
+	}
+	httpd_resp_send(req, res, strlen(res));
+    return ESP_OK;
+}
+//
+static const httpd_uri_t timer_get = {
+    .uri       = "/timer/",
+    .method    = HTTP_GET,
+    .handler   = timer_get_handler,
 };
 
 //-- WIFI INFO
@@ -357,6 +426,7 @@ bool StartWeb(void) {
         httpd_register_uri_handler(server, &reset_get);
         httpd_register_uri_handler(server, &free_get);
         httpd_register_uri_handler(server, &time_get);
+        httpd_register_uri_handler(server, &timer_get);
         httpd_register_uri_handler(server, &wifi_get);
         httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, httpd_error);
     }
