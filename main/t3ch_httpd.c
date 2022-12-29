@@ -10,7 +10,6 @@
 //--
 static const char *TAG = "T3CH_HTTPD";
 static nvs_handle_t nvsh;
-static esp_err_t err;
 //
 static struct tm timeinfo;
 //
@@ -128,6 +127,7 @@ static const httpd_uri_t reset_get = {
 //
 static esp_err_t wifi_get_handler(httpd_req_t *req)
 {
+	char out[128]={0};
 	char res[128]={0};
 	char ap_ssid[32]={0};
 	char ap_pwd[64]={0};
@@ -140,36 +140,56 @@ static esp_err_t wifi_get_handler(httpd_req_t *req)
 	esp_wifi_get_config(WIFI_IF_AP, (wifi_config_t*)&cap);
 	esp_wifi_get_config(WIFI_IF_STA, (wifi_config_t*)&csta);
 
-    //
-    if (strlen((const char*)cap.ssid)) {
-        strcpy(ap_ssid,(const char*) cap.ssid);
-        strcpy(ap_pwd,(const char*) cap.password);
-    }
-    else {
-		printf("wifi_get_handler() cap.ssid not set!?");
-	}
-	
 	//
-    if (strlen((const char*)csta.ssid)) {
-        strcpy(sta_ssid,(const char*) csta.ssid);
-        strcpy(sta_pwd,(const char*) csta.password);
-    }
-    else {
-		printf("wifi_get_handler() csta.ssid not set!");
-		strcpy(sta_ssid,"Not set");
-		strcpy(sta_pwd,"Not set");
+	size_t chk = t3ch_httpd_get_param(req, "setap", &out);
+	// set new settings
+	if( chk > 0 ) {
+		//
+		chk = t3ch_httpd_get_param(req, "ssid", &ap_ssid);
+		printf("wifi_get_handler() setap... chk: %d, new ssid: %s", chk, ap_ssid);
+		//
+		chk = t3ch_httpd_get_param(req, "pwd", &ap_pwd);
+		printf("wifi_get_handler() setap... chk: %d, new pwd: %s", chk, ap_pwd);
+		
+		//
+	    bool suc = t3ch_wifi_update_ap( ap_ssid, ap_pwd );
+	    
+		//
+		sprintf(res,"{\"success\":%s,\"ap_ssid\":\"%s\",\"ap_pwd\":\"%s\"}",
+		    (suc?"true":"false"), ap_ssid, ap_pwd);
 	}
-	
-	//
-	sprintf(res,"{\"success\":true,\"ap_ssid\":\"%s\",\"ap_pwd\":\"%s\",\"sta_ssid\":\"%s\",\"sta_pwd\":\"%s\"}",
-	    ap_ssid, ap_pwd, sta_ssid, sta_pwd);
+	else {
+	    //
+	    if (strlen((const char*)cap.ssid)) {
+	        strcpy(ap_ssid,(const char*) cap.ssid);
+	        strcpy(ap_pwd,(const char*) cap.password);
+	    }
+	    else {
+			printf("wifi_get_handler() cap.ssid not set!?");
+		}
+		
+		//
+	    if (strlen((const char*)csta.ssid)) {
+	        strcpy(sta_ssid,(const char*) csta.ssid);
+	        strcpy(sta_pwd,(const char*) csta.password);
+	    }
+	    else {
+			printf("wifi_get_handler() csta.ssid not set!");
+			strcpy(sta_ssid,"Not set");
+			strcpy(sta_pwd,"Not set");
+		}
+		
+		//
+		sprintf(res,"{\"success\":true,\"ap_ssid\":\"%s\",\"ap_pwd\":\"%s\",\"sta_ssid\":\"%s\",\"sta_pwd\":\"%s\"}",
+		    ap_ssid, ap_pwd, sta_ssid, sta_pwd);
+	}
 	//
 	httpd_resp_send(req, res, strlen(res));
     return ESP_OK;
 }
 //
 static const httpd_uri_t wifi_get = {
-    .uri       = "/wifi",
+    .uri       = "/wifi/",
     .method    = HTTP_GET,
     .handler   = wifi_get_handler,
 };
@@ -316,7 +336,7 @@ bool StartWeb(void) {
     
     //-- Save some data into nvs for statistics
     //
-    err = nvs_open("httpd_storage",NVS_READWRITE,&nvsh);
+    esp_err_t err = nvs_open("httpd_storage",NVS_READWRITE,&nvsh);
     if( err!=ESP_OK ) return false;
     //
     char nvsout[128];

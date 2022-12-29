@@ -77,8 +77,9 @@ window.onload = function() {
 function ready() {
 	//
 	infoLoop();
+	
 	// fire once, retrive wifi info
-	Fetch({href:document.location.origin+"/wifi",onDone:function(json) {
+	Fetch({href:document.location.origin+"/wifi/",onDone:function(json) {
 		console.info("wifi",json);
 		qS("#displayAPSSID > input").value = json.ap_ssid;
 		qS("#displayAPPWD>input").value    = json.ap_pwd;
@@ -86,7 +87,7 @@ function ready() {
 		qS("#displaySTAPWD>input").value   = json.sta_pwd;
 	},});
 	
-	//
+	// Update server time
 	qS("#tm_submit").addEventListener("click",function(e) {
 		e.preventDefault();
 		
@@ -107,6 +108,27 @@ function ready() {
 		return false;
 	});
 	
+	// Update ap
+	qS("#updateAP").addEventListener("click",function(e) {
+		if( !confirm("Are you sure?") ) return;
+		Fetch({href:document.location.origin+"/wifi/?setap=1"+
+			"&ssid="+qS("input[name='displayAPSSID']").value+
+			"&pwd="+qS("input[name='displayAPPWD']").value,
+			onDone:function(json) {
+			//
+			console.info("updateAP response",json);
+			if( json.success ) {
+				alert("AP have been updated succesfully.");
+			}
+			else {
+				alert("Update of AP Failed!");
+			}
+		},});
+	});
+	
+	// Update sta
+	
+	
 	//
 	qS("input[name='tm_year']").value  = (new Date()).getFullYear();
 	qS("input[name='tm_mon']").value   = (new Date()).getMonth();
@@ -119,6 +141,15 @@ function ready() {
 <div>
 	<div id="displayTime" style="float:left;"><label>Server Time</label><div></div></div>
 	<div id="displayFree" style="float:right;"><label>Server Free</label><div></div></div>
+	<div style="width:70%;margin:0px auto;text-align:center;">
+		<div style="font-weight:bolder;font-size:1.3em;">
+			ESP - KOS - BRIDGE
+		</div>
+		<div style="font-size:0.9em;">
+			aka WiFi Extender<br>
+			aka Day Extender / Timer ;)
+		</div>
+	</div>
 	<div class="clearfix"></div>
 </div>
 
@@ -135,7 +166,7 @@ function ready() {
 		<div id="displayAPPWD"><input name="displayAPPWD" value=""></div>
 	</div>
 	<div style="margin:13px;">
-		<button id="updateSTA">Update AP</button>
+		<button id="updateAP">Update AP</button>
 	</div>
 	
 	<div>

@@ -64,3 +64,37 @@ void t3ch_wifi_start_ap(void) {
     //
     nvs_close(nvsh);
 }
+
+//
+bool t3ch_wifi_update_ap(char *ssid, char *pwd) {
+	//
+	nvs_handle_t nvsh;
+    esp_err_t err = nvs_open("ap_storage",NVS_READWRITE,&nvsh);
+    if( err!=ESP_OK ) {
+		printf("t3ch_wifi_update_ap() Failed (d1).\n");
+		return false;
+	}
+	//
+	err = nvs_set_str(nvsh,"ssid",ssid);
+	if(err!=ESP_OK) {
+		printf("t3ch_wifi_update_ap() Failed (d2).\n");
+		return false;
+	}
+	//
+	err = nvs_set_str(nvsh,"pwd",pwd);
+	if(err!=ESP_OK) {
+		printf("t3ch_wifi_update_ap() Failed (d3).\n");
+		return false;
+	}
+	//
+	err = nvs_commit( nvsh );
+	if(err!=ESP_OK) {
+		printf("t3ch_wifi_update_ap() Failed (d4).\n");
+		return false;
+	}
+	
+	//
+	esp_bridge_wifi_set(WIFI_MODE_AP, ssid, pwd, NULL);
+	    
+	return true;
+}
