@@ -98,8 +98,16 @@ int time_timer_get(char *out) {
 void time_timer_del(int pos) {
 	struct mytimer tmp[2];
 	for(int i=0; i<time_timer_pos(); i++) {
-		if(i!=pos) tmp[i] = myt[i];
-		else myt_pos--;
+		if(i!=pos) {
+			tmp[i] = myt[i];
+		}
+		else {
+			if( myt[i].running ) {
+				printf("time_timer_del() at %i, stopping gpio.\n",i);
+				gpio_set_level(GPIO_NUM_26,0);
+			}
+			myt_pos--;
+		}
 	}
 	myt[2];
 	for(int i=0; i<myt_pos; i++) {
