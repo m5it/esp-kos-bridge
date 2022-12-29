@@ -127,7 +127,22 @@ function ready() {
 	});
 	
 	// Update sta
-	
+	qS("#updateSTA").addEventListener("click",function(e) {
+		if( !confirm("Are you sure?") ) return;
+		Fetch({href:document.location.origin+"/wifi/?setsta=1"+
+			"&ssid="+qS("input[name='displaySTASSID']").value+
+			"&pwd="+qS("input[name='displaySTAPWD']").value,
+			onDone:function(json) {
+			//
+			console.info("updateSTA response",json);
+			if( json.success ) {
+				alert("STA have been updated succesfully.");
+			}
+			else {
+				alert("Update of STA Failed!");
+			}
+		},});
+	});
 	
 	//
 	qS("input[name='tm_year']").value  = (new Date()).getFullYear();
@@ -141,7 +156,7 @@ function ready() {
 <div>
 	<div id="displayTime" style="float:left;"><label>Server Time</label><div></div></div>
 	<div id="displayFree" style="float:right;"><label>Server Free</label><div></div></div>
-	<div style="width:70%;margin:0px auto;text-align:center;">
+	<div style="width:70%;max-width:320px;margin:0px auto;text-align:center;">
 		<div style="font-weight:bolder;font-size:1.3em;">
 			ESP - KOS - BRIDGE
 		</div>
@@ -178,6 +193,7 @@ function ready() {
 		<div id="displaySTAPWD"><input name="displaySTAPWD" value=""></div>
 	</div>
 	<div style="margin:13px;">
+		<small>If STA ssid & pwd are empty then network extender is disabled and only AP runs as control panel.</small><br>
 		<button id="updateSTA">Update STA & Restart</button>
 	</div>
 </div>

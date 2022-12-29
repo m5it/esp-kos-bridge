@@ -5,64 +5,129 @@
 
 //--
 static const char *TAG = "T3CH_WIFI";
-// Try retrive AP ssid & pwd from nvs storage
-static bool tmpAP_success = false;
-static char tmpAP_SSID[128] = {0};
-static char tmpAP_PWD[128] = {0};
-
+char APSSID[32]={0};
+char APPWD[64]={0};
+char STASSID[32]={0};
+char STAPWD[64]={0};
 //
 void t3ch_wifi_start_sta(void) {
 	printf("t3ch_wifi_start_sta() STARTING\n");
 	
 	//
-	nvs_handle_t nvsh;
+	nvs_handle_t nvsh2;
 	esp_err_t err;
 	//
-	esp_bridge_create_station_netif(NULL, NULL, false, false);
+	bool success = false;
+	char SSID[32] = {0};
+	char PWD[64] = {0};
 	//
-	StartSTA(STA_SSID, STA_PWD);
+	err = nvs_open("sta_storage",NVS_READWRITE,&nvsh2);
+	//
+	if( err==ESP_OK ) {
+		char nvsout[64]={0};
+		//
+		err = t3ch_nvs_get_str(nvsh2, "ssid",&SSID);
+		printf("t3ch_wifi_start_sta() ssid: %s\n",SSID);
+		//if( err==ESP_OK ) {
+		if(err!=ESP_OK) {
+			printf("t3ch_wifi_start_sta() something wrong with ssid?: %s\n",SSID);
+		}
+		if(strlen(SSID)>0) {
+			//strncpy(SSID, (uint8_t*)nvsout, strlen(nvsout)+1);
+			printf("t3ch_wifi_start_sta() starting STA anyway... for me looks good!\n");
+			success = true;
+		}
+		//
+		err = t3ch_nvs_get_str(nvsh2, "pwd",&PWD);
+		printf("t3ch_wifi_start_sta() pwd: %s\n",PWD);
+		if( err==ESP_OK ) {
+			//strncpy(PWD, (uint8_t*)nvsout, strlen(nvsout)+1);
+		}
+		
+		if( success ) {
+			printf("t3ch_wifi_start_sta() STARTING esp_bridge_create_station_netif()...\n");
+			//
+			esp_bridge_create_station_netif(NULL, NULL, false, false);
+			//
+			StartSTA(SSID, PWD);
+		}
+		else {
+			printf("t3ch_wifi_start_sta() not success. not starting...\n");
+		}
+	}
+	else printf("t3ch_wifi_start_sta() open of storage nvs failed.\n");
+	nvs_close(nvsh2);
+}
+
+//
+bool t3ch_wifi_update_sta(char *ssid, char *pwd) {
+	printf("t3ch_wifi_update_sta() STARTING. ssid:%s, pwd: %s\n", ssid, pwd);
+	
+	//
+	nvs_handle_t nvsh;
+    esp_err_t err = nvs_open("sta_storage",NVS_READWRITE,&nvsh);
+    if( err!=ESP_OK ) {
+		printf("t3ch_wifi_update_ap() Failed (d1).\n");
+		return false;
+	}
+	//
+	err = nvs_set_str(nvsh,"ssid",ssid);
+	if(err!=ESP_OK) {
+		printf("t3ch_wifi_update_ap() Failed (d2).\n");
+		return false;
+	}
+	//
+	err = nvs_set_str(nvsh,"pwd",pwd);
+	if(err!=ESP_OK) {
+		printf("t3ch_wifi_update_ap() Failed (d3).\n");
+		return false;
+	}
+	//
+	err = nvs_commit( nvsh );
+	if(err!=ESP_OK) {
+		printf("t3ch_wifi_update_ap() Failed (d4).\n");
+		return false;
+	}
+	return true;
 }
 
 //
 void t3ch_wifi_start_ap(void) {
 	//
-	nvs_handle_t nvsh;
+	nvs_handle_t nvsh1;
 	esp_err_t err;
+	//
+	bool success = false;
+	char SSID[32] = {0};
+	char PWD[64] = {0};
 	//
 	esp_bridge_create_softap_netif(NULL, NULL, true, true);
 	//
-	err = nvs_open("ap_storage",NVS_READWRITE,&nvsh);
+	err = nvs_open("ap_storage",NVS_READWRITE,&nvsh1);
 	//
 	if( err==ESP_OK ) {
-		char nvsout[256]={0};
-		size_t rs;
-		nvs_get_str(nvsh,"ssid",NULL,&rs);
-		err = nvs_get_str(nvsh,"ssid",nvsout,&rs);
+		char nvsout[64]={0};
+		//
+		err = t3ch_nvs_get_str(nvsh1, "ssid",&SSID);
+		printf("t3ch_wifi_start_ap() ssid: %s\n",SSID);
 		if( err==ESP_OK ) {
-			printf("esp_bridge_create_softap_netif() configuring ssid: %s from nvs!\n",nvsout);
-			strncpy(tmpAP_SSID, (uint8_t*)nvsout, strlen(nvsout)+1);
-			tmpAP_success = true;
+			//strncpy(SSID, (uint8_t*)nvsout, strlen(nvsout)+1);
+			printf("t3ch_wifi_start_ap() ssid looks ok?!\n");
+			success = true;
 		}
-		else printf("esp_bridge_create_softap_netif() get ap_ssid from nvs failed.\n");
-		
-		nvsout[256];
-		nvs_get_str(nvsh,"pwd",NULL,&rs);
-		err = nvs_get_str(nvsh,"pwd",nvsout,&rs);
+		//
+		err = t3ch_nvs_get_str(nvsh1, "pwd",&PWD);
+		printf("t3ch_wifi_start_ap() pwd: %s\n",PWD);
 		if( err==ESP_OK ) {
-			printf("esp_bridge_create_softap_netif() configuring pwd: %s from nvs!\n",nvsout);
-			strncpy(tmpAP_PWD, (uint8_t*)nvsout, strlen(nvsout)+1);
-		}
-		else {
-			printf("esp_bridge_create_softap_netif() get ap_ssid from nvs failed.\n");
-			tmpAP_success = false;
+			//strncpy(PWD, (uint8_t*)nvsout, strlen(nvsout)+1);
 		}
 	}
-	else printf("esp_bridge_create_softap_netif() open of storage nvs failed.\n");
+	else printf("t3ch_wifi_start_ap() open of storage nvs failed.\n");
 	//
-    esp_bridge_wifi_set(WIFI_MODE_AP, (tmpAP_success?tmpAP_SSID:AP_SSID), (tmpAP_success?tmpAP_PWD:AP_PWD), NULL);
+    esp_bridge_wifi_set(WIFI_MODE_AP, (success?SSID:AP_SSID), (success?(strlen(PWD)>0?PWD:""):AP_PWD), NULL);
     //
     //
-    nvs_close(nvsh);
+    nvs_close(nvsh1);
 }
 
 //

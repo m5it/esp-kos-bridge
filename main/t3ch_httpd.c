@@ -127,7 +127,7 @@ static const httpd_uri_t reset_get = {
 //
 static esp_err_t wifi_get_handler(httpd_req_t *req)
 {
-	char out[128]={0};
+	char out_sta[128]={0}, out_ap[128]={0};
 	char res[128]={0};
 	char ap_ssid[32]={0};
 	char ap_pwd[64]={0};
@@ -141,15 +141,20 @@ static esp_err_t wifi_get_handler(httpd_req_t *req)
 	esp_wifi_get_config(WIFI_IF_STA, (wifi_config_t*)&csta);
 
 	//
-	size_t chk = t3ch_httpd_get_param(req, "setap", &out);
+	size_t chk_setap, chk_setsta;
+	chk_setap  = t3ch_httpd_get_param(req, "setap", &out_ap);
+	chk_setsta = t3ch_httpd_get_param(req, "setsta", &out_sta);
+	//
+	printf("DEBUG wifi_get_handler() out_ap: %s, chk_setap: %d\n", out_ap, chk_setap);
+	printf("DEBUG wifi_get_handler() out_sta: %s, chk_setsta: %d\n", out_sta, chk_setsta);
 	// set new settings
-	if( chk > 0 ) {
+	if( strlen(out_ap)>0 ) {
 		//
-		chk = t3ch_httpd_get_param(req, "ssid", &ap_ssid);
-		printf("wifi_get_handler() setap... chk: %d, new ssid: %s", chk, ap_ssid);
+		chk_setap = t3ch_httpd_get_param(req, "ssid", &ap_ssid);
+		printf("wifi_get_handler() setap... chk: %d, new ssid: %s", chk_setap, ap_ssid);
 		//
-		chk = t3ch_httpd_get_param(req, "pwd", &ap_pwd);
-		printf("wifi_get_handler() setap... chk: %d, new pwd: %s", chk, ap_pwd);
+		chk_setap = t3ch_httpd_get_param(req, "pwd", &ap_pwd);
+		printf("wifi_get_handler() setap... chk: %d, new pwd: %s", chk_setap, ap_pwd);
 		
 		//
 	    bool suc = t3ch_wifi_update_ap( ap_ssid, ap_pwd );
@@ -157,6 +162,28 @@ static esp_err_t wifi_get_handler(httpd_req_t *req)
 		//
 		sprintf(res,"{\"success\":%s,\"ap_ssid\":\"%s\",\"ap_pwd\":\"%s\"}",
 		    (suc?"true":"false"), ap_ssid, ap_pwd);
+	}
+	else if( strlen(out_sta)>0 ) {
+		//
+		chk_setsta = t3ch_httpd_get_param(req, "ssid", &sta_ssid);
+		printf("wifi_get_handler() setsta... chk: %d, new ssid: %s", chk_setsta, sta_ssid);
+		//
+		chk_setsta = t3ch_httpd_get_param(req, "pwd", &sta_pwd);
+		printf("wifi_get_handler() setsta... chk: %d, new pwd: %s", chk_setsta, sta_pwd);
+		
+		//
+	    bool suc = t3ch_wifi_update_sta( sta_ssid, sta_pwd );
+	    
+	    //
+	    if( suc ) {
+			printf("wifi_get_handler() setsta restarting esp 5s...\n");
+			vTaskDelay(5000 / portTICK_PERIOD_MS);
+			esp_restart();
+		}
+	    
+		//
+		sprintf(res,"{\"success\":%s,\"sta_ssid\":\"%s\",\"sta_pwd\":\"%s\"}",
+		    (suc?"true":"false"), sta_ssid, sta_pwd);
 	}
 	else {
 	    //
