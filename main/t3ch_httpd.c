@@ -184,6 +184,7 @@ static esp_err_t timer_get_handler(httpd_req_t *req)
 		    sHour, sMin, eHour, eMin, igpio);
 		
 		bool suc = time_timer_add(sHour, sMin, eHour, eMin, igpio);
+		if( suc ) time_timer_save();
 		sprintf(res,"{\"success\":%s,\"size\":\"%i\", \"pos\":\"%i\",\"running\":%s}",(suc?"true":"false"), time_timer_size(),time_timer_pos(),(time_timer_running()?"true":"false"));
 	}
 	else if( strlen(opt_del)>0 ) {

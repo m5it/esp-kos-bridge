@@ -277,6 +277,7 @@ esp_err_t register_ap(void) {
 static struct {
 	//
 	struct arg_int *testGpio;
+	struct arg_lit *eraseTimer;
 	//
 	struct arg_str *nvsOpen;
 	struct arg_str *nvsRead;
@@ -333,6 +334,13 @@ static int do_cmd_test(int argc, char **argv) {
 		int tmp = (uint32_t)(test_args.testGpio->ival[0]);
 		printf("testGpio tmp %i\n",tmp);
 		gpio_set_level(GPIO_NUM_26,tmp);
+	}
+	//
+	if( test_args.eraseTimer->count>0 ) {
+		nvs_handle_t nvsh;
+		esp_err_t err = nvs_open("timer_storage",NVS_READWRITE,&nvsh);
+		nvs_erase_key(nvsh,"json");
+		nvs_close(nvsh);
 	}
     //--
     //
@@ -419,6 +427,7 @@ static int do_cmd_test(int argc, char **argv) {
 esp_err_t register_test(void) {
 	//
 	test_args.testGpio    = arg_int0("t","testGpio","<i>","Test gpio");
+	test_args.eraseTimer  = arg_lit0("e","eraseTimer","Erase timer");
 	// nvs options
 	test_args.nvsOpen    = arg_str1("o","nvsOpen","<s>","Open nvs");
 	test_args.nvsRead    = arg_str1("r","nvsRead","<s>","Read from nvs");

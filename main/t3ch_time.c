@@ -11,6 +11,9 @@
 
 #include "t3ch_time.h"
 #include "driver/gpio.h"
+#include "nvs.h"
+#include "cJSON.h" // https://github.com/DaveGamble/cJSON
+
 //--
 static const char *TAG = "T3CH_TIME";
 //
@@ -20,6 +23,8 @@ char strftime_buf[64];
 
 //
 static struct mytimer {
+	//
+	//char *idCRC;
     //
     struct tm start_time;
     struct tm end_time;
@@ -34,9 +39,13 @@ bool myt_running = false;
 TaskHandle_t h_myt;
 static uint8_t ucptp_myt;
 
+//-- TIMER
+//
 void time_timer(void * pvp) {
 	while(true) {
 		for(int i=0; i<time_timer_pos(); i++) {
+			//
+			//printf("time_timer t3ch_gpio_state for 26: %i\n", t3ch_gpio_state(26));
 			//
 			if( !myt[i].running && t3ch_time_chk( myt[i].start_time, myt[i].end_time ) ) {
 				printf("Temporary timer at %i not running, STARTING now on gpio: %i!\n", i, myt[i].gpio);
@@ -58,27 +67,6 @@ void time_timer(void * pvp) {
 		vTaskDelay(5000 / portTICK_PERIOD_MS);
 	}
 }
-
-/*
-//
-myt[0].start_time.tm_hour = 17;
-myt[0].start_time.tm_min  = 30;
-//
-myt[0].end_time.tm_hour   = 23;
-myt[0].end_time.tm_min    = 0;
-//
-myt[0].running            = false;
-//
-myt[1].start_time.tm_hour = 4;
-myt[1].start_time.tm_min  = 0;
-//
-myt[1].end_time.tm_hour   = 8;
-myt[1].end_time.tm_min    = 0;
-//
-myt[1].running            = false;
-*/
-
-//-- TIMER
 //
 int time_timer_size(void) {
 	return sizeof(myt)/sizeof(myt[0]);
@@ -122,7 +110,27 @@ void time_timer_del(int pos) {
 	for(int i=0; i<myt_pos; i++) {
 		myt[i] = tmp[i];
 	}
+	time_timer_save();
 }
+
+//
+bool time_timer_exists(struct tm starttime, struct tm endtime) {
+	printf("time_timer_exists() STARTING\n");
+	//
+	int startsec = ((starttime.tm_hour*60)*60) + (starttime.tm_min*60) + starttime.tm_sec;
+	int endsec   = ((endtime.tm_hour*60)*60) + (endtime.tm_min*60) + endtime.tm_sec;
+	for(int i=0; i<myt_pos; i++) {
+		int chkstartsec = ((myt[i].start_time.tm_hour*60)*60) + (myt[i].start_time.tm_min*60) + myt[i].start_time.tm_sec;
+		int chkendsec   = ((myt[i].end_time.tm_hour*60)*60) + (myt[i].end_time.tm_min*60) + myt[i].end_time.tm_sec;
+		if( startsec <= chkstartsec && endsec >= chkendsec ) {
+			printf("time_timer_exists() looks exists!\n");
+			return true;
+		}
+	}
+	printf("time_timer_exists() DONE\n");
+	return false;
+}
+
 //
 bool time_timer_add(int startHour, int startMin, int endHour, int endMin, int gpio) {
 	printf("time_timer_add() STARTING, startHour: %i, startMin: %i, endHour: %i, endMin: %i\n",
@@ -133,17 +141,35 @@ bool time_timer_add(int startHour, int startMin, int endHour, int endMin, int gp
 		return false;
 	}
 	//
-	myt[myt_pos].start_time.tm_hour = startHour;
-	myt[myt_pos].start_time.tm_min  = startMin;
-	//
-	myt[myt_pos].end_time.tm_hour   = endHour;
-	myt[myt_pos].end_time.tm_min    = endMin;
-	//
-	myt[myt_pos].running            = false;
-	myt[myt_pos].gpio               = gpio;
+	struct tm tmp_start;
+	struct tm tmp_end;
+	tmp_start.tm_hour = startHour;
+	tmp_start.tm_min  = startMin;
+	tmp_end.tm_hour   = endHour;
+	tmp_end.tm_min    = endMin;
+	// Check if already exists
+	if( time_timer_exists(tmp_start, tmp_end) ) {
+		printf("time_timer_add() Failed exists!\n");
+		return false;
+	}
+	myt[myt_pos].start_time = tmp_start;
+	myt[myt_pos].end_time   = tmp_end;
+	myt[myt_pos].running    = false;
+	myt[myt_pos].gpio       = gpio;
+	// generate idCRC
+	/*char tmpstr[32];
+	printf("time_timer_add() ascing time...\n");
+	sprintf(tmpstr,"%s",asctime(&myt[myt_pos].start_time));
+	char tmpcrc[8];
+	sprintf(tmpcrc,"%x",crc32b(tmpstr));
+	myt[myt_pos].idCRC     = tmpcrc;
+	printf("time_timer_add() generated idCRC: %s from %s\n",myt[myt_pos].idCRC,tmpstr);
+	*/
+	
 	myt_pos++;
 	return true;
 }
+
 //
 bool time_timer_running(void) { return myt_running; }
 //
@@ -169,6 +195,65 @@ bool time_timer_stop(void) {
 	return true;
 }
 
+//
+void time_timer_save(void) {
+	// Generate cJSON
+	cJSON *myt_ary;
+    myt_ary  = cJSON_CreateArray();
+    for(int i=0; i<myt_pos; i++) {
+	    cJSON *myt_obj  = cJSON_CreateObject();
+	    //
+	    cJSON_AddItemToObject(myt_obj,"startHour", cJSON_CreateNumber( myt[i].start_time.tm_hour )); 
+	    cJSON_AddItemToObject(myt_obj,"startMin", cJSON_CreateNumber( myt[i].start_time.tm_min ));
+	    //
+	    cJSON_AddItemToObject(myt_obj,"endHour", cJSON_CreateNumber( myt[i].end_time.tm_hour )); 
+	    cJSON_AddItemToObject(myt_obj,"endMin", cJSON_CreateNumber( myt[i].end_time.tm_min ));
+	    //
+	    cJSON_AddItemToObject(myt_obj,"gpio", cJSON_CreateNumber( myt[i].gpio ));
+	    cJSON_AddItemToArray(myt_ary,myt_obj);
+	}
+	char *out = cJSON_Print( myt_ary );
+    printf("time_timer_add() cJSON out: %s\n",out);
+    // Save to nvs
+    nvs_handle_t nvsh;
+	esp_err_t err = nvs_open("timer_storage",NVS_READWRITE,&nvsh);
+	//
+	nvs_erase_key(nvsh,"json");
+	//
+	nvs_set_str(nvsh, "json", out);
+	nvs_commit( nvsh );
+	nvs_close( nvsh );
+}
+// retrive timer settings if exists. (timer_storage)
+void time_timer_init(void) {
+	char tmpout[1024];
+	cJSON *myt_ary;
+	nvs_handle_t nvsh;
+	esp_err_t err = nvs_open("timer_storage",NVS_READWRITE,&nvsh);
+	err = t3ch_nvs_get_str(nvsh,"json",&tmpout);
+	nvs_close(nvsh);
+	if( strlen(tmpout)>0 ) {
+		printf("time_timer_init() tmpout: %s\n", tmpout);
+		myt_ary = cJSON_Parse( tmpout );
+		int myt_size = cJSON_GetArraySize( myt_ary );
+		for(int i=0; i<myt_size; i++) {
+			cJSON *myt_obj    = cJSON_GetArrayItem(myt_ary,i);
+			cJSON *startHour = cJSON_GetObjectItemCaseSensitive(myt_obj,"startHour");
+			printf("time_timer_init() startHour: %s\n",cJSON_Print(startHour));
+			//
+			time_timer_add(
+			    getInt( cJSON_Print(cJSON_GetObjectItemCaseSensitive(myt_obj,"startHour")) ),
+			    getInt( cJSON_Print(cJSON_GetObjectItemCaseSensitive(myt_obj,"startMin")) ),
+			    getInt( cJSON_Print(cJSON_GetObjectItemCaseSensitive(myt_obj,"endHour")) ),
+			    getInt( cJSON_Print(cJSON_GetObjectItemCaseSensitive(myt_obj,"endMin")) ),
+			    getInt( cJSON_Print(cJSON_GetObjectItemCaseSensitive(myt_obj,"gpio")) )
+			);
+		}
+	}
+	else {
+		printf("time_timer_init() tmpout empty!\n");
+	}
+}
 //-- UPDATE TIME TROUGH NET
 //
 void time_sync_notification_cb(struct timeval *tv) {
@@ -227,6 +312,7 @@ void t3ch_time_set_tm( struct tm TimeInfo ) {
     settimeofday(&tnow, NULL);
     localtime_r(&t, &timeinfo);
 }
+
 //
 bool t3ch_time_chk( struct tm starttime, struct tm endtime ) {
     //

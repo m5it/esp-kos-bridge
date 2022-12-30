@@ -107,6 +107,7 @@ bool t3ch_wifi_update_sta(char *ssid, char *pwd) {
 		printf("t3ch_wifi_update_ap() Failed (d4).\n");
 		return false;
 	}
+	nvs_close(nvsh);
 	return true;
 }
 
@@ -176,7 +177,7 @@ bool t3ch_wifi_update_ap(char *ssid, char *pwd) {
 		printf("t3ch_wifi_update_ap() Failed (d4).\n");
 		return false;
 	}
-	
+	nvs_close(nvsh);
 	//
 	esp_bridge_wifi_set(WIFI_MODE_AP, ssid, pwd, NULL);
 	    

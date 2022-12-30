@@ -272,10 +272,10 @@ function ready() {
 	qS("input[name='tm_mday']").value  = (new Date()).getDate();
 	//-- Generate select blocks for timer
 	//
-	generate_select_hour({name:"startHour",appendElement:document.querySelector("#startHour"),});
-	generate_select_hour({name:"endHour",appendElement:document.querySelector("#endHour"),});
-	generate_select_min({name:"startMin",appendElement:document.querySelector("#startMin"),});
-	generate_select_min({name:"endMin",appendElement:document.querySelector("#endMin"),});
+	generate_select_hour({name:"startHour",appendElement:qS("#startHour"),});
+	generate_select_hour({name:"endHour",appendElement:qS("#endHour"),});
+	generate_select_min({name:"startMin",appendElement:qS("#startMin"),});
+	generate_select_min({name:"endMin",appendElement:qS("#endMin"),});
 	
 	//-- Start infinite loop to retrive Free and Time of server
 	//
@@ -394,9 +394,6 @@ function ready() {
 		});
 		return false;
 	});
-	
-	// Timer Delete
-	timerDelete();
 	
 	//
 	qS("#timerStop").addEventListener("click",function(e) {

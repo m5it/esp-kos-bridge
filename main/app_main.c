@@ -183,6 +183,7 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_console_start_repl(s_repl));
     //--
     t3ch_events_init();
+    time_timer_init();
     //
     //esp_bridge_create_all_netif();
     
