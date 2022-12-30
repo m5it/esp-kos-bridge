@@ -322,7 +322,7 @@ bool t3ch_time_chk( struct tm starttime, struct tm endtime ) {
 	int startsec = ((starttime.tm_hour*60)*60) + (starttime.tm_min*60) + starttime.tm_sec;
 	int endsec   = ((endtime.tm_hour*60)*60) + (endtime.tm_min*60) + endtime.tm_sec;
 	int cursec   = ((timeinfo.tm_hour*60)*60) + (timeinfo.tm_min*60) + timeinfo.tm_sec;
-	//ESP_LOGI(TAG, "t3ch_time_chk() startsec: %i, endsec: %i, cursec: %i", startsec, endsec, cursec);
+	printf("t3ch_time_chk() startsec: %i, endsec: %i, cursec: %i", startsec, endsec, cursec);
 	if( startsec<=cursec && endsec>=cursec ) return true;
 	return false;
 }
