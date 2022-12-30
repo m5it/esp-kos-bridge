@@ -2,6 +2,7 @@
 <hr>
 
 This version of esp-iot-bridge is focused on wifi extender and timer for gpio pins.
+Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
 
 # How to start<br>
 1.) Upload to your MCU.<br>
