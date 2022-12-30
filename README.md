@@ -12,7 +12,7 @@ This version of esp-iot-bridge is focused on wifi extender and timer for gpio pi
       idf.py -p /dev/tty.usbserial-54F90067081 -b 115200 flash<br>
 
 2.) connect to wifi ssid: STARTING_SSID, pwd: STARTING_PWD<br>
-    ssid & pwd of AP can be changed in t3ch_config.h if necessary!<br>
+    ssid & pwd of AP can be changed in t3ch_config.h if necessary before upload or later with HTTP panel.<br>
     
 3.) navigate to http://192.168.4.1<br>
 
