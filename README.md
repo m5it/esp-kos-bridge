@@ -28,7 +28,7 @@ Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
 
 # Support up to 100 timer configurations and can be configured more if necessary but i guess no. :)
 
-# Supported HTTPD Requests
+# Supported HTTP Requests
   * /free
   * /time/
     - settm
