@@ -8,6 +8,12 @@ This version of esp-iot-bridge is focused on wifi extender.
 2.) navigate to http://192.168.4.1<br>
 3.) configure time, ap, sta, timer... enjoy.<br>
 
+# Supported save of data into NVS. ( If device stays out of power, things still gets saved! )
+  - timer settings
+  - ap settings
+  - sta settings
+(Time still needs to be set if device gets out of power! :/)
+
 # Supported HTTPD Requests:
   - /free
   - /time/
