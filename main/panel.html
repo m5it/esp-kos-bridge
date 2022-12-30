@@ -1,8 +1,26 @@
+<!--
+/**    Started by Espressif Systems - modified by by t3ch aka B.K.
+ * -------------------------------------------------------------------
+ *               ESP-KOS-BRIDGE => WiFi Extender / Timer
+ *               https://github.com/m5it/esp-kos-bridge
+ * -------------------------------------------------------------------
+ *            If you like project consider donating. 
+ *                   Donate - Welcome - Thanks!
+ *    https://www.paypal.com/donate/?hosted_button_id=QGRYL4SL5N4FE
+ * Donate - Donar - Spenden - Daruj - пожертвовать - दान करना - 捐 - 寄付
+ */
+-->
 <html>
 <head>
 <title>Welcome To ESP-KOS-BRIDGE</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta charset="UTF-8">
 <style>
+/**/
+* {
+	line-break: anywhere;
+}
 label {
 	font-weight:bolder;
 	padding:3px 5px;
@@ -11,13 +29,115 @@ label:after {
 	clear:both;
 	display:block;
 }
+button {
+	padding:2px;
+}
+.header {
+	border: solid 1px black;
+    padding: 7px;
+    margin: 13px;
+    border-radius: 13px;
+    box-shadow: 0px 0px 2px 1px lightgrey;
+}
+.field {
+	float:left;
+	width:33%;
+	box-sizing:border-box;
+}
+.dfield {
+	display:inline-block;
+}
+.spec6 {}
+.spec6 .dfield {
+	max-width:18%;
+	text-align:center;
+}
+.spec6 .dfield label {
+	overflow: hidden;
+    display: block;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.trifield {
+}
+#tm {}
+#tm > div {}
+#tm > div:after {clear: both;content: ".";display: block;font-size: 0;height: 0;line-height: 0;visibility: hidden;} {}
+#tm > div > label {}
+#tm > div > input {
+	float:left;
+	margin-left:20px;
+}
 
+.timerDisplay {
+	margin:2px;
+}
+.timerDisplay .title {}
+.timerDisplay .title > div {
+	font-weight:bolder;
+}
+.timerDisplay > div > div {
+	display:inline-block;
+	width:16%;
+	white-space:nowrap;
+}
+/**/
 .clearfix:after {clear: both;content: ".";display: block;font-size: 0;height: 0;line-height: 0;visibility: hidden;}
 .clearfix { display: inline-block; }
 * html .clearfix { height: 1%; }
 .clearfix { display: block; }
+/**/
+@media only screen and (max-width: 600px) and (min-width: 320px)  {
+	.field {
+		float:none !important;
+		width:auto;
+	}
+	.trifield {
+		display:block !important;
+		float:none !important;
+	}
+}
 </style>
 <script>
+//
+var loading_d=null, loading_d1=null;
+function loadingStart() {
+	loading_d = document.createElement("div");
+	loading_d.setAttribute("style","position:fixed;top:0px;left:0px;right:0px;bottom:0px;background:black;opacity:0.6;z-index:1999;");
+	loading_d1 = document.createElement("div");
+	loading_d1.setAttribute("style","position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:white;font-weight:bolder;font-size:1.4em;z-index:2000;");
+	loading_d1.innerText = "LOADING...";
+	qS("body").appendChild(loading_d);
+	qS("body").appendChild(loading_d1);
+}
+function loadingStop() {
+	loading_d.remove();
+	loading_d1.remove();
+	loading_d=null, loading_d1=null;
+}
+//
+function generate_select_hour(opt) {
+	var opt_name = (typeof(opt)=='object' && typeof(opt.name)!='undefined'?opt.name:"startHour");
+	var opt_appendElement = (typeof(opt)=='object' && typeof(opt.appendElement)!='undefined'?opt.appendElement:null);
+	if(opt_appendElement==null) return false;
+	var ret="<select name='"+opt_name+"'>";
+	for(var i=0; i<=23; i++) {
+		ret += "<option value=\""+i+"\">"+i+"</option>";
+	}
+	ret += "</select>";
+	opt_appendElement.innerHTML = ret;
+}
+function generate_select_min(opt) {
+	var opt_name = (typeof(opt)=='object' && typeof(opt.name)!='undefined'?opt.name:"startMin");
+	var opt_appendElement = (typeof(opt)=='object' && typeof(opt.appendElement)!='undefined'?opt.appendElement:null);
+	if(opt_appendElement==null) return false;
+	var ret="<select name='"+opt_name+"'>";
+	for(var i=0; i<=55; i+=5) {
+		ret += "<option value=\""+i+"\">"+i+"</option>";
+	}
+	ret += "</select>";
+	opt_appendElement.innerHTML = ret;
+}
 function qS(s) {return document.querySelector(s);}
 function Stringify( cssSelector, opt ) {
 	var ret={};
@@ -69,12 +189,95 @@ function infoLoop() {
 	// Repeat loop in 5s
 	setTimeout(function() { infoLoop(); },5000);
 }
+//--
+//
+function timerGet( opt ) {
+	Fetch({href:document.location.origin+"/timer/",onDone:function(json) {
+		console.info("timer",json);
+		var html="<div class='timerDisplay'>";
+		html += "<div class=\"title\">"+
+				"<div>GPIO</div>"+
+				"<div>StartHour</div>"+
+				"<div>StartMin</div>"+
+				"<div>EndHour</div>"+
+				"<div>EndMin</div>"+
+				"<div>Running</div>"+
+			"</div>";
+		for(var i=0; i<json.length; i++) {
+			html += "<div><div>"+json[i].gpio+"</div>";
+			html += "<div>"+json[i].startHour+"</div>";
+			html += "<div>"+json[i].startMin+"</div>";
+			html += "<div>"+json[i].endHour+"</div>";
+			html += "<div>"+json[i].endMin+"</div>";
+			html += "<div>"+(json[i].running?"YES":"NO")+"</div>";
+			html += "<div><button class='timerDelete' attr='"+i+"'>x</button></div></div>";
+		}
+		html += "</div>";
+		qS("#displayTimer").innerHTML = html;
+		//
+		timerDelete();
+		//
+		if( typeof(opt)=='object' && typeof(opt.loop)!='undefined' && opt.loop ) {
+			setTimeout(function() { timerGet(opt); }, 10000);
+		}
+	},});
+}
+//
+function timerStat() {
+	Fetch({href:document.location.origin+"/timer/?stat=1",onDone:function(json) {
+		console.info("timer stat",json);
+		qS("#timerInfo").innerText = (json.running?"Running!":"Not running!");
+	},});
+}
+//
+function timerDelete() {
+	if( qS(".timerDelete")!=null ) {
+		var a = document.querySelectorAll(".timerDelete:not(.initialized)");
+		for(var i=0; i<a.length; i++) {
+			a[i].classList.add("initialized");
+			a[i].addEventListener("click",function(e) {
+				e.preventDefault();
+				var tmp = this.getAttribute("attr");
+				console.info("timerDel id",tmp);
+				loadingStart();
+				Fetch({href:document.location.origin+"/timer/?del="+tmp,
+					onDone:function(json){
+						console.info("timerAdd response",json);
+						// response like ?stat=1
+						// {success,size,pos,running}
+						if( json.success ) {
+							timerGet();
+						}
+						else {
+							alert("Something failed... :x"+JSON.stringify(json));
+						}
+						loadingStop();
+					},
+				});
+				return false;
+			});
+		}
+	}
+}
 //
 window.onload = function() {
 	ready();
 }
 //
 function ready() {
+	//-- Set some inputs
+	//
+	qS("input[name='tm_year']").value  = (new Date()).getFullYear();
+	qS("input[name='tm_mon']").value   = (new Date()).getMonth();
+	qS("input[name='tm_mday']").value  = (new Date()).getDate();
+	//-- Generate select blocks for timer
+	//
+	generate_select_hour({name:"startHour",appendElement:document.querySelector("#startHour"),});
+	generate_select_hour({name:"endHour",appendElement:document.querySelector("#endHour"),});
+	generate_select_min({name:"startMin",appendElement:document.querySelector("#startMin"),});
+	generate_select_min({name:"endMin",appendElement:document.querySelector("#endMin"),});
+	
+	//-- Start infinite loop to retrive Free and Time of server
 	//
 	infoLoop();
 	
@@ -85,12 +288,18 @@ function ready() {
 		qS("#displayAPPWD>input").value    = json.ap_pwd;
 		qS("#displaySTASSID>input").value  = json.sta_ssid;
 		qS("#displaySTAPWD>input").value   = json.sta_pwd;
+		qS("#displayVersion>div").innerText= json.version+" "+json.version_string;
 	},});
+	
+	// fire once, retrive timer info
+	timerGet({loop:true});
+	timerStat();
 	
 	// Update server time
 	qS("#tm_submit").addEventListener("click",function(e) {
 		e.preventDefault();
-		
+		loadingStart();
+		console.info("#tm_submit clicked.");
 		var q = document.location.origin+"/time/?settm=1"+
 		    "&tm_hour="+qS("#tm input[name='tm_hour']").value+
 		    "&tm_min="+qS("#tm input[name='tm_min']").value+
@@ -102,15 +311,18 @@ function ready() {
 		//
 		Fetch({href:q,onDone:function(json){
 			console.info("timetm response",json);
+			loadingStop();
 		},});
 		
-		e.stopPropagation();
 		return false;
 	});
 	
 	// Update ap
 	qS("#updateAP").addEventListener("click",function(e) {
+		e.preventDefault();
+		console.info("#updateAP clicked.");
 		if( !confirm("Are you sure?") ) return;
+		loadingStart();
 		Fetch({href:document.location.origin+"/wifi/?setap=1"+
 			"&ssid="+qS("input[name='displayAPSSID']").value+
 			"&pwd="+qS("input[name='displayAPPWD']").value,
@@ -123,12 +335,17 @@ function ready() {
 			else {
 				alert("Update of AP Failed!");
 			}
+			loadingStop();
 		},});
+		return false;
 	});
 	
 	// Update sta
 	qS("#updateSTA").addEventListener("click",function(e) {
+		e.preventDefault();
+		console.info("#updateSTA clicked.");
 		if( !confirm("Are you sure?") ) return;
+		loadingStart();
 		Fetch({href:document.location.origin+"/wifi/?setsta=1"+
 			"&ssid="+qS("input[name='displaySTASSID']").value+
 			"&pwd="+qS("input[name='displaySTAPWD']").value,
@@ -141,66 +358,132 @@ function ready() {
 			else {
 				alert("Update of STA Failed!");
 			}
+			loadingStop();
 		},});
+		return false;
+	});
+	
+	// Timer Add
+	qS("#timerAdd").addEventListener("click",function(e) {
+		e.preventDefault();
+		console.info("timerAdd clicked.");
+		loadingStart();
+		Fetch({href:document.location.origin+"/timer/?add=1"+
+			"&startHour="+qS("select[name='startHour']").value+
+			"&startMin="+qS("select[name='startMin']").value+
+			"&endHour="+qS("select[name='endHour']").value+
+			"&endMin="+qS("select[name='endMin']").value+
+			"&gpio="+qS("input[name='gpio']").value,
+			onDone:function(json){
+				console.info("timerAdd response",json);
+				// response like ?stat=1
+				// {success,size,pos,running}
+				if( json.success ) {
+					timerGet();
+				}
+				else {
+					if( json.size==json.pos ) {
+						alert("No more space for timer.");
+					}
+					else {
+						alert("Something failed... :x"+JSON.stringify(json));
+					}
+				}
+				loadingStop();
+			},
+		});
+		return false;
+	});
+	
+	// Timer Delete
+	timerDelete();
+	
+	//
+	qS("#timerStop").addEventListener("click",function(e) {
+		e.preventDefault();
+		console.info("timerStop clicked.");
+		loadingStart();
+		Fetch({href:document.location.origin+"/timer/?stop=1",onDone:function(json){
+			console.info("timerStop json",json);
+			timerStat();
+			loadingStop();
+		},});
+		return false;
 	});
 	
 	//
-	qS("input[name='tm_year']").value  = (new Date()).getFullYear();
-	qS("input[name='tm_mon']").value   = (new Date()).getMonth();
-	qS("input[name='tm_mday']").value  = (new Date()).getDate();
+	qS("#timerStart").addEventListener("click",function(e) {
+		e.preventDefault();
+		console.info("timerStart clicked.");
+		loadingStart();
+		Fetch({href:document.location.origin+"/timer/?start=1",onDone:function(json){
+			console.info("timerStart json",json);
+			loadingStop();
+			timerStat();
+		},});
+		return false;
+	});
 }
 </script>
 </head>
 <body>
 
-<div>
-	<div id="displayTime" style="float:left;"><label>Server Time</label><div></div></div>
-	<div id="displayFree" style="float:right;"><label>Server Free</label><div></div></div>
-	<div style="width:70%;max-width:320px;margin:0px auto;text-align:center;">
+<div class="header">
+	<div id="displayTime" class="trifield" style="float:left;"><label>Server Time</label><div></div></div>
+	<div id="displayFree" class="trifield" style="float:right;">
+		<div id="displayFree">
+			<label>Server Free</label>
+			<div></div>
+		</div>
+		<div id="displayVersion">
+			<label>Version</label>
+			<div></div>
+		</div>
+	</div>
+	<div class="trifield" style="width:70%;max-width:320px;margin:0px auto;text-align:center;">
 		<div style="font-weight:bolder;font-size:1.3em;">
 			ESP - KOS - BRIDGE
 		</div>
 		<div style="font-size:0.9em;">
-			aka WiFi Extender<br>
-			aka Day Extender / Timer ;)
+			aka WiFi Extender, aka Day Extender / Timer ;)
 		</div>
 	</div>
 	<div class="clearfix"></div>
 </div>
 
-<hr>
 
-<div>
+<div class="field">
 	<label>WiFi Informations</label>
 	<div>
-		<label>AP SSID</label>
-		<div id="displayAPSSID"><input name="displayAPSSID" value=""></div>
-	</div>
-	<div>
-		<label>AP PWD</label>
-		<div id="displayAPPWD"><input name="displayAPPWD" value=""></div>
-	</div>
-	<div style="margin:13px;">
-		<button id="updateAP">Update AP</button>
-	</div>
-	
-	<div>
-		<label>STA SSID</label>
-		<div id="displaySTASSID"><input name="displaySTASSID" value=""></div>
-	</div>
-	<div>
-		<label>STA PWD</label>
-		<div id="displaySTAPWD"><input name="displaySTAPWD" value=""></div>
-	</div>
-	<div style="margin:13px;">
-		<small>If STA ssid & pwd are empty then network extender is disabled and only AP runs as control panel.</small><br>
-		<button id="updateSTA">Update STA & Restart</button>
+		<div>
+			<label>AP SSID</label>
+			<div id="displayAPSSID"><input name="displayAPSSID" value=""></div>
+		</div>
+		<div>
+			<label>AP PWD</label>
+			<div id="displayAPPWD"><input name="displayAPPWD" value=""></div>
+		</div>
+		<div style="margin:13px;">
+			<button id="updateAP">Update AP</button>
+		</div>
+		
+		<div>
+			<label>STA SSID</label>
+			<div id="displaySTASSID"><input name="displaySTASSID" value=""></div>
+		</div>
+		<div>
+			<label>STA PWD</label>
+			<div id="displaySTAPWD"><input name="displaySTAPWD" value=""></div>
+		</div>
+		<div style="margin:13px;">
+			<small>If STA ssid & pwd are empty then network extender is disabled and only AP runs as control panel.</small><br>
+			<button id="updateSTA">Update STA & Restart</button>
+		</div>
 	</div>
 </div>
 
-<hr>
 
-<div>
+<div class="field">
 	<label>Set Server/Timer Time ( struct tm )</label>
 	<div><form id="tm">
 		<!-- struct tm -->
@@ -214,31 +497,45 @@ function ready() {
 		<div><label>TM YDAY</label><input type="text" name="tm_yday" value="" disabled=disabled></div>
 		<div><label>TM MON</label><input type="text" name="tm_mon" value=""></div>
 		<div><label>TM ISDST</label><input type="text" name="tm_isdst" value="" disabled=disabled></div>
-	
-		<div><button name="submit" id="tm_submit">set</button></div>
+		<br>
+		<div align="center"><button name="submit" id="tm_submit">Set</button></div>
 	</form></div>
 </div>
 
-<hr>
-<div>
-    <div>
-        <div>
-			<label>Define gpio</label>
-			<div><input type="text" id="" value=""> Define GPIO for 5W Led.</div>
+<div class="field">
+	<label>Timer Settings</label>
+    <div class="spec6">
+        <div class="dfield">
+			<label>GPIO</label>
+			<div><input type="text" name="gpio" value="" size=2></div>
 		</div>
-        <div>
-			<div style="width:50%;float:left;box-sizing:border-box;">
-				<label>Start hour</label>
-		        <div>
-		        </div>
-	        </div>
-	        <div style="width:50%;float:left;box-sizing:border-box;">
-				<label>End hour</label>
-		        <div>
-		        </div>
-	        </div>
-	        <div class="clearfix"></div>
+		<div class="dfield">
+			<label>Start hour</label>
+	        <div id="startHour"></div>
         </div>
+        <div class="dfield">
+			<label>Start min</label>
+	        <div id="startMin"></div>
+        </div>
+        <div class="dfield">
+			<label>End hour</label>
+	        <div id="endHour"></div>
+        </div>
+        <div class="dfield">
+			<label>End min</label>
+	        <div id="endMin"></div>
+        </div>
+        <div class="dfield">
+	        <button id="timerAdd">Add</button>
+        </div>
+        <div class="clearfix"></div>
+    </div>
+    
+    <label>Timer display</label> 
+    <button id="timerStart">Start</button> | <button id="timerStop">Stop</button> 
+    <div id="timerInfo" style="display:inline-block;"></div>
+    <div id="displayTimer">
+	    <div></div>
     </div>
 </div>
 

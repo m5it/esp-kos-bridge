@@ -1,3 +1,14 @@
+/**    Started by Espressif Systems - modified by by t3ch aka B.K.
+ * -------------------------------------------------------------------
+ *               ESP-KOS-BRIDGE => WiFi Extender / Timer
+ *               https://github.com/m5it/esp-kos-bridge
+ * -------------------------------------------------------------------
+ *            If you like project consider donating. 
+ *                   Donate - Welcome - Thanks!
+ *    https://www.paypal.com/donate/?hosted_button_id=QGRYL4SL5N4FE
+ * Donate - Donar - Spenden - Daruj - пожертвовать - दान करना - 捐 - 寄付
+ */
+
 #include "t3ch_time.h"
 #include "driver/gpio.h"
 //--
@@ -14,6 +25,7 @@ static struct mytimer {
     struct tm end_time;
     //
     bool running;
+    int gpio;
 };
 //
 struct mytimer myt[2];
@@ -27,23 +39,20 @@ void time_timer(void * pvp) {
 		for(int i=0; i<time_timer_pos(); i++) {
 			//
 			if( !myt[i].running && t3ch_time_chk( myt[i].start_time, myt[i].end_time ) ) {
-				printf("Temporary timer at %i not running, Starting.\n",i);
-				
-				bool chk = t3ch_time_chk( myt[i].start_time, myt[i].end_time );
-				printf("Temporary timer is true: %s\n", (chk?"YES":"NO") );
+				printf("Temporary timer at %i not running, STARTING now on gpio: %i!\n", i, myt[i].gpio);
 				myt[i].running = true;
-				gpio_set_level(GPIO_NUM_26,1);
+				gpio_set_level(myt[i].gpio,1);
 			}
 			else if( myt[i].running && !t3ch_time_chk( myt[i].start_time, myt[i].end_time ) ) {
-				printf("Temporary timer at %i running, Shutting down.\n",i);
+				printf("Temporary timer at %i running, Shutting down on gpio: %i.\n", i, myt[i].gpio);
 				myt[i].running = false;
-				gpio_set_level(GPIO_NUM_26,0);
+				gpio_set_level(myt[i].gpio,0);
 			}
 			else if( myt[i].running ) {
-				printf("Temporary timer at %i running...\n",i);
+				printf("Temporary timer at %i running on gpio: %i...\n", i, myt[i].gpio);
 			}
 			else {
-				printf("Temporary timer at %i not running...\n",i);
+				printf("Temporary timer at %i not running for gpio: %i...\n", i, myt[i].gpio);
 			}
 		}
 		vTaskDelay(5000 / portTICK_PERIOD_MS);
@@ -86,8 +95,8 @@ int time_timer_get(char *out) {
 	jsonlen = sprintf(ret+jsonlen,"[");
 	for(int i=0; i<myt_pos; i++) {
 		printf("time_timer_get() at: %i, jsonlen: %i\n",i,jsonlen);
-		jsonlen += sprintf(ret+jsonlen,"{\"startHour\":%i,\"startMin\":%i,\"endHour\":%i,\"endMin\":%i,\"running\":%s}",
-		    myt[i].start_time.tm_hour, myt[i].start_time.tm_min,myt[i].end_time.tm_hour, myt[i].end_time.tm_min, (myt[i].running?"true":"false") );
+		jsonlen += sprintf(ret+jsonlen,"{\"gpio\":%i,\"startHour\":%i,\"startMin\":%i,\"endHour\":%i,\"endMin\":%i,\"running\":%s}%s",
+		    myt[i].gpio, myt[i].start_time.tm_hour, myt[i].start_time.tm_min,myt[i].end_time.tm_hour, myt[i].end_time.tm_min, (myt[i].running?"true":"false"), (i>=(myt_pos-1)?"":",") );
 	}
 	jsonlen += sprintf(ret+jsonlen,"]");
 	printf("time_timer_get() done, jsonlen: %i, data: %s\n",jsonlen,ret);
@@ -115,7 +124,10 @@ void time_timer_del(int pos) {
 	}
 }
 //
-bool time_timer_add(int startHour, int startMin, int endHour, int endMin) {
+bool time_timer_add(int startHour, int startMin, int endHour, int endMin, int gpio) {
+	printf("time_timer_add() STARTING, startHour: %i, startMin: %i, endHour: %i, endMin: %i\n",
+	    startHour, startMin, endHour, endMin);
+	//
 	if( myt_pos>=time_timer_size() ) {
 		printf("time_timer_add() Failed, timer full.");
 		return false;
@@ -128,6 +140,7 @@ bool time_timer_add(int startHour, int startMin, int endHour, int endMin) {
 	myt[myt_pos].end_time.tm_min    = endMin;
 	//
 	myt[myt_pos].running            = false;
+	myt[myt_pos].gpio               = gpio;
 	myt_pos++;
 	return true;
 }

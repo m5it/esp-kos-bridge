@@ -14,6 +14,17 @@
 //
 // AND BY KOS
 
+/**    Started by Espressif Systems - modified by by t3ch aka B.K.
+ * -------------------------------------------------------------------
+ *               ESP-KOS-BRIDGE => WiFi Extender / Timer
+ *               https://github.com/m5it/esp-kos-bridge
+ * -------------------------------------------------------------------
+ *            If you like project consider donating. 
+ *                   Donate - Welcome - Thanks!
+ *    https://www.paypal.com/donate/?hosted_button_id=QGRYL4SL5N4FE
+ * Donate - Donar - Spenden - Daruj - пожертвовать - दान करना - 捐 - 寄付
+ */
+ 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -126,7 +137,9 @@ static void esp_bridge_create_button(void)
 void app_main(void)
 {
     esp_log_level_set("*", ESP_LOG_INFO);
-	
+	printf("#--\n");
+	printf("# ESP-KOS-BRIDGE Starting v%i - %s\n",t3ch_version(), t3ch_version_string());
+	printf("#--\n");
 	
 	//
 	printf("Initializing storage.");

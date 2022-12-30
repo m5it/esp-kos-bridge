@@ -1,3 +1,14 @@
+/**    Started by Espressif Systems - modified by by t3ch aka B.K.
+ * -------------------------------------------------------------------
+ *               ESP-KOS-BRIDGE => WiFi Extender / Timer
+ *               https://github.com/m5it/esp-kos-bridge
+ * -------------------------------------------------------------------
+ *            If you like project consider donating. 
+ *                   Donate - Welcome - Thanks!
+ *    https://www.paypal.com/donate/?hosted_button_id=QGRYL4SL5N4FE
+ * Donate - Donar - Spenden - Daruj - пожертвовать - दान करना - 捐 - 寄付
+ */
+
 #include "esp_wifi.h"
 
 #include "t3ch_httpd.h"
@@ -149,20 +160,31 @@ static esp_err_t timer_get_handler(httpd_req_t *req)
 	}
 	else if( strlen(opt_add)>0 ) {
 		printf("timer_get_handler() starting ADD.\n");
-		char startHour[2]={0};
-		char startMin[2]={0};
-		char endHour[2]={0};
-		char endMin[2]={0};
+		char startHour[4]={0};
+		char startMin[4]={0};
+		char endHour[4]={0};
+		char endMin[4]={0};
+		char gpio[4]={0};
 		t3ch_httpd_get_param(req, "startHour", &startHour);
 		t3ch_httpd_get_param(req, "startMin", &startMin);
 		t3ch_httpd_get_param(req, "endHour", &endHour);
 		t3ch_httpd_get_param(req, "endMin", &endMin);
+		t3ch_httpd_get_param(req, "gpio", &gpio);
+		
+		printf("timer_get_handler() (D1) sHour: %i, sMin: %i, eHour: %i, eMin: %i, gpio: %i\n",
+		    startHour, startMin, endHour, endMin, gpio);
+		
 		int sHour = strtol(startHour, (char**)NULL, 10);
 		int sMin  = strtol(startMin, (char**)NULL, 10);
 		int eHour = strtol(endHour, (char**)NULL, 10);
 		int eMin  = strtol(endMin, (char**)NULL, 10);
-		bool suc = time_timer_add(sHour, sMin, eHour, eMin);
-		sprintf(res,"{\"success\":true,\"size\":\"%i\", \"pos\":\"%i\",\"running\":%s}",time_timer_size(),time_timer_pos(),(time_timer_running()?"true":"false"));
+		int igpio = strtol(gpio, (char**)NULL, 10);
+		
+		printf("timer_get_handler() (D2) sHour: %i, sMin: %i, eHour: %i, eMin: %i, gpio: %i\n",
+		    sHour, sMin, eHour, eMin, igpio);
+		
+		bool suc = time_timer_add(sHour, sMin, eHour, eMin, igpio);
+		sprintf(res,"{\"success\":%s,\"size\":\"%i\", \"pos\":\"%i\",\"running\":%s}",(suc?"true":"false"), time_timer_size(),time_timer_pos(),(time_timer_running()?"true":"false"));
 	}
 	else if( strlen(opt_del)>0 ) {
 		printf("timer_get_handler() starting DEL\n");
@@ -281,8 +303,8 @@ static esp_err_t wifi_get_handler(httpd_req_t *req)
 		}
 		
 		//
-		sprintf(res,"{\"success\":true,\"ap_ssid\":\"%s\",\"ap_pwd\":\"%s\",\"sta_ssid\":\"%s\",\"sta_pwd\":\"%s\"}",
-		    ap_ssid, ap_pwd, sta_ssid, sta_pwd);
+		sprintf(res,"{\"success\":true,\"ap_ssid\":\"%s\",\"ap_pwd\":\"%s\",\"sta_ssid\":\"%s\",\"sta_pwd\":\"%s\",\"version\":\"%d\",\"version_string\":\"%s\"}",
+		    ap_ssid, ap_pwd, sta_ssid, sta_pwd, t3ch_version(), t3ch_version_string());
 	}
 	//
 	httpd_resp_send(req, res, strlen(res));

@@ -1,3 +1,14 @@
+/**    Started by Espressif Systems - modified by by t3ch aka B.K.
+ * -------------------------------------------------------------------
+ *               ESP-KOS-BRIDGE => WiFi Extender / Timer
+ *               https://github.com/m5it/esp-kos-bridge
+ * -------------------------------------------------------------------
+ *            If you like project consider donating. 
+ *                   Donate - Welcome - Thanks!
+ *    https://www.paypal.com/donate/?hosted_button_id=QGRYL4SL5N4FE
+ * Donate - Donar - Spenden - Daruj - пожертвовать - दान करना - 捐 - 寄付
+ */
+
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "esp_wifi.h"
@@ -9,6 +20,14 @@ char APSSID[32]={0};
 char APPWD[64]={0};
 char STASSID[32]={0};
 char STAPWD[64]={0};
+
+char *t3ch_version_string(void) {
+	return VERSION_STRING;
+}
+
+int t3ch_version(void) {
+	return VERSION;
+}
 //
 void t3ch_wifi_start_sta(void) {
 	printf("t3ch_wifi_start_sta() STARTING\n");
