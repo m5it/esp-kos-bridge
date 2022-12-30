@@ -1,7 +1,7 @@
 # ESP-KOS-BRIDGE modified from ESP-IOT-Bridge Smart Gateway Solution
 <hr>
 
-This version of esp-iot-bridge is focused on wifi extender.
+This version of esp-iot-bridge is focused on wifi extender and timer for gpio pins.
 
 # How to start<br>
 1.) Upload to your MCU.<br>
