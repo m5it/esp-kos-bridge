@@ -3,8 +3,16 @@
 
 This version of esp-iot-bridge is focused on wifi extender.
 
-# How to start
+# How to start<br>
+1.) Upload to your MCU.<br>
+    (Choose correct PORT for your device! (-p) )<br>
+    Ex.:<br>
+      idf.py menuconfig (OPTIONAL)<br>
+      idf.py build      (OPTIONAL)<br>
+      idf.py -p /dev/tty.usbserial-54F90067081 -b 115200 flash<br>
 1.) connect to wifi ssid: STARTING_SSID, pwd: STARTING_PWD<br>
+    ssid & pwd of AP can be changed in t3ch_config.h if necessary!<br>
+    
 2.) navigate to http://192.168.4.1<br>
 3.) configure time, ap, sta, timer... enjoy.<br>
 
