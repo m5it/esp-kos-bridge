@@ -205,9 +205,14 @@ static esp_err_t timer_get_handler(httpd_req_t *req)
 	}
 	else {
 		printf("timer_get_handler() retriving json of timers.\n");
-		char tmp[256]={0};
-		int len = time_timer_get(tmp);
-		printf("timeer_get_handler tmp(%i/%i): %s\n",len,strlen(tmp),tmp);
+		int len = time_timer_gen();
+		char tmp[len];
+		time_timer_get(tmp);
+		//char *tmp;
+		//int len = time_timer_get(tmp);
+		//char *tmp = time_timer_get();
+		printf("timer_get_handler tmp(%i/%i): %s\n",len,strlen(tmp),tmp);
+		//printf("timer_get_handler tmp(%i): %s\n",strlen(tmp),tmp);
 		strcpy(res,tmp);
 	}
 	httpd_resp_send(req, res, strlen(res));

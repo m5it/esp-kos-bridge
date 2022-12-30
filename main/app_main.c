@@ -144,7 +144,11 @@ void app_main(void)
 	//
 	printf("Initializing storage.");
     esp_err_t err = esp_storage_init();
-	ESP_ERROR_CHECK( err );
+    ESP_ERROR_CHECK( err );
+    
+    //-- Use nvs_flash_erase() here just to fix super problems.
+    //nvs_flash_erase();
+    //--
     
     //
     printf("Initializing network interfaces.");

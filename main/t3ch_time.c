@@ -13,14 +13,16 @@
 #include "driver/gpio.h"
 #include "nvs.h"
 #include "cJSON.h" // https://github.com/DaveGamble/cJSON
-
+#include <string.h>
+#define TIMER_SIZE 100
 //--
 static const char *TAG = "T3CH_TIME";
 //
 static time_t now;
 static struct tm timeinfo;
 char strftime_buf[64];
-
+//
+char timer_data[256];
 //
 static struct mytimer {
 	//
@@ -33,7 +35,7 @@ static struct mytimer {
     int gpio;
 };
 //
-struct mytimer myt[2];
+struct mytimer myt[TIMER_SIZE];
 int myt_pos = 0;
 bool myt_running = false;
 TaskHandle_t h_myt;
@@ -76,24 +78,49 @@ int time_timer_pos(void) {
 	return myt_pos;
 }
 //
-int time_timer_get(char *out) {
-	printf("time_timer_get() STARTING, myt_pos: %i\n",myt_pos);
-	char ret[256]={0};
+int time_timer_gen(void) {
+	printf("time_timer_gen() STARTING, myt_pos: %i\n",myt_pos);
+	int startsize = 256;
+	//char ret[startsize];
+	timer_data[startsize];
+	memset(timer_data,'\0',startsize);
+	//char ret[256]={0};
 	int jsonlen=0;
-	jsonlen = sprintf(ret+jsonlen,"[");
+	jsonlen = sprintf(timer_data+jsonlen,"[");
 	for(int i=0; i<myt_pos; i++) {
-		printf("time_timer_get() at: %i, jsonlen: %i\n",i,jsonlen);
-		jsonlen += sprintf(ret+jsonlen,"{\"gpio\":%i,\"startHour\":%i,\"startMin\":%i,\"endHour\":%i,\"endMin\":%i,\"running\":%s}%s",
+		printf("time_timer_gen() at: %i, jsonlen: %i\n",i,jsonlen);
+		jsonlen += sprintf(timer_data+jsonlen,"{\"gpio\":%i,\"startHour\":%i,\"startMin\":%i,\"endHour\":%i,\"endMin\":%i,\"running\":%s}%s",
 		    myt[i].gpio, myt[i].start_time.tm_hour, myt[i].start_time.tm_min,myt[i].end_time.tm_hour, myt[i].end_time.tm_min, (myt[i].running?"true":"false"), (i>=(myt_pos-1)?"":",") );
+		// dinamically allocate / increase ret size if necessary
+		if( jsonlen>=(startsize-128) ) {
+			printf("time_timer_gen() fixing ret[] size! startsize: %i\n",startsize);
+			startsize += 128;
+			char tmpret[startsize];
+			printf("time_timer_gen() d1\n");
+			//memset(tmpret,'\0',startsize);
+			strcpy(tmpret,timer_data);
+			printf("time_timer_gen() d2\n");
+			timer_data[startsize];
+			printf("time_timer_gen() d3\n");
+			//memset(ret,'\0',startsize);
+			strcpy(timer_data,tmpret);
+			printf("time_timer_gen() d4\n");
+		}
 	}
-	jsonlen += sprintf(ret+jsonlen,"]");
-	printf("time_timer_get() done, jsonlen: %i, data: %s\n",jsonlen,ret);
-	strcpy(out,ret);
+	jsonlen += sprintf(timer_data+jsonlen,"]");
+	//printf("time_timer_gen() done, jsonlen: %i, data: %s\n",jsonlen,ret);
+	printf("time_timer_gen() done, jsonlen: %i, data: %s\n",jsonlen,timer_data);
+	//strcpy(out,ret);
 	return jsonlen;
 }
 //
+void time_timer_get(char *out) {
+	printf("time_timer_get() STARTED\n");
+	strcpy(out,timer_data);
+}
+//
 void time_timer_del(int pos) {
-	struct mytimer tmp[2];
+	struct mytimer tmp[TIMER_SIZE];
 	for(int i=0; i<time_timer_pos(); i++) {
 		if(i!=pos) {
 			tmp[i] = myt[i];
@@ -106,7 +133,7 @@ void time_timer_del(int pos) {
 			myt_pos--;
 		}
 	}
-	myt[2];
+	myt[TIMER_SIZE];
 	for(int i=0; i<myt_pos; i++) {
 		myt[i] = tmp[i];
 	}
@@ -115,13 +142,17 @@ void time_timer_del(int pos) {
 
 //
 bool time_timer_exists(struct tm starttime, struct tm endtime) {
-	printf("time_timer_exists() STARTING\n");
+	printf("time_timer_exists() STARTING myt_pos: %i\n");
 	//
-	int startsec = ((starttime.tm_hour*60)*60) + (starttime.tm_min*60) + starttime.tm_sec;
-	int endsec   = ((endtime.tm_hour*60)*60) + (endtime.tm_min*60) + endtime.tm_sec;
+	int startsec = ((starttime.tm_hour*60)*60) + (starttime.tm_min*60);// + starttime.tm_sec;
+	int endsec   = ((endtime.tm_hour*60)*60) + (endtime.tm_min*60);// + endtime.tm_sec;
 	for(int i=0; i<myt_pos; i++) {
-		int chkstartsec = ((myt[i].start_time.tm_hour*60)*60) + (myt[i].start_time.tm_min*60) + myt[i].start_time.tm_sec;
-		int chkendsec   = ((myt[i].end_time.tm_hour*60)*60) + (myt[i].end_time.tm_min*60) + myt[i].end_time.tm_sec;
+		int chkstartsec = ((myt[i].start_time.tm_hour*60)*60) + (myt[i].start_time.tm_min*60);// + myt[i].start_time.tm_sec;
+		int chkendsec   = ((myt[i].end_time.tm_hour*60)*60) + (myt[i].end_time.tm_min*60);// + myt[i].end_time.tm_sec;
+		
+		printf("time_timer_exists() startsec: %i vs chkstartsec: %i\n",startsec, chkstartsec);
+		printf("time_timer_exists() endsec: %i vs chkendsec: %i\n",endsec, chkendsec);
+		
 		if( startsec <= chkstartsec && endsec >= chkendsec ) {
 			printf("time_timer_exists() looks exists!\n");
 			return true;
@@ -136,10 +167,10 @@ bool time_timer_add(int startHour, int startMin, int endHour, int endMin, int gp
 	printf("time_timer_add() STARTING, startHour: %i, startMin: %i, endHour: %i, endMin: %i, gpio: %i\n",
 	    startHour, startMin, endHour, endMin, gpio);
 	//
-	if( myt_pos>=time_timer_size() ) {
-		printf("time_timer_add() Failed, timer full.");
-		return false;
-	}
+	//if( myt_pos>=time_timer_size() ) {
+	//	printf("time_timer_add() Failed, timer full.");
+	//	return false;
+	//}
 	//
 	struct tm tmp_start;
 	struct tm tmp_end;
@@ -226,11 +257,17 @@ void time_timer_save(void) {
 }
 // retrive timer settings if exists. (timer_storage)
 void time_timer_init(void) {
-	char tmpout[1024];
+	//char tmpout[1024];
 	cJSON *myt_ary;
 	nvs_handle_t nvsh;
+	size_t rs;
 	esp_err_t err = nvs_open("timer_storage",NVS_READWRITE,&nvsh);
-	err = t3ch_nvs_get_str(nvsh,"json",&tmpout);
+	nvs_get_str(nvsh,"json",NULL,&rs);
+	printf("time_timer_init() got json size: %d\n",rs);
+	// int convertdata = static_cast<int>(data)
+	char tmpout[ (int)(rs) ];
+	//err = t3ch_nvs_get_str(nvsh,"json",&tmpout);
+	err = nvs_get_str(nvsh,"json",tmpout,&rs);
 	nvs_close(nvsh);
 	if( strlen(tmpout)>0 ) {
 		printf("time_timer_init() tmpout: %s\n", tmpout);
@@ -257,6 +294,8 @@ void time_timer_init(void) {
 void time_sync_notification_cb(struct timeval *tv) {
     ESP_LOGI(TAG, "Notification of a time synchronization event");
 }
+
+//-- here up have forgot to add t3ch_... :) lol
 
 void t3ch_time_sntp_init(void) {
 	ESP_LOGI(TAG, "t3ch_time_sntp_init() starting.");

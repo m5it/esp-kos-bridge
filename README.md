@@ -26,6 +26,8 @@ Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
 
 (Time still needs to be set if device gets out of power! :/)
 
+# Support up to 100 timer configurations and can be configured more if necessary but i guess no. :)
+
 # Supported HTTPD Requests
   * /free
   * /time/
@@ -43,7 +45,7 @@ Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
 # Supported cJSON ! :)
 
 # Screenshoots
-![alt text](https://github.com/m5it/esp-kos-bridge/blob/main/screenshot_version-0.1.png)
+![alt text](https://github.com/m5it/esp-kos-bridge/blob/main/screenshot_version-0.1a.png)
 
 <hr>
 
