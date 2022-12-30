@@ -133,8 +133,8 @@ bool time_timer_exists(struct tm starttime, struct tm endtime) {
 
 //
 bool time_timer_add(int startHour, int startMin, int endHour, int endMin, int gpio) {
-	printf("time_timer_add() STARTING, startHour: %i, startMin: %i, endHour: %i, endMin: %i\n",
-	    startHour, startMin, endHour, endMin);
+	printf("time_timer_add() STARTING, startHour: %i, startMin: %i, endHour: %i, endMin: %i, gpio: %i\n",
+	    startHour, startMin, endHour, endMin, gpio);
 	//
 	if( myt_pos>=time_timer_size() ) {
 		printf("time_timer_add() Failed, timer full.");
@@ -238,8 +238,6 @@ void time_timer_init(void) {
 		int myt_size = cJSON_GetArraySize( myt_ary );
 		for(int i=0; i<myt_size; i++) {
 			cJSON *myt_obj    = cJSON_GetArrayItem(myt_ary,i);
-			cJSON *startHour = cJSON_GetObjectItemCaseSensitive(myt_obj,"startHour");
-			printf("time_timer_init() startHour: %s\n",cJSON_Print(startHour));
 			//
 			time_timer_add(
 			    getInt( cJSON_Print(cJSON_GetObjectItemCaseSensitive(myt_obj,"startHour")) ),
@@ -319,10 +317,16 @@ bool t3ch_time_chk( struct tm starttime, struct tm endtime ) {
 	//ESP_LOGI(TAG, "t3ch_time_chk() starting, starttime %i:%i, endtime %i:%i",
 	//    starttime.tm_hour, starttime.tm_min, endtime.tm_hour, endtime.tm_min );
 	//
+	printf("t3ch_time_chk() D1: %i:%i:%i\n",starttime.tm_hour, starttime.tm_min, starttime.tm_sec);
+	printf("t3ch_time_chk() D2: %i:%i:%i\n",endtime.tm_hour, endtime.tm_min, endtime.tm_sec);
+	// fuck the sec. bug.
+	starttime.tm_sec = 0;
+	endtime.tm_sec   = 0;
+	// :)
 	int startsec = ((starttime.tm_hour*60)*60) + (starttime.tm_min*60) + starttime.tm_sec;
 	int endsec   = ((endtime.tm_hour*60)*60) + (endtime.tm_min*60) + endtime.tm_sec;
 	int cursec   = ((timeinfo.tm_hour*60)*60) + (timeinfo.tm_min*60) + timeinfo.tm_sec;
-	printf("t3ch_time_chk() startsec: %i, endsec: %i, cursec: %i", startsec, endsec, cursec);
+	printf("t3ch_time_chk() startsec: %i, endsec: %i, cursec: %i\n", startsec, endsec, cursec);
 	if( startsec<=cursec && endsec>=cursec ) return true;
 	return false;
 }
