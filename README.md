@@ -38,6 +38,8 @@ Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
     - stat
   * /wifi/
 
+# Supported uart, jtag, x console commands.. (useful for testing, developing)
+
 # Screenshoots
 ![alt text](https://github.com/m5it/esp-kos-bridge/blob/main/screenshot_version-0.1.png)
 
