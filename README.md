@@ -12,6 +12,7 @@ This version of esp-iot-bridge is focused on wifi extender.
   - timer settings
   - ap settings
   - sta settings
+
 (Time still needs to be set if device gets out of power! :/)
 
 # Supported HTTPD Requests
