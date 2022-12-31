@@ -1,0 +1,186 @@
+% git checkout master
+Switched to branch 'master'
+Your branch is up to date with 'origin/master'.
+t3ch@iMac-Pro-de-blaz esp-kos-bridge % git pull
+remote: Enumerating objects: 153, done.
+remote: Counting objects: 100% (103/103), done.
+remote: Compressing objects: 100% (40/40), done.
+remote: Total 153 (delta 68), reused 86 (delta 63), pack-reused 50
+Receiving objects: 100% (153/153), 57.66 KiB | 410.00 KiB/s, done.
+Resolving deltas: 100% (76/76), completed with 25 local objects.
+From https://github.com/espressif/esp-iot-bridge
+   b60975f..ba6917e  master     -> origin/master
+Updating b60975f..ba6917e
+Fast-forward
+ .github/PULL_REQUEST_TEMPLATE.md                                              |  13 ++++
+ .github/workflows/build_example.yml                                           |  31 ++++++++
+ .github/workflows/build_test.yml                                              |  30 ++++++++
+ .github/workflows/issue_comment.yml                                           |  20 +++++
+ .github/workflows/new_issues.yml                                              |  20 +++++
+ .github/workflows/new_prs.yml                                                 |  25 +++++++
+ .github/workflows/upload_component.yml                                        |  20 +++++
+ .gitlab-ci.yml                                                                |  72 +++---------------
+ .pre-commit-config.yaml                                                       |  19 +++++
+ README.md                                                                     | 370 ++------------------------------------------------------------------------------------------
+ README_CN.md                                                                  | 369 ++------------------------------------------------------------------------------------------
+ components/esp_modem/private_include/esp_modem_device_specific_dce.h          |   2 +-
+ components/esp_modem/src/esp_modem_netif.c                                    |   2 +-
+ components/esp_modem/src/esp_sim7600.c                                        |   2 +-
+ components/esp_usbh_cdc/esp_usbh_cdc.c                                        |   2 +-
+ components/iot_bridge/CHANGELOG.md                                            |  11 +++
+ components/iot_bridge/CMakeLists.txt                                          |  12 ++-
+ components/iot_bridge/Kconfig                                                 | 118 +-----------------------------
+ components/iot_bridge/LICENSE                                                 | 202 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ components/iot_bridge/README.md                                               |  49 +++++++++++++
+ components/iot_bridge/User_Guide.md                                           | 371 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ components/iot_bridge/User_Guide_CN.md                                        | 370 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ components/iot_bridge/VERSION                                                 |   2 -
+ {doc => components/iot_bridge/doc}/Linux_based_readme.md                      |   0
+ {doc => components/iot_bridge/doc}/SDIO_setup.md                              |   0
+ {doc => components/iot_bridge/doc}/SPI_setup.md                               |   0
+ {doc => components/iot_bridge/doc}/_static/4G_dongle.png                      | Bin
+ {doc => components/iot_bridge/doc}/_static/4G_dongle_en.png                   | Bin
+ {doc => components/iot_bridge/doc}/_static/4G_hotpot.png                      | Bin
+ {doc => components/iot_bridge/doc}/_static/4G_hotpot_en.png                   | Bin
+ {doc => components/iot_bridge/doc}/_static/data_forwarding.png                | Bin
+ {doc => components/iot_bridge/doc}/_static/dongle.png                         | Bin
+ {doc => components/iot_bridge/doc}/_static/dongle_en.png                      | Bin
+ {doc => components/iot_bridge/doc}/_static/esp_iot_bridge.png                 | Bin
+ {doc => components/iot_bridge/doc}/_static/esp_iot_bridge_en.png              | Bin
+ {doc => components/iot_bridge/doc}/_static/eth.png                            | Bin
+ {doc => components/iot_bridge/doc}/_static/external.png                       | Bin
+ {doc => components/iot_bridge/doc}/_static/gpio_map.png                       | Bin
+ {doc => components/iot_bridge/doc}/_static/modem.png                          | Bin
+ {doc => components/iot_bridge/doc}/_static/web_server.png                     | Bin
+ {doc => components/iot_bridge/doc}/_static/web_server_en.png                  | Bin
+ {doc => components/iot_bridge/doc}/_static/wifi_router.png                    | Bin
+ {doc => components/iot_bridge/doc}/_static/wifi_router_en.png                 | Bin
+ {doc => components/iot_bridge/doc}/_static/wireless_dongle.png                | Bin
+ {doc => components/iot_bridge/doc}/_static/wireless_dongle_en.png             | Bin
+ components/iot_bridge/driver/CMakeLists.txt                                   |  24 ++++++
+ components/{network_adapter/Kconfig.projbuild => iot_bridge/driver/Kconfig}   |   0
+ components/{network_adapter => iot_bridge/driver}/include/interface.h         |   0
+ components/{network_adapter => iot_bridge/driver}/include/network_adapter.h   |   0
+ components/{network_adapter => iot_bridge/driver}/include/sdio_slave_api.h    |   0
+ components/{network_adapter => iot_bridge/driver}/include/slave_bt.h          |   0
+ components/{network_adapter => iot_bridge/driver}/src/network_adapter.c       |   0
+ components/{network_adapter => iot_bridge/driver}/src/sdio_slave_api.c        |   0
+ components/{network_adapter => iot_bridge/driver}/src/slave_bt.c              |   0
+ components/{network_adapter => iot_bridge/driver}/src/spi_slave_api.c         |   0
+ components/iot_bridge/idf_component.yml                                       |   7 ++
+ components/iot_bridge/include/esp_bridge.h                                    |  43 +++++++++--
+ components/iot_bridge/priv_inc/esp_bridge_config.h                            |  16 +++-
+ components/iot_bridge/priv_inc/esp_bridge_internal.h                          |  27 ++-----
+ components/iot_bridge/priv_inc/esp_bridge_modem.h                             |  19 ++++-
+ components/iot_bridge/priv_inc/esp_bridge_wifi.h                              |   2 +-
+ components/iot_bridge/src/bridge_common.c                                     |  64 ++++++++++------
+ components/iot_bridge/src/bridge_modem.c                                      | 143 ++++++++++++++++++++++++------------
+ components/iot_bridge/src/bridge_wifi.c                                       |  47 ++++++------
+ components/iot_bridge/src/modem_board_sim7600.c                               |  22 ++++--
+ components/iot_bridge/src/modem_board_usb.c                                   |  71 +++++++++++++-----
+ components/led/test/led_indicator_test.c                                      |   2 +-
+ components/network_adapter/CMakeLists.txt                                     |  21 ------
+ components/web_server/include/web_server.h                                    |   2 +-
+ components/web_server/src/web_server.c                                        | 310 +++++++++++++++++++++++++++++++++++++++++++++++++++++------------------------
+ components/wifi_prov_mgr/include/wifi_prov_mgr.h                              |   2 +-
+ components/wifi_prov_mgr/src/wifi_prov_mgr.c                                  | 141 +++++++++++++++++++----------------
+ examples/test.sh                                                              |  10 +++
+ CMakeLists.txt => examples/wifi_router/CMakeLists.txt                         |   6 +-
+ {main => examples/wifi_router/main}/CMakeLists.txt                            |   0
+ examples/wifi_router/main/Kconfig.projbuild                                   | 127 ++++++++++++++++++++++++++++++++
+ {main => examples/wifi_router/main}/app_main.c                                |  11 ++-
+ {main => examples/wifi_router/main}/idf_component.yml                         |  13 +++-
+ partitions.csv => examples/wifi_router/partitions.csv                         |   0
+ sdkconfig.defaults => examples/wifi_router/sdkconfig.defaults                 |   0
+ sdkconfig.defaults.esp32 => examples/wifi_router/sdkconfig.defaults.esp32     |   0
+ sdkconfig.defaults.esp32s2 => examples/wifi_router/sdkconfig.defaults.esp32s2 |   0
+ sdkconfig.defaults.esp32s3 => examples/wifi_router/sdkconfig.defaults.esp32s3 |   0
+ idf_patch/README.md                                                           |  21 ------
+ idf_patch/idf_patch_4_4.patch                                                 |  13 ----
+ idf_patch/idf_patch_5_0.patch                                                 |  13 ----
+ idf_patch/ip4_forward.patch                                                   |  17 -----
+ main/Kconfig.projbuild                                                        |  13 ----
+ optimize_sdkconfig/sdkconfig.defaults.esp32                                   |  27 -------
+ optimize_sdkconfig/sdkconfig.defaults.esp32c3                                 |  22 ------
+ optimize_sdkconfig/sdkconfig.defaults.esp32s2                                 |  50 -------------
+ optimize_sdkconfig/sdkconfig.defaults.esp32s3                                 |  52 -------------
+ requirements.txt                                                              |   6 --
+ test_app/CMakeLists.txt                                                       |  12 +++
+ test_app/main/CMakeLists.txt                                                  |   3 +
+ test_app/main/test_app_main.c                                                 |  16 ++++
+ test_app/sdkconfig.defaults                                                   |   2 +
+ 97 files changed, 2044 insertions(+), 1485 deletions(-)
+ create mode 100644 .github/PULL_REQUEST_TEMPLATE.md
+ create mode 100644 .github/workflows/build_example.yml
+ create mode 100644 .github/workflows/build_test.yml
+ create mode 100644 .github/workflows/issue_comment.yml
+ create mode 100644 .github/workflows/new_issues.yml
+ create mode 100644 .github/workflows/new_prs.yml
+ create mode 100644 .github/workflows/upload_component.yml
+ create mode 100644 .pre-commit-config.yaml
+ create mode 100644 components/iot_bridge/CHANGELOG.md
+ create mode 100644 components/iot_bridge/LICENSE
+ create mode 100644 components/iot_bridge/README.md
+ create mode 100644 components/iot_bridge/User_Guide.md
+ create mode 100644 components/iot_bridge/User_Guide_CN.md
+ delete mode 100644 components/iot_bridge/VERSION
+ rename {doc => components/iot_bridge/doc}/Linux_based_readme.md (100%)
+ rename {doc => components/iot_bridge/doc}/SDIO_setup.md (100%)
+ rename {doc => components/iot_bridge/doc}/SPI_setup.md (100%)
+ rename {doc => components/iot_bridge/doc}/_static/4G_dongle.png (100%)
+ rename {doc => components/iot_bridge/doc}/_static/4G_dongle_en.png (100%)
+ rename {doc => components/iot_bridge/doc}/_static/4G_hotpot.png (100%)
+ rename {doc => components/iot_bridge/doc}/_static/4G_hotpot_en.png (100%)
+ rename {doc => components/iot_bridge/doc}/_static/data_forwarding.png (100%)
+ rename {doc => components/iot_bridge/doc}/_static/dongle.png (100%)
+ rename {doc => components/iot_bridge/doc}/_static/dongle_en.png (100%)
+ rename {doc => components/iot_bridge/doc}/_static/esp_iot_bridge.png (100%)
+ rename {doc => components/iot_bridge/doc}/_static/esp_iot_bridge_en.png (100%)
+ rename {doc => components/iot_bridge/doc}/_static/eth.png (100%)
+ rename {doc => components/iot_bridge/doc}/_static/external.png (100%)
+ rename {doc => components/iot_bridge/doc}/_static/gpio_map.png (100%)
+ mode change 100755 => 100644
+ rename {doc => components/iot_bridge/doc}/_static/modem.png (100%)
+ rename {doc => components/iot_bridge/doc}/_static/web_server.png (100%)
+ rename {doc => components/iot_bridge/doc}/_static/web_server_en.png (100%)
+ rename {doc => components/iot_bridge/doc}/_static/wifi_router.png (100%)
+ rename {doc => components/iot_bridge/doc}/_static/wifi_router_en.png (100%)
+ rename {doc => components/iot_bridge/doc}/_static/wireless_dongle.png (100%)
+ rename {doc => components/iot_bridge/doc}/_static/wireless_dongle_en.png (100%)
+ create mode 100644 components/iot_bridge/driver/CMakeLists.txt
+ rename components/{network_adapter/Kconfig.projbuild => iot_bridge/driver/Kconfig} (100%)
+ rename components/{network_adapter => iot_bridge/driver}/include/interface.h (100%)
+ rename components/{network_adapter => iot_bridge/driver}/include/network_adapter.h (100%)
+ rename components/{network_adapter => iot_bridge/driver}/include/sdio_slave_api.h (100%)
+ rename components/{network_adapter => iot_bridge/driver}/include/slave_bt.h (100%)
+ rename components/{network_adapter => iot_bridge/driver}/src/network_adapter.c (100%)
+ rename components/{network_adapter => iot_bridge/driver}/src/sdio_slave_api.c (100%)
+ rename components/{network_adapter => iot_bridge/driver}/src/slave_bt.c (100%)
+ rename components/{network_adapter => iot_bridge/driver}/src/spi_slave_api.c (100%)
+ create mode 100644 components/iot_bridge/idf_component.yml
+ delete mode 100644 components/network_adapter/CMakeLists.txt
+ create mode 100755 examples/test.sh
+ rename CMakeLists.txt => examples/wifi_router/CMakeLists.txt (60%)
+ rename {main => examples/wifi_router/main}/CMakeLists.txt (100%)
+ create mode 100644 examples/wifi_router/main/Kconfig.projbuild
+ rename {main => examples/wifi_router/main}/app_main.c (94%)
+ rename {main => examples/wifi_router/main}/idf_component.yml (66%)
+ rename partitions.csv => examples/wifi_router/partitions.csv (100%)
+ rename sdkconfig.defaults => examples/wifi_router/sdkconfig.defaults (100%)
+ rename sdkconfig.defaults.esp32 => examples/wifi_router/sdkconfig.defaults.esp32 (100%)
+ rename sdkconfig.defaults.esp32s2 => examples/wifi_router/sdkconfig.defaults.esp32s2 (100%)
+ rename sdkconfig.defaults.esp32s3 => examples/wifi_router/sdkconfig.defaults.esp32s3 (100%)
+ delete mode 100644 idf_patch/README.md
+ delete mode 100644 idf_patch/idf_patch_4_4.patch
+ delete mode 100644 idf_patch/idf_patch_5_0.patch
+ delete mode 100644 idf_patch/ip4_forward.patch
+ delete mode 100644 main/Kconfig.projbuild
+ delete mode 100644 optimize_sdkconfig/sdkconfig.defaults.esp32
+ delete mode 100644 optimize_sdkconfig/sdkconfig.defaults.esp32c3
+ delete mode 100644 optimize_sdkconfig/sdkconfig.defaults.esp32s2
+ delete mode 100644 optimize_sdkconfig/sdkconfig.defaults.esp32s3
+ delete mode 100644 requirements.txt
+ create mode 100644 test_app/CMakeLists.txt
+ create mode 100644 test_app/main/CMakeLists.txt
+ create mode 100644 test_app/main/test_app_main.c
+ create mode 100644 test_app/sdkconfig.defaults
