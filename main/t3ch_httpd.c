@@ -141,7 +141,7 @@ static const httpd_uri_t reset_get = {
 static esp_err_t timer_get_handler(httpd_req_t *req)
 {
 	printf("timer_get_handler() STARTING.\n");
-	char res[512]={0};
+	//char res[512]={0};
 	char opt_stat[4]={0};
 	char opt_add[4]={0};
 	char opt_del[4]={0};
@@ -156,7 +156,10 @@ static esp_err_t timer_get_handler(httpd_req_t *req)
 	
 	if( strlen(opt_stat)>0 ) {
 		printf("timer_get_handler() retriving stat.\n");
+		char res[64];
+		memset(res,'\0',64);
 		sprintf(res,"{\"success\":true,\"size\":\"%i\", \"pos\":\"%i\",\"running\":%s}",time_timer_size(),time_timer_pos(),(time_timer_running()?"true":"false"));
+		httpd_resp_send(req, res, strlen(res));
 	}
 	else if( strlen(opt_add)>0 ) {
 		printf("timer_get_handler() starting ADD.\n");
@@ -185,37 +188,51 @@ static esp_err_t timer_get_handler(httpd_req_t *req)
 		
 		bool suc = time_timer_add(sHour, sMin, eHour, eMin, igpio);
 		if( suc ) time_timer_save();
+		char res[64];
+		memset(res,'\0',64);
 		sprintf(res,"{\"success\":%s,\"size\":\"%i\", \"pos\":\"%i\",\"running\":%s}",(suc?"true":"false"), time_timer_size(),time_timer_pos(),(time_timer_running()?"true":"false"));
+		httpd_resp_send(req, res, strlen(res));
 	}
 	else if( strlen(opt_del)>0 ) {
 		printf("timer_get_handler() starting DEL\n");
 		int pos = strtol(opt_del, (char**)NULL, 10);
 		time_timer_del( pos );
+		char res[64];
+		memset(res,'\0',64);
 		sprintf(res,"{\"success\":true,\"size\":\"%i\", \"pos\":\"%i\",\"running\":%s}",time_timer_size(),time_timer_pos(),(time_timer_running()?"true":"false"));
+		httpd_resp_send(req, res, strlen(res));
 	}
 	else if( strlen(opt_start)>0 ) {
 		printf("timer_get_handler() starting START\n");
 		time_timer_start();
+		char res[64];
+		memset(res,'\0',64);
 		sprintf(res,"{\"success\":true}");
+		httpd_resp_send(req, res, strlen(res));
 	}
 	else if( strlen(opt_stop)>0 ) {
 		printf("timer_get_handler() starting STOP\n");
 		time_timer_stop();
+		char res[32];
+		memset(res,'\0',32);
 		sprintf(res,"{\"success\":true}");
+		httpd_resp_send(req, res, strlen(res));
 	}
 	else {
 		printf("timer_get_handler() retriving json of timers.\n");
 		int len = time_timer_gen();
-		char tmp[len];
+		char tmp[len+1];
+		memset(tmp,'\0',len+1);
 		time_timer_get(tmp);
 		//char *tmp;
 		//int len = time_timer_get(tmp);
 		//char *tmp = time_timer_get();
 		printf("timer_get_handler tmp(%i/%i): %s\n",len,strlen(tmp),tmp);
 		//printf("timer_get_handler tmp(%i): %s\n",strlen(tmp),tmp);
-		strcpy(res,tmp);
+		//strcpy(res,tmp);
+		httpd_resp_send(req, tmp, strlen(tmp));
 	}
-	httpd_resp_send(req, res, strlen(res));
+	//httpd_resp_send(req, res, strlen(res));
     return ESP_OK;
 }
 //

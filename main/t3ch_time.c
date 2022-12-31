@@ -121,26 +121,20 @@ void time_timer_get(char *out) {
 //
 void time_timer_del(int pos) {
 	printf("time_timer_del() STARTING, pos: %i\n",pos);
+	//
+	if( myt[pos].running ) {
+		gpio_set_level(myt[pos].gpio,0);
+	}
+	//
 	for(int i=0; i<(time_timer_pos()-1); i++) {
-		if(i>pos) {
-			myt[i] = myt[i+1];
-		}
-		else if(i==pos) {
-			if( myt[i].running ) {
-				gpio_set_level(myt[i].gpio,0);
-			}
-			myt[i] = myt[i+1];
-		}
-		else {
-			myt[i] = myt[i];
-		}
+		myt[i] = (i>=pos?myt[i+1]:myt[i]);
 	}
 	myt_pos--;
 	time_timer_save();
 }
 
 //
-bool time_timer_exists(struct tm starttime, struct tm endtime) {
+bool time_timer_exists(struct tm starttime, struct tm endtime, int gpio) {
 	printf("time_timer_exists() STARTING myt_pos: %i\n");
 	//
 	int startsec = ((starttime.tm_hour*60)*60) + (starttime.tm_min*60);// + starttime.tm_sec;
@@ -152,7 +146,7 @@ bool time_timer_exists(struct tm starttime, struct tm endtime) {
 		printf("time_timer_exists() startsec: %i vs chkstartsec: %i\n",startsec, chkstartsec);
 		printf("time_timer_exists() endsec: %i vs chkendsec: %i\n",endsec, chkendsec);
 		
-		if( startsec <= chkstartsec && endsec >= chkendsec ) {
+		if( myt[i].gpio==gpio && startsec <= chkstartsec && endsec >= chkendsec ) {
 			printf("time_timer_exists() looks exists!\n");
 			return true;
 		}
@@ -166,11 +160,6 @@ bool time_timer_add(int startHour, int startMin, int endHour, int endMin, int gp
 	printf("time_timer_add() STARTING, startHour: %i, startMin: %i, endHour: %i, endMin: %i, gpio: %i\n",
 	    startHour, startMin, endHour, endMin, gpio);
 	//
-	//if( myt_pos>=time_timer_size() ) {
-	//	printf("time_timer_add() Failed, timer full.");
-	//	return false;
-	//}
-	//
 	struct tm tmp_start;
 	struct tm tmp_end;
 	tmp_start.tm_hour = startHour;
@@ -180,7 +169,7 @@ bool time_timer_add(int startHour, int startMin, int endHour, int endMin, int gp
 	tmp_end.tm_min    = endMin;
 	tmp_end.tm_sec    = 0;
 	// Check if already exists
-	if( time_timer_exists(tmp_start, tmp_end) ) {
+	if( time_timer_exists(tmp_start, tmp_end, gpio) ) {
 		printf("time_timer_add() Failed exists!\n");
 		return false;
 	}
@@ -188,16 +177,6 @@ bool time_timer_add(int startHour, int startMin, int endHour, int endMin, int gp
 	myt[myt_pos].end_time   = tmp_end;
 	myt[myt_pos].running    = false;
 	myt[myt_pos].gpio       = gpio;
-	// generate idCRC
-	/*char tmpstr[32];
-	printf("time_timer_add() ascing time...\n");
-	sprintf(tmpstr,"%s",asctime(&myt[myt_pos].start_time));
-	char tmpcrc[8];
-	sprintf(tmpcrc,"%x",crc32b(tmpstr));
-	myt[myt_pos].idCRC     = tmpcrc;
-	printf("time_timer_add() generated idCRC: %s from %s\n",myt[myt_pos].idCRC,tmpstr);
-	*/
-	
 	myt_pos++;
 	return true;
 }
@@ -364,15 +343,19 @@ bool t3ch_time_chk( struct tm starttime, struct tm endtime ) {
 	//ESP_LOGI(TAG, "t3ch_time_chk() starting, starttime %i:%i, endtime %i:%i",
 	//    starttime.tm_hour, starttime.tm_min, endtime.tm_hour, endtime.tm_min );
 	//
-	printf("t3ch_time_chk() D1: %i:%i:%i\n",starttime.tm_hour, starttime.tm_min, starttime.tm_sec);
-	printf("t3ch_time_chk() D2: %i:%i:%i\n",endtime.tm_hour, endtime.tm_min, endtime.tm_sec);
+	time(&now);
+    localtime_r(&now, &timeinfo);
+	//
+	//printf("t3ch_time_chk() D1: %i:%i:%i\n",starttime.tm_hour, starttime.tm_min, starttime.tm_sec);
+	//printf("t3ch_time_chk() D2: %i:%i:%i\n",endtime.tm_hour, endtime.tm_min, endtime.tm_sec);
+	//printf("t3ch_time_chk() D3: %i:%i:%i\n",timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
 	// fuck the sec. bug.
 	starttime.tm_sec = 0;
 	endtime.tm_sec   = 0;
 	// :)
 	int startsec = ((starttime.tm_hour*60)*60) + (starttime.tm_min*60);// + starttime.tm_sec;
 	int endsec   = ((endtime.tm_hour*60)*60) + (endtime.tm_min*60);// + endtime.tm_sec;
-	int cursec   = ((timeinfo.tm_hour*60)*60) + (timeinfo.tm_min*60);// + timeinfo.tm_sec;
+	int cursec   = ((timeinfo.tm_hour*60)*60) + (timeinfo.tm_min*60) + timeinfo.tm_sec;
 	printf("t3ch_time_chk() startsec: %i, endsec: %i, cursec: %i\n", startsec, endsec, cursec);
 	if( startsec<=cursec && endsec>=cursec ) return true;
 	return false;
