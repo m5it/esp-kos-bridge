@@ -120,23 +120,30 @@ void time_timer_get(char *out) {
 }
 //
 void time_timer_del(int pos) {
-	struct mytimer tmp[TIMER_SIZE];
-	for(int i=0; i<time_timer_pos(); i++) {
-		if(i!=pos) {
-			tmp[i] = myt[i];
+	//struct mytimer tmp[TIMER_SIZE];
+	//int cntadd = 0;
+	for(int i=0; i<(time_timer_pos()-1); i++) {
+		if(i>=pos) {
+			//tmp[cntadd] = myt[cntadd];
+			myt[i] = myt[i+1];
+			//cntadd++;
 		}
 		else {
 			if( myt[i].running ) {
 				printf("time_timer_del() at %i, stopping gpio.\n",i);
-				gpio_set_level(GPIO_NUM_26,0);
+				gpio_set_level(myt[i].gpio,0);
 			}
-			myt_pos--;
+			//myt_pos--;
+			myt[i] = myt[i];
 		}
 	}
-	myt[TIMER_SIZE];
-	for(int i=0; i<myt_pos; i++) {
+	myt_pos--;
+	/*myt[TIMER_SIZE];
+	//for(int i=0; i<myt_pos; i++) {
+	for(int i=0; i<=cntadd; i++) {
+		printf("time_timer_del() aranging myt at %i\n",i);
 		myt[i] = tmp[i];
-	}
+	}*/
 	time_timer_save();
 }
 
@@ -176,8 +183,10 @@ bool time_timer_add(int startHour, int startMin, int endHour, int endMin, int gp
 	struct tm tmp_end;
 	tmp_start.tm_hour = startHour;
 	tmp_start.tm_min  = startMin;
+	tmp_start.tm_sec  = 0;
 	tmp_end.tm_hour   = endHour;
 	tmp_end.tm_min    = endMin;
+	tmp_end.tm_sec    = 0;
 	// Check if already exists
 	if( time_timer_exists(tmp_start, tmp_end) ) {
 		printf("time_timer_add() Failed exists!\n");
@@ -228,6 +237,7 @@ bool time_timer_stop(void) {
 
 //
 void time_timer_save(void) {
+	printf("time_timer_save() STARTING\n");
 	// Generate cJSON
 	cJSON *myt_ary;
     myt_ary  = cJSON_CreateArray();
@@ -244,16 +254,22 @@ void time_timer_save(void) {
 	    cJSON_AddItemToArray(myt_ary,myt_obj);
 	}
 	char *out = cJSON_Print( myt_ary );
-    printf("time_timer_add() cJSON out: %s\n",out);
+	printf("time_timer_save() strlen(out): %i\n", strlen(out));
+    printf("time_timer_save() cJSON out: %s\n",out);
     // Save to nvs
     nvs_handle_t nvsh;
 	esp_err_t err = nvs_open("timer_storage",NVS_READWRITE,&nvsh);
+	printf("time_timer_save() d1\n");
 	//
 	nvs_erase_key(nvsh,"json");
+	printf("time_timer_save() d2\n");
 	//
 	nvs_set_str(nvsh, "json", out);
+	printf("time_timer_save() d3\n");
 	nvs_commit( nvsh );
+	printf("time_timer_save() d4\n");
 	nvs_close( nvsh );
+	printf("time_timer_save() d5\n");
 }
 // retrive timer settings if exists. (timer_storage)
 void time_timer_init(void) {
@@ -265,7 +281,7 @@ void time_timer_init(void) {
 	nvs_get_str(nvsh,"json",NULL,&rs);
 	printf("time_timer_init() got json size: %d\n",rs);
 	// int convertdata = static_cast<int>(data)
-	char tmpout[ (int)(rs) ];
+	char tmpout[ (int)(rs)+1 ];
 	//err = t3ch_nvs_get_str(nvsh,"json",&tmpout);
 	err = nvs_get_str(nvsh,"json",tmpout,&rs);
 	nvs_close(nvsh);
