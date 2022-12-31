@@ -51,5 +51,6 @@ Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
 
 # Here is original esp-iot-bridge README.md and location https://github.com/espressif/esp-iot-bridge
 # Any questions on ESP-KOS-BRIDGE turn to FB person and developer: Blaz Kos
+# FB Url: https://www.facebook.com/blaz.kos.9
 # Love you all *** :)
 
