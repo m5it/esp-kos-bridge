@@ -120,30 +120,22 @@ void time_timer_get(char *out) {
 }
 //
 void time_timer_del(int pos) {
-	//struct mytimer tmp[TIMER_SIZE];
-	//int cntadd = 0;
+	printf("time_timer_del() STARTING, pos: %i\n",pos);
 	for(int i=0; i<(time_timer_pos()-1); i++) {
-		if(i>=pos) {
-			//tmp[cntadd] = myt[cntadd];
+		if(i>pos) {
 			myt[i] = myt[i+1];
-			//cntadd++;
 		}
-		else {
+		else if(i==pos) {
 			if( myt[i].running ) {
-				printf("time_timer_del() at %i, stopping gpio.\n",i);
 				gpio_set_level(myt[i].gpio,0);
 			}
-			//myt_pos--;
+			myt[i] = myt[i+1];
+		}
+		else {
 			myt[i] = myt[i];
 		}
 	}
 	myt_pos--;
-	/*myt[TIMER_SIZE];
-	//for(int i=0; i<myt_pos; i++) {
-	for(int i=0; i<=cntadd; i++) {
-		printf("time_timer_del() aranging myt at %i\n",i);
-		myt[i] = tmp[i];
-	}*/
 	time_timer_save();
 }
 
@@ -378,9 +370,9 @@ bool t3ch_time_chk( struct tm starttime, struct tm endtime ) {
 	starttime.tm_sec = 0;
 	endtime.tm_sec   = 0;
 	// :)
-	int startsec = ((starttime.tm_hour*60)*60) + (starttime.tm_min*60) + starttime.tm_sec;
-	int endsec   = ((endtime.tm_hour*60)*60) + (endtime.tm_min*60) + endtime.tm_sec;
-	int cursec   = ((timeinfo.tm_hour*60)*60) + (timeinfo.tm_min*60) + timeinfo.tm_sec;
+	int startsec = ((starttime.tm_hour*60)*60) + (starttime.tm_min*60);// + starttime.tm_sec;
+	int endsec   = ((endtime.tm_hour*60)*60) + (endtime.tm_min*60);// + endtime.tm_sec;
+	int cursec   = ((timeinfo.tm_hour*60)*60) + (timeinfo.tm_min*60);// + timeinfo.tm_sec;
 	printf("t3ch_time_chk() startsec: %i, endsec: %i, cursec: %i\n", startsec, endsec, cursec);
 	if( startsec<=cursec && endsec>=cursec ) return true;
 	return false;
