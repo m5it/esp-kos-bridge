@@ -1,0 +1,39 @@
+% git merge master
+Auto-merging README.md
+CONFLICT (content): Merge conflict in README.md
+Auto-merging components/iot_bridge/include/esp_bridge.h
+CONFLICT (content): Merge conflict in components/iot_bridge/include/esp_bridge.h
+Auto-merging components/iot_bridge/src/bridge_common.c
+CONFLICT (content): Merge conflict in components/iot_bridge/src/bridge_common.c
+Auto-merging components/iot_bridge/src/bridge_wifi.c
+CONFLICT (content): Merge conflict in components/iot_bridge/src/bridge_wifi.c
+Auto-merging components/web_server/include/web_server.h
+Auto-merging components/web_server/src/web_server.c
+CONFLICT (content): Merge conflict in components/web_server/src/web_server.c
+Auto-merging components/wifi_prov_mgr/src/wifi_prov_mgr.c
+CONFLICT (file location): main/DHT22.c added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/DHT22.c.
+CONFLICT (file location): main/DHT22.h added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/DHT22.h.
+Auto-merging examples/wifi_router/main/app_main.c
+CONFLICT (content): Merge conflict in examples/wifi_router/main/app_main.c
+CONFLICT (file location): main/cJSON.h added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/cJSON.h.
+CONFLICT (file location): main/crc_t.h added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/crc_t.h.
+CONFLICT (file location): main/dht.c added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/dht.c.
+CONFLICT (file location): main/dht.h added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/dht.h.
+CONFLICT (file location): main/esp_idf_lib_helpers.h added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/esp_idf_lib_helpers.h.
+CONFLICT (file location): main/ets_sys.h added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/ets_sys.h.
+CONFLICT (file location): main/panel.html added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/panel.html.
+CONFLICT (file location): main/t3ch_config.h added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/t3ch_config.h.
+CONFLICT (file location): main/t3ch_console.c added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/t3ch_console.c.
+CONFLICT (file location): main/t3ch_console.h added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/t3ch_console.h.
+CONFLICT (file location): main/t3ch_events.c added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/t3ch_events.c.
+CONFLICT (file location): main/t3ch_events.h added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/t3ch_events.h.
+CONFLICT (file location): main/t3ch_functions.c added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/t3ch_functions.c.
+CONFLICT (file location): main/t3ch_gpio.c added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/t3ch_gpio.c.
+CONFLICT (file location): main/t3ch_httpd.c added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/t3ch_httpd.c.
+CONFLICT (file location): main/t3ch_httpd.h added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/t3ch_httpd.h.
+CONFLICT (file location): main/t3ch_nvs.c added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/t3ch_nvs.c.
+CONFLICT (file location): main/t3ch_nvs.h added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/t3ch_nvs.h.
+CONFLICT (file location): main/t3ch_time.c added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/t3ch_time.c.
+CONFLICT (file location): main/t3ch_time.h added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/t3ch_time.h.
+CONFLICT (file location): main/t3ch_wifi.c added in HEAD inside a directory that was renamed in master, suggesting it should perhaps be moved to examples/wifi_router/main/t3ch_wifi.c.
+Automatic merge failed; fix conflicts and then commit the result.
