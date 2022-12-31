@@ -11,8 +11,8 @@
 
 //--
 //
-#define VERSION_STRING "Bite your Ass!"
-#define VERSION 0.1
+#define VERSION_STRING "Conejo blanco"
+#define VERSION "0.2"
 
 //--
 // Default AP SSID & PWD

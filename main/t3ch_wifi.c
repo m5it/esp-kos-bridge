@@ -25,7 +25,7 @@ char *t3ch_version_string(void) {
 	return VERSION_STRING;
 }
 
-int t3ch_version(void) {
+char *t3ch_version(void) {
 	return VERSION;
 }
 //

@@ -326,7 +326,13 @@ static esp_err_t wifi_get_handler(httpd_req_t *req)
 		}
 		
 		//
-		sprintf(res,"{\"success\":true,\"ap_ssid\":\"%s\",\"ap_pwd\":\"%s\",\"sta_ssid\":\"%s\",\"sta_pwd\":\"%s\",\"version\":\"%d\",\"version_string\":\"%s\"}",
+		/*char tmpversion[4] = {0};
+		sprintf(tmpversion,"%d",t3ch_version());
+		char encversion[16] = {0};
+		esp_web_url_encode(tmpversion,tmpversion,encversion,strlen(tmpversion));
+		printf("wifi_get_handler() DEBUG tmpversion: %s, encversion: %s\n",tmpversion, encversion);
+		*/
+		sprintf(res,"{\"success\":true,\"ap_ssid\":\"%s\",\"ap_pwd\":\"%s\",\"sta_ssid\":\"%s\",\"sta_pwd\":\"%s\",\"version\":\"%s\",\"version_string\":\"%s\"}",
 		    ap_ssid, ap_pwd, sta_ssid, sta_pwd, t3ch_version(), t3ch_version_string());
 	}
 	//
