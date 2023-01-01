@@ -4,7 +4,7 @@
 This version of esp-iot-bridge is focused on wifi extender and timer for gpio pins.
 Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
 
-# What is comming:
+# What is comming aka version ( 0.2 - Conejo blanco ):
 - scan for wifis. ( already supported in ESP-IOT-BRIDGE so is simple to reuse it.. :) )
 - ota updates. (same already supported in ESP-IOT-BRIDGE so will use same or similar code.. )
 - more you should say if you like more.
