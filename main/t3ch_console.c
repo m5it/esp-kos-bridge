@@ -8,7 +8,7 @@
  *    https://www.paypal.com/donate/?hosted_button_id=QGRYL4SL5N4FE
  * Donate - Donar - Spenden - Daruj - пожертвовать - दान करना - 捐 - 寄付
  */
-
+#include "esp_wifi.h"
 #include "t3ch_console.h"
 #include "t3ch_events.h"
 //#include "t3ch_config.h"
@@ -271,6 +271,77 @@ esp_err_t register_ap(void) {
     return esp_console_cmd_register(&command);
 }
 
+//--
+// STA arguments
+static struct {
+    struct arg_lit *isUp; //
+    struct arg_lit *up;
+    struct arg_lit *scan;
+    struct arg_lit *scanView;
+    struct arg_end *end;
+} sta_args;
+//
+static int do_cmd_sta(int argc, char **argv) {
+	int nerrors = arg_parse(argc, argv, (void **)&sta_args);
+    if (nerrors != 0) {
+        arg_print_errors(stderr, sta_args.end, argv[0]);
+        return 1;
+    }
+    //
+    if (sta_args.isUp->count > 0) {
+        printf("DEBUG STA isUp() STARTING.\n");
+		if( t3ch_wifi_sta_isup() ) {
+			printf("DEBUG STA IS UP.\n");
+		}
+		else {
+			printf("DEBUG STA NOT UP!\n");
+		}
+    }
+    //
+    if (sta_args.up->count>0 ) {
+		printf("DEBUG STA up() STARTING.\n");
+	    if( t3ch_wifi_sta_up() ) {
+			printf("DEBUG STA configured succesfully.\n");
+		}
+		else {
+			printf("DEBUG Failed configuring STA!\n");
+		}
+	}
+	//
+	if (sta_args.scan->count>0 ) {
+	    t3ch_wifi_scan_start();
+	}
+	//
+	if (sta_args.scanView->count>0 ) {
+		int size = t3ch_wifi_scan_gen();
+		printf("t3ch_console.c => do_cmd_sta() scanView size: %d\n",size);
+		char tmp[size+1];
+		memset(tmp,'\0',size+1);
+		t3ch_wifi_scan_get(tmp);
+	    printf("t3ch_console.c => do_cmd_sta() scanView: %s\n",tmp);
+	}
+	return 0;
+}
+//
+esp_err_t register_sta(void) {
+	//
+	sta_args.isUp      = arg_lit0("u", "isUp","Check if STA interface is up.");
+	sta_args.up        = arg_lit0("U", "up","Put STA interface up.");
+	sta_args.scan      = arg_lit0("s", "scan","Scan for wifi.");
+	sta_args.scanView  = arg_lit0("S", "scanView","Preview scan results for wifi.");
+	sta_args.end       = arg_end(0);
+	//
+	esp_console_cmd_t command = {
+        .command = "sta",
+        .help = "STA client",
+        .hint = NULL,
+        .func = &do_cmd_sta,
+        .argtable = &sta_args
+    };
+	// register command
+    return esp_console_cmd_register(&command);
+}
+
 
 //--
 // test arguments
@@ -283,6 +354,7 @@ static struct {
 	struct arg_str *nvsRead;
 	struct arg_str *nvsWrite;
 	//
+	struct arg_lit *testScan;
 	struct arg_lit *testTime;
 	struct arg_lit *testLedc;
 	struct arg_lit *pauseLedc;
@@ -380,6 +452,11 @@ static int do_cmd_test(int argc, char **argv) {
 		else printf("nvsWrite commit Success!\n");
 	}
     //--
+    if (test_args.testScan->count > 0) {
+		printf("test scan starting.");
+		StartScan();
+	}
+    //--
     if (test_args.testLedc->count > 0) {
 		printf("test ledc starting.");
 	    example_ledc_init();
@@ -433,6 +510,7 @@ esp_err_t register_test(void) {
 	test_args.nvsRead    = arg_str1("r","nvsRead","<s>","Read from nvs");
 	test_args.nvsWrite   = arg_str1("w","nvsWrite","<s>","Write to nvs");
 	// default options
+	test_args.testScan   = arg_lit0("S", "testScan", "Test wifi scan");
 	test_args.testTime   = arg_lit0("T", "testTime", "Test time");
 	test_args.testLedc   = arg_lit0("L", "testLedc", "Test ledc");
 	test_args.pauseLedc  = arg_lit0("P", "pauseLedc", "Pause ledc");

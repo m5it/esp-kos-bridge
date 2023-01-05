@@ -39,10 +39,28 @@ button {
     border-radius: 13px;
     box-shadow: 0px 0px 2px 1px lightgrey;
 }
+.fieldrow {
+	padding:3px;
+}
+.fieldrow:not(.titles) > div {
+	cursor:pointer;
+}
+.fieldrow > div {
+	padding:2px;
+}
+.fieldrow.titles {
+	font-weight:bolder;
+}
+.fieldrow.titles > div {}
 .field {
 	float:left;
-	width:33%;
 	box-sizing:border-box;
+}
+.w33 {
+	width:33%;
+}
+.w25 {
+	width:25%;
 }
 .dfield {
 	display:inline-block;
@@ -58,8 +76,9 @@ button {
     white-space: nowrap;
     text-overflow: ellipsis;
 }
-.trifield {
-}
+.trifield {}
+.trifield > div { display:inline-block; }
+
 #tm {}
 #tm > div {}
 #tm > div:after {clear: both;content: ".";display: block;font-size: 0;height: 0;line-height: 0;visibility: hidden;} {}
@@ -88,8 +107,12 @@ button {
 .clearfix { display: block; }
 /**/
 @media only screen and (max-width: 600px) and (min-width: 320px)  {
+	body {margin:0px;padding:0px;}
 	.field {
 		float:none !important;
+		width:auto;
+	}
+	.w33 {
 		width:auto;
 	}
 	.trifield {
@@ -420,6 +443,47 @@ function ready() {
 		},});
 		return false;
 	});
+	
+	//--
+	//
+	qS("#scanSTA").addEventListener("click",function(e) {
+		e.preventDefault();
+		console.info("scan start clicked.");
+		loadingStart();
+		Fetch({href:document.location.origin+"/wifi/?scan_start=1",onDone:function(json){
+			console.info("scan start json",json);
+			//
+			Fetch({href:document.location.origin+"/wifi/?scan_get=1",onDone:function(json){
+				console.info("scan get json",json);
+				loadingStop();
+				if( json.success ) {
+					var html = "<div>";
+					html += "<div class='fieldrow titles'><div class='field w25'>SSID</div>";
+					html += "<div class='field w25'>RSSI</div>";
+					html += "<div class='field w25'>CHAN</div>";
+					html += "<div class='field w25'>MODE</div></div>";
+					for(var i=0; i<json.data.length; i++) {
+						html += "<div class='fieldrow fieldsel' attr=\""+json.data[i].ssid+"\"><div class='field w25'>"+json.data[i].ssid+"</div>";
+						html += "<div class='field w25'>"+json.data[i].rssi+"</div>";
+						html += "<div class='field w25'>"+json.data[i].chan+"</div>";
+						html += "<div class='field w25'>"+json.data[i].mode+"</div></div>";
+					}
+					html += "</div>";
+					qS("#displaySCAN > div").innerHTML = html;
+					document.querySelectorAll("#displaySCAN .fieldsel").forEach(function(elm) {
+						elm.addEventListener("click",function(e1) {
+							var attr = this.getAttribute("attr");
+							console.info("elm attr",attr);
+							//
+							qS("input[name='displaySTASSID']").value = attr;
+							qS("input[name='displaySTAPWD']").value  = "";
+						});
+					});
+				}
+			},});
+		},});
+		return false;
+	});
 }
 </script>
 </head>
@@ -442,45 +506,59 @@ function ready() {
 			ESP - KOS - BRIDGE
 		</div>
 		<div style="font-size:0.9em;">
-			aka WiFi Extender, aka Day Extender / Timer ;)
+			aka WiFi Extender & Day Extender / Timer
 		</div>
 	</div>
 	<div class="clearfix"></div>
 </div>
 
 
-<div class="field">
+<div class="field w33">
 	<label>WiFi Informations</label>
 	<div>
 		<div>
-			<label>AP SSID</label>
-			<div id="displayAPSSID"><input name="displayAPSSID" value=""></div>
-		</div>
-		<div>
-			<label>AP PWD</label>
-			<div id="displayAPPWD"><input name="displayAPPWD" value=""></div>
-		</div>
-		<div style="margin:13px;">
-			<button id="updateAP">Update AP</button>
+			<div>
+				<label>AP SSID</label>
+				<div id="displayAPSSID"><input name="displayAPSSID" value=""></div>
+			</div>
+			<div>
+				<label>AP PWD</label>
+				<div id="displayAPPWD"><input name="displayAPPWD" value=""></div>
+			</div>
+			<div style="margin:13px;">
+				<button id="updateAP">Update AP</button>
+			</div>
 		</div>
 		
 		<div>
-			<label>STA SSID</label>
-			<div id="displaySTASSID"><input name="displaySTASSID" value=""></div>
-		</div>
-		<div>
-			<label>STA PWD</label>
-			<div id="displaySTAPWD"><input name="displaySTAPWD" value=""></div>
-		</div>
-		<div style="margin:13px;">
-			<small>If STA ssid & pwd are empty then network extender is disabled and only AP runs as control panel.</small><br>
-			<button id="updateSTA">Update STA & Restart</button>
+			
+			<div class="field" style="width:50%;">
+				<div>
+					<label>STA SSID</label>
+					<div id="displaySTASSID"><input name="displaySTASSID" value=""></div>
+				</div>
+				<div>
+					<label>STA PWD</label>
+					<div id="displaySTAPWD"><input name="displaySTAPWD" value=""></div>
+				</div>
+				<div style="margin:13px;">
+					<small>If STA ssid & pwd are empty then network extender is disabled and only AP runs as control panel.</small><br>
+					<button id="updateSTA">Update STA & Restart</button>
+				</div>
+			</div>
+			<div class="field" style="width:50%;">
+				<div>
+					<label>SCAN 4 WIFI</label> <button id="scanSTA">scan</button>
+					<div id="displaySCAN"><div></div></div>
+				</div>
+			</div>
+			<div class="clearfix"></div>
 		</div>
 	</div>
 </div>
 
 
-<div class="field">
+<div class="field w33">
 	<label>Set Server/Timer Time ( struct tm )</label>
 	<div><form id="tm">
 		<!-- struct tm -->
@@ -499,7 +577,7 @@ function ready() {
 	</form></div>
 </div>
 
-<div class="field">
+<div class="field w33">
 	<label>Timer Settings</label>
     <div class="spec6">
         <div class="dfield">

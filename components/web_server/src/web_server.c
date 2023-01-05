@@ -405,7 +405,7 @@ static esp_err_t esp_web_check_ap_info(wifi_ap_record_t *ap_info)
     }
     // check rssi
     if (ap_info->rssi < ESP_BRIDGE_WEB_SCAN_RSSI_THRESHOLD) {
-        ESP_LOGI(TAG, "Ignore low rssi, ssid: %s", ap_info->ssid);
+        ESP_LOGI(TAG, "Ignore low rssi: %i, ssid: %s", ap_info->rssi, ap_info->ssid);
         goto check_err;
     }
     return ESP_OK;
@@ -456,7 +456,7 @@ static esp_err_t esp_web_start_scan_filter(uint8_t *phone_mac, uint8_t *password
 
     ap_info = (wifi_ap_record_t*) malloc(ESP_BRIDGE_WEB_SCAN_LIST_SIZE * sizeof(wifi_ap_record_t));
     if (ap_info == NULL) {
-        ESP_LOGE(TAG, "ap info malloc fail");
+        ESP_LOGI(TAG, "ap info malloc fail");
         return ESP_ERR_NO_MEM;
     }
 
@@ -474,7 +474,7 @@ static esp_err_t esp_web_start_scan_filter(uint8_t *phone_mac, uint8_t *password
 
         ret = esp_web_wifi_scan_get_ap_records(&ap_scan_number, ap_info);
         if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "get scan fail");
+            ESP_LOGI(TAG, "get scan fail");
             goto err;
         }
 
@@ -510,7 +510,7 @@ static esp_err_t esp_web_start_scan_filter(uint8_t *phone_mac, uint8_t *password
         }
 
         if (SLIST_EMPTY(&s_router_all_list)) {
-            ESP_LOGE(TAG, "Not find router");
+            ESP_LOGI(TAG, "Not find router");
             goto err;
         }
 
@@ -597,7 +597,7 @@ static esp_err_t esp_web_start_scan_filter(uint8_t *phone_mac, uint8_t *password
 #endif
         // delete scan list
         for (item = SLIST_FIRST(&s_router_all_list); item != NULL; item = SLIST_NEXT(item, next)) {
-            ESP_LOGD(TAG, "Delete SSID:%s", item->ssid);
+            ESP_LOGI(TAG, "Delete SSID:%s", item->ssid);
             SLIST_REMOVE(&s_router_all_list, item, router_obj, next);
             free(item);
         }
@@ -637,14 +637,14 @@ static esp_err_t esp_web_start_scan_filter(uint8_t *phone_mac, uint8_t *password
     }
     // delete fail connect list
     stop_scan_filter();
-    ESP_LOGW(TAG, "scan filter timeout");
+    ESP_LOGI(TAG, "scan filter timeout");
     return ESP_FAIL;
 err:
     free(ap_info);
     ap_info = NULL;
     // delete fail connect list
     stop_scan_filter();
-    ESP_LOGW(TAG, "scan filter error");
+    ESP_LOGI(TAG, "scan filter error");
     return ESP_FAIL;
 }
 

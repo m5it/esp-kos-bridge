@@ -246,7 +246,8 @@ static const httpd_uri_t timer_get = {
 //
 static esp_err_t wifi_get_handler(httpd_req_t *req)
 {
-	char out_sta[128]={0}, out_ap[128]={0};
+	char out_sta[128]={0}, out_ap[128]={0}, 
+		out_scan_start[4]={0}, out_scan_get[4]={0};
 	char res[128]={0};
 	char ap_ssid[32]={0};
 	char ap_pwd[64]={0};
@@ -263,11 +264,16 @@ static esp_err_t wifi_get_handler(httpd_req_t *req)
 	size_t chk_setap, chk_setsta;
 	chk_setap  = t3ch_httpd_get_param(req, "setap", &out_ap);
 	chk_setsta = t3ch_httpd_get_param(req, "setsta", &out_sta);
+	t3ch_httpd_get_param(req, "scan_start", &out_scan_start);
+	t3ch_httpd_get_param(req, "scan_get", &out_scan_get);
 	//
 	printf("DEBUG wifi_get_handler() out_ap: %s, chk_setap: %d\n", out_ap, chk_setap);
 	printf("DEBUG wifi_get_handler() out_sta: %s, chk_setsta: %d\n", out_sta, chk_setsta);
+	printf("DEBUG wifi_get_handler() out_scan_start: %s\n", out_scan_start);
+	printf("DEBUG wifi_get_handler() out_scan_get: %s\n", out_scan_start);
+	
 	// set new settings
-	if( strlen(out_ap)>0 ) {
+	if     ( strlen(out_ap)>0 ) {
 		//
 		chk_setap = t3ch_httpd_get_param(req, "ssid", &ap_ssid);
 		printf("wifi_get_handler() setap... chk: %d, new ssid: %s", chk_setap, ap_ssid);
@@ -304,6 +310,32 @@ static esp_err_t wifi_get_handler(httpd_req_t *req)
 		sprintf(res,"{\"success\":%s,\"sta_ssid\":\"%s\",\"sta_pwd\":\"%s\"}",
 		    (suc?"true":"false"), sta_ssid, sta_pwd);
 	}
+	//
+	else if( strlen(out_scan_start)>0 ) {
+		bool suc = t3ch_wifi_scan_start();
+		//
+		sprintf(res,"{\"success\":%s}",(suc?"true":"false"));
+	}
+	//
+	else if( strlen(out_scan_get)>0 ) {
+		int size = t3ch_wifi_scan_gen();
+		if( size<=0 ) {
+			//
+			sprintf(res,"{\"success\":false}");
+		}
+		else {
+			char data[size+1];
+			memset(data,'\0',size+1);
+			t3ch_wifi_scan_get( data );
+			// fix response variable size
+			res[size+129];
+			memset(res,'\0',size+129);
+			//
+			sprintf(res,"{\"success\":true,\"data\":%s}",data);
+			printf("DEBUG scanGet response(%i, %i): %s\n",strlen(res), strlen(data), res);
+		}
+	}
+	//
 	else {
 	    //
 	    if (strlen((const char*)cap.ssid)) {

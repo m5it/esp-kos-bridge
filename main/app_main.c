@@ -158,7 +158,8 @@ void app_main(void)
 	//
 	printf("Preparing console.");
     esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
-    
+    //
+    repl_config.prompt = "kos>";
     // install console REPL environment
 #if CONFIG_ESP_CONSOLE_UART
 	ESP_LOGI(TAG,"DEBUG console d1");
@@ -179,11 +180,11 @@ void app_main(void)
     register_free();
     register_reset();
     register_list();
+    register_sta();
     register_test();
     register_dht();
     register_ap();
     // Start console REPL
-    repl_config.prompt = "kos>";
     ESP_ERROR_CHECK(esp_console_start_repl(s_repl));
     //--
     t3ch_events_init();

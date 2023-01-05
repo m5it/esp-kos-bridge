@@ -12,6 +12,7 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "esp_wifi.h"
+#include "esp_log.h"
 #include "t3ch_config.h"
 
 //--
@@ -21,10 +22,129 @@ char APPWD[64]={0};
 char STASSID[32]={0};
 char STAPWD[64]={0};
 
+//--
+//
+bool t3ch_wifi_scan_running = false;
+#define T3CH_WIFI_MAX_SCAN_SIZE 10
+uint16_t t3ch_wifi_scan_number = T3CH_WIFI_MAX_SCAN_SIZE;
+wifi_ap_record_t t3ch_wifi_scan_ap_info[T3CH_WIFI_MAX_SCAN_SIZE];
+uint16_t t3ch_wifi_scan_ap_count = 0;
+char t3ch_wifi_scan_json[256]={0};
+//
+//t3ch_wifi_scan_ap_count = 0;
+//memset(t3ch_wifi_scan_ap_info, 0, sizeof(t3ch_wifi_scan_ap_info));
+
+//--
+// Check if STA interface is up
+bool t3ch_wifi_sta_isup(void) {
+	esp_netif_t *sta_if = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+	if( sta_if==NULL ) {
+		return false;
+	}
+	return true;
+}
+
+// Configure STA interface UP
+bool t3ch_wifi_sta_up(void) {
+	esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta();
+    assert(sta_netif);
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    esp_err_t err = esp_wifi_init(&cfg);
+    if( err!=ESP_OK ) {
+	    ESP_ERROR_CHECK(err);
+	    return false;
+	}
+	//
+	err = esp_wifi_set_mode(WIFI_MODE_APSTA);
+	if( err!=ESP_OK ) {
+	    ESP_ERROR_CHECK(err);
+		return false;
+	}
+	return true;
+}
+//
+bool t3ch_wifi_scan_start(void) {
+	//
+	if( t3ch_wifi_scan_running ) {
+		printf("t3ch_wifi_scan_start() Failed, already running!");
+		return false;
+	}
+	// Check if STA interface is up. If not set it up.
+	if( !t3ch_wifi_sta_isup() ) {
+		printf("t3ch_wifi_scan_start() configuring STA interface.\n");
+		if( !t3ch_wifi_sta_up() ) {
+			printf("t3ch_wifi_scan_start() Failed configuring STA interface!\n");
+			return false;
+		}
+	}
+	//
+	t3ch_wifi_scan_ap_count = 0;
+	//t3ch_wifi_scan_ap_info[T3CH_WIFI_MAX_SCAN_SIZE];
+	memset(t3ch_wifi_scan_ap_info, 0, sizeof(t3ch_wifi_scan_ap_info));
+	//
+	t3ch_wifi_scan_running = true;
+	// Start scan
+	esp_wifi_scan_start(NULL, true);
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&t3ch_wifi_scan_number, t3ch_wifi_scan_ap_info));
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&t3ch_wifi_scan_ap_count));
+    ESP_LOGI(TAG, "Total APs scanned = %u", t3ch_wifi_scan_ap_count);
+    for (int i = 0; (i < T3CH_WIFI_MAX_SCAN_SIZE) && (i < t3ch_wifi_scan_ap_count); i++) {
+        ESP_LOGI(TAG, "SSID \t\t%s", t3ch_wifi_scan_ap_info[i].ssid);
+        ESP_LOGI(TAG, "RSSI \t\t%d", t3ch_wifi_scan_ap_info[i].rssi);
+        ESP_LOGI(TAG, "MODE \t\t%d", t3ch_wifi_scan_ap_info[i].authmode);
+        ESP_LOGI(TAG, "Channel \t\t%d\n", t3ch_wifi_scan_ap_info[i].primary);
+    }
+    //
+    t3ch_wifi_scan_running = false;
+    return true;
+}
+//
+int t3ch_wifi_scan_gen(void) {
+	int size=0,len=256;
+	t3ch_wifi_scan_json[len];
+	memset(t3ch_wifi_scan_json,'\0',len);
+	//
+	if( t3ch_wifi_scan_ap_count<=0 ) return 0;
+	//
+	size += sprintf(t3ch_wifi_scan_json+size,"[");
+	for (int i = 0; (i < T3CH_WIFI_MAX_SCAN_SIZE) && (i < t3ch_wifi_scan_ap_count); i++) {
+        //ESP_LOGI(TAG, "SSID \t\t%s", t3ch_wifi_scan_ap_info[i].ssid);
+        //ESP_LOGI(TAG, "RSSI \t\t%d", t3ch_wifi_scan_ap_info[i].rssi);
+        //ESP_LOGI(TAG, "MODE \t\t%d", t3ch_wifi_scan_ap_info[i].authmode);
+        //ESP_LOGI(TAG, "Channel \t\t%d\n", t3ch_wifi_scan_ap_info[i].primary);
+        size += sprintf(t3ch_wifi_scan_json+size,
+            "{\"ssid\":\"%s\",\"rssi\":\"%d\",\"mode\":\"%d\",\"chan\":\"%d\"}%s",
+            t3ch_wifi_scan_ap_info[i].ssid,
+            t3ch_wifi_scan_ap_info[i].rssi,
+            t3ch_wifi_scan_ap_info[i].authmode,
+            t3ch_wifi_scan_ap_info[i].primary,
+            (i>=(t3ch_wifi_scan_ap_count-1)?"":","));
+        printf("t3ch_wifi_scan_gen() DEBUG size: %d\n",size);
+        // increase json if too small
+        if( size>=(len-128) ) {
+			len += 128;
+			printf("t3ch_wifi_scan_gen() increasing json len: %d\n",len);
+			char tmp[len];//={0}; # variable sized object can not be initialized! :)
+			strcpy(tmp,t3ch_wifi_scan_json);
+			t3ch_wifi_scan_json[len];
+			memset(t3ch_wifi_scan_json,'\0',len);
+			strcpy(t3ch_wifi_scan_json,tmp);
+		}
+    }
+    size += sprintf(t3ch_wifi_scan_json+size,"]");
+    printf("t3ch_wifi_scan_gen() DONE size: %i\n",size);
+    return size;
+}
+//
+void t3ch_wifi_scan_get(char *out) {
+	strcpy(out,t3ch_wifi_scan_json);
+}
+//--
+//
 char *t3ch_version_string(void) {
 	return VERSION_STRING;
 }
-
+//
 char *t3ch_version(void) {
 	return VERSION;
 }
