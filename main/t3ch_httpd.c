@@ -574,8 +574,32 @@ static int dl0=0, dl1=0, dl2=0;
 char task_url_download[256]={0};
 //
 void task_ota_download(void *pv) {
-	printf("task_ota_download STARTED!, url: %s\n",downloadUrl);
-	t3ch_ota_download(downloadUrl);
+	printf("task_ota_download STARTED!, url: %s\n",task_url_download);
+	t3ch_ota_download(task_url_download);
+}
+//
+void task_ota_upload(void *pv) {
+	printf("task_ota_upload STARTED!\n");
+	//
+	esp_err_t err = esp_ota_end(update_handle);
+    if (err != ESP_OK) {
+        if (err == ESP_ERR_OTA_VALIDATE_FAILED) {
+            printf("ota_update_post_handler() Image validation failed, image is corrupted\n");
+        }
+        printf("ota_update_post_handler() esp_ota_end failed (%s)!\n", esp_err_to_name(err));
+        //goto err_handler;
+    }
+    else {
+	    printf("ota_update_post_handler() entering next..\n");
+	    err = esp_ota_set_boot_partition(update_partition);
+	    if (err != ESP_OK) {
+	        printf("ota_update_post_handler() esp_ota_set_boot_partition failed (%s)!\n", esp_err_to_name(err));
+	        //goto err_handler;
+	    }
+	    else {
+			printf("ready to reset? successs? :)");
+		}
+	}
 }
 
 //
@@ -755,7 +779,7 @@ static esp_err_t ota_update_post_handler(httpd_req_t *req)
 	                goto err_handler;
 	            }
 	            printf("ota_update_post_handler() entering esp_ota_end()!!! luck!\n");
-	            //
+	            /*//
 	            err = t3ch_ota_end(update_handle);
 			    if (err != ESP_OK) {
 			        if (err == ESP_ERR_OTA_VALIDATE_FAILED) {
@@ -769,8 +793,15 @@ static esp_err_t ota_update_post_handler(httpd_req_t *req)
 			    if (err != ESP_OK) {
 			        printf("ota_update_post_handler() esp_ota_set_boot_partition failed (%s)!\n", esp_err_to_name(err));
 			        goto err_handler;
-			    }
-			    
+			    }*/
+			    xTaskCreate(
+				    task_ota_upload,
+				    "task_ota_upload",
+				    15000,
+				    NULL,
+				    1,
+				    NULL
+				);
 			    dl0 += tmpl;
 	            dl1 += getSize(newdec);
 	            dl2 += strlen(newdec);
