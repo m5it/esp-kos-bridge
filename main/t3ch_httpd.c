@@ -568,7 +568,7 @@ err_handler:
 //static int update_upload_size;
 static esp_ota_handle_t update_handle = 0;
 static const esp_partition_t *update_partition;
-
+static int dl0=0, dl1=0, dl2=0; 
 //
 static esp_err_t ota_update_post_handler(httpd_req_t *req)
 {
@@ -597,9 +597,16 @@ static esp_err_t ota_update_post_handler(httpd_req_t *req)
 	if( strlen(out_download)>0 ) {
 		printf("ota_update_post_handler() download start, url: %s\n",out_download);
 		//
-		//if( t3ch_ota_download(out_download) ) {
-		//	esp_restart();
-		//}
+		char *newdec = (char*)malloc(strlen(out_download));
+        memset(newdec,'\0', strlen(out_download));
+        int tmpl = t3ch_urldecode(out_download,newdec,strlen(out_download));
+        
+        printf("ota_update_post_handler() updating from %s\n",newdec);
+        //
+		if( t3ch_ota_download(newdec) ) {
+			free(newdec);
+			esp_restart();
+		}
 		//
 		sprintf(res,"{\"success\":true}");
 		httpd_resp_send(req, res, strlen(res));
@@ -633,8 +640,8 @@ static esp_err_t ota_update_post_handler(httpd_req_t *req)
 	        if( received_len<=0 ) {
 				printf("ota_update_post_handler() received_len 0... breaking... remaining_len: %d\n",remaining_len);
 				
-				//esp_ota_end(update_handle);
-	            //goto err_handler;
+				esp_ota_end(update_handle);
+	            goto err_handler;
 	            
 				break;
 			}
@@ -687,7 +694,7 @@ static esp_err_t ota_update_post_handler(httpd_req_t *req)
         char *newdec = (char*)malloc(strlen(dec));
         memset(newdec,'\0', strlen(dec));
         int tmpl = t3ch_urldecode(dec,newdec,strlen(dec));
-        printf("ota_update_post_handler() Got urldecoded newdec(%d)\n",tmpl);
+        printf("ota_update_post_handler() Got urldecoded newdec size: %d, getSize: %d, strlen: %d\n",tmpl,getSize(newdec),strlen(newdec));
 		
 		if( strlen(test)<=0 ) {
 			// First
@@ -696,10 +703,10 @@ static esp_err_t ota_update_post_handler(httpd_req_t *req)
 				//
 				update_partition = esp_web_get_ota_update_partition();
 				// check post data size
-			    /*if (update_partition->size < total_len) {
-			        printf("ota_update_post_handler() ota data too long, partition size is %u, bin size is %d", update_partition->size, total_len);
-			        goto err_handler;
-			    }*/
+			    //if (update_partition->size < total_len) {
+			    //    printf("ota_update_post_handler() ota data too long, partition size is %u, bin size is %d", update_partition->size, total_len);
+			    //    goto err_handler;
+			    //}
 			    // start ota
 			    err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
 			    if (err != ESP_OK) {
@@ -713,6 +720,13 @@ static esp_err_t ota_update_post_handler(httpd_req_t *req)
 	                esp_ota_end(update_handle);
 	                goto err_handler;
 	            }
+	            
+	            dl0=0;
+	            dl1=0;
+	            dl2=0;
+	            dl0 += tmpl;
+	            dl1 += getSize(newdec);
+	            dl2 += strlen(newdec);
 			}
 			// Last
 			else if( getInt(at)==getInt(of) ) {
@@ -724,6 +738,7 @@ static esp_err_t ota_update_post_handler(httpd_req_t *req)
 	                esp_ota_end(update_handle);
 	                goto err_handler;
 	            }
+	            printf("ota_update_post_handler() entering esp_ota_end()!!! luck!\n");
 	            //
 	            err = esp_ota_end(update_handle);
 			    if (err != ESP_OK) {
@@ -733,12 +748,18 @@ static esp_err_t ota_update_post_handler(httpd_req_t *req)
 			        printf("ota_update_post_handler() esp_ota_end failed (%s)!\n", esp_err_to_name(err));
 			        goto err_handler;
 			    }
+			    printf("ota_update_post_handler() entering next..\n");
 			    err = esp_ota_set_boot_partition(update_partition);
 			    if (err != ESP_OK) {
 			        printf("ota_update_post_handler() esp_ota_set_boot_partition failed (%s)!\n", esp_err_to_name(err));
 			        goto err_handler;
 			    }
-				printf("ota_update_post_handler() upload, last chunk! Update success!!! :)\n");
+			    
+			    dl0 += tmpl;
+	            dl1 += getSize(newdec);
+	            dl2 += strlen(newdec);
+	            
+				printf("ota_update_post_handler() upload, last chunk! Update success!!! :) dl0: %i, dl1: %i, dl2: %i\n",dl0,dl1,dl2);
 			}
 			// Other
 			else {
@@ -750,11 +771,15 @@ static esp_err_t ota_update_post_handler(httpd_req_t *req)
 	                esp_ota_end(update_handle);
 	                goto err_handler;
 	            }
+	            
+	            dl0 += tmpl;
+	            dl1 += getSize(newdec);
+	            dl2 += strlen(newdec);
 			}
 			
 			//
-			printf("ota_update_post_handler() DEBUG update_handle...\n");
-			printf("ota_update_post_handler() update_handle size: %d\n",esp_get_ota_handle_size(update_handle));
+			//printf("ota_update_post_handler() DEBUG update_handle...\n");
+			//printf("ota_update_post_handler() update_handle size: %d\n",esp_get_ota_handle_size(update_handle));
 		}
 		else {
 			printf("ota_update_post_handler() Got urldecoded newdec: %s\n", newdec);
