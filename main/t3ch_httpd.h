@@ -9,6 +9,7 @@
  * Donate - Donar - Spenden - Daruj - пожертвовать - दान करना - 捐 - 寄付
  */
 
+//#include "protocol_examples_common.h"
 #include "esp_tls_crypto.h"
 #include <esp_http_server.h>
 #include "esp_log.h"

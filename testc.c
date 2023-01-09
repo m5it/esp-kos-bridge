@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
-
+#include <regex.h>
+//#include <b64/cencode.h>
+//#include <b64/cdecode.h>
 int chrat(char *str, char key) {
 	char *pch = strchr(str,key);
 	return (int)(pch-str);
@@ -60,6 +62,27 @@ static int esp_web_url_decode(char *val, int valLen, char *ret, int retLen)
     }
 
     return d;
+}
+
+//
+//
+/*
+char tmp1[] = "hello%20World";
+char *p, *e;
+p = tmp1;
+e = p + strlen(p);
+char buff[128]={0};
+int ret = esp_web_url_decode(p, (e - p), buff, 128);
+printf("ret: %i, buf: %s\n",ret,buff);
+*/
+int t3ch_urldecode(char *in, char *out, int size) {
+	char *p, *e;
+	p = in;
+	e = p + strlen(p);
+	int ret = esp_web_url_decode(p, (e-p), out, size);
+	printf("ret: %d\n", ret);
+	printf("decoded: %s\n", out);
+	return ret;
 }
 
 /*char rfc3986[256] = {0};
@@ -141,7 +164,40 @@ char *url_encode( char *table, unsigned char *s, char *enc){
         return length;
 }
 
+int match(const char *rx, char *buf) {
+	regex_t regex;
+	int reti;
+	//char msgbuf[100];
+	//
+	reti = regcomp(&regex,rx,0);
+	if( reti ) {
+		printf("Failed!\n");
+		regfree(&regex);
+		return 0;
+	}
+	//
+	reti = regexec(&regex,buf,0,NULL,0);
+	if(!reti) {
+		printf("Match!\n");
+		regfree(&regex);
+		return 1;
+	}
+	else if(reti==REG_NOMATCH) {
+		printf("No match!\n");
+		regfree(&regex);
+		return 1;
+	}
+	else {
+		printf("Looks error!\n");
+		regfree(&regex);
+		return 1;
+	}
+}
+
 void main() {
+	//
+	char xxx[] = "aG9sYQ==";
+	printf("xxx: %d\n",strlen(xxx));
 	//
 	char tmp[] = "test=123";
 	int x = chrat(tmp,'=');
@@ -149,15 +205,46 @@ void main() {
 	
 	//
 	char tmp1[] = "hello%20World";
-	char *p, *e;
+	/*char *p, *e;
 	p = tmp1;
 	e = p + strlen(p);
 	char buff[128]={0};
 	int ret = esp_web_url_decode(p, (e - p), buff, 128);
 	printf("ret: %i, buf: %s\n",ret,buff);
-	
+	*/
+	int buffsize = (strlen(tmp1)+1);
+	char buff[buffsize];
+	memset(buff,'\0',buffsize);
+	t3ch_urldecode(tmp1, buff, buffsize);
 	//
 	char out[128]={0};
 	UrlEncode(buff, buff, out, 128);
 	printf("Encoded: %s\n",out);
+	
+	//
+	char tmp2[] = "hello\r\n\r\nWorld\r\n";
+	printf("seaching World...in: %s\n",tmp2);
+	// example retrive of length of string
+	printf("tmp2 size: %d, sizeof: %d\n", ( sizeof(tmp2)/sizeof(tmp2[0])), sizeof(tmp2));
+	
+	char * pch = strstr(tmp2,"\r\n\r\n");
+	if( pch==NULL ) {
+		printf("Can not find what we are searching\n");
+	}
+	else {
+		printf("Looks we found what we search..: \n%s\n",pch);
+		char xx[strlen(pch)];
+		memset(xx,'\0',strlen(pch));
+		strcpy(xx,pch+4);
+		printf("fixing...: %s\n",xx);
+	}
+	
+	//
+	if( match("^-.*WebKitFormBoundary.*","a------WebKitFormBoundary5ing3KxzYPLdymXH--") ) {
+		printf("Looks we got comething... :)!\n");
+	}
+	else {
+		printf("Looks didnt match nothing!\n");
+	}
+	
 }

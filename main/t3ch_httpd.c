@@ -10,12 +10,14 @@
  */
 
 #include "esp_wifi.h"
-
+#include "esp_ota_ops.h"
+#include "esp_https_ota.h"
 #include "t3ch_httpd.h"
 #include "t3ch_nvs.h"
 #include "t3ch_time.h"
 //#include "t3ch_time.h"
 #include "dht.h"
+
 //
 //#include "cJSON.h"
 //--
@@ -34,18 +36,34 @@ static struct stats {
 //-- FUnctioNS
 //-------------
 // check if any request attribute exists
+/*
+[0;32mI (207308) T3CH_HTTPD: Found URL query(209) => upload=%EF%BF%BD%06%02%20%EF%BF%BD%14%08%40%EF%BF%BD%00%00%00%00%00%00%00%00%EF%BF%BD%01%00%00%00%00%01%20%00%40%3F%EF%BF%BD5%03%002T%CD%AB%00%00%00%00%00%00%00%00%00%00%00%00v1.0.0-217-g9d64b6&POS=0&ALL=16872[0m
+[0;32mI (207332) T3CH_HTTPD: Found separator(203) at 6[0m
+[0;32mI (207343) T3CH_HTTPD: Found URL query parameter => POS => 0[0m
+[0;32mI (207343) T3CH_HTTPD: Found URL query(209) => upload=%EF%BF%BD%06%02%20%EF%BF%BD%14%08%40%EF%BF%BD%00%00%00%00%00%00%00%00%EF%BF%BD%01%00%00%00%00%01%20%00%40%3F%EF%BF%BD5%03%002T%CD%AB%00%00%00%00%00%00%00%00%00%00%00%00v1.0.0-217-g9d64b6&POS=0&ALL=16872[0m
+[0;32mI (207367) T3CH_HTTPD: Found separator(203) at 6[0m
+[0;32mI (207378) T3CH_HTTPD: Found URL query parameter => ALL => 16872[0m
+ota_update_post_handler() upload start, data( 2 / 16872 )
+*/
 size_t t3ch_httpd_get_param(httpd_req_t *req, const char *key, char *paramout) {
 	size_t buf_len = httpd_req_get_url_query_len(req) + 1;
     if (buf_len > 1) {
 		char *buf = malloc(buf_len);
+		memset(buf,'\0',buf_len);
         if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
             ESP_LOGI(TAG, "Found URL query(%i) => %s", strlen(buf),buf);
             int x = chrat(buf,'=');
             ESP_LOGI(TAG, "Found separator(%i) at %i", strlen(buf)-x, x);
+            //
+            //char tmpbuf[strlen(buf)-x];
+            //memset(tmpbuf,'\0',strlen(buf)-x);
+            //
             if (httpd_query_key_value(buf, key, paramout, strlen(buf)-x) == ESP_OK) {
                 ESP_LOGI(TAG, "Found URL query parameter => %s => %s", key, paramout);
+            //    strcpy(paramout,tmpbuf);
             }
 		}
+		free(buf);
 		return buf_len;
 	}
 	return 0;
@@ -485,6 +503,469 @@ static const httpd_uri_t free_get = {
     .handler   = free_get_handler,
 };
 
+//_-
+/*static esp_err_t ota_data_post_handler(httpd_req_t *req)
+{
+    char *buf = ((web_server_context_t*) (req->user_ctx))->scratch;
+    int total_len = req->content_len;
+    int remaining_len = req->content_len;
+    int received_len = 0;
+    esp_err_t err = ESP_FAIL;
+    esp_ota_handle_t update_handle = 0;
+    const esp_partition_t *update_partition = esp_web_get_ota_update_partition();
+    // check post data size
+    if (update_partition->size < total_len) {
+        ESP_LOGE(TAG, "ota data too long, partition size is %u, bin size is %d", update_partition->size, total_len);
+        goto err_handler;
+    }
+    ESP_LOGI(TAG, "bin size is %d", total_len);
+    memset(buf, 0x0, ESP_BRIDGE_WEB_SCRATCH_BUFSIZE * sizeof(char));
+    // Send a message to MCU.
+    // esp_at_port_write_data((uint8_t*)s_ota_start_response, strlen(s_ota_start_response));
+    printf("%s\r\n", s_ota_start_response);
+    // start ota
+    err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "ota begin failed (%s)", esp_err_to_name(err));
+        goto err_handler;
+    }
+    // receive ota data
+    while (remaining_len > 0) {
+        received_len = httpd_req_recv(req, buf, MIN(remaining_len, ESP_BRIDGE_WEB_SCRATCH_BUFSIZE)); // Receive the file part by part into a buffer
+        if (received_len <= 0) { // received error
+            if (received_len == HTTPD_SOCK_ERR_TIMEOUT) {
+                continue;
+            }
+            ESP_LOGE(TAG, "Failed to receive post ota data, err = %d", received_len);
+            esp_ota_end(update_handle);
+            goto err_handler;
+        }else { // received successfully
+            err = esp_ota_write(update_handle, buf, received_len);
+            if (err != ESP_OK) {
+                ESP_LOGE(TAG, "ota write failed (%s)", esp_err_to_name(err));
+                esp_ota_end(update_handle);
+                goto err_handler;
+            }
+            remaining_len -= received_len;
+        }
+    }
+    err = esp_web_ota_end(update_handle, update_partition);
+    if (err != ESP_OK) {
+        goto err_handler;
+    }
+    esp_web_response_ok(req);
+    // esp_at_port_write_data((uint8_t*)s_ota_receive_success_response, strlen(s_ota_receive_success_response));
+    printf("%s\r\n", s_ota_receive_success_response);
+    ESP_LOGI(TAG, "ota end successfully, please restart");
+    return ESP_OK;
+
+err_handler:
+    esp_web_response_error(req, HTTPD_500);
+    // esp_at_port_write_data((uint8_t*)s_ota_receive_fail_response, strlen(s_ota_receive_fail_response));
+    printf("%s\r\n", s_ota_receive_fail_response);
+    return ESP_FAIL;
+}*/
+//static int update_upload_size;
+static esp_ota_handle_t update_handle = 0;
+static const esp_partition_t *update_partition;
+
+//
+static esp_err_t ota_update_post_handler(httpd_req_t *req)
+{
+	printf("ota_update_post_handler() starting..., total_len: %d\n",req->content_len);
+	char res[64];
+	int total_len = req->content_len;
+    int remaining_len = req->content_len;
+    int received_len = 0;
+    int len=0;
+	char out_download[512]={0}, out_upload[512]={0};
+	size_t chk_download, chk_upload;
+	//
+	esp_err_t err;
+	//esp_ota_handle_t update_handle = 0;
+    //const esp_partition_t *update_partition;// = esp_web_get_ota_update_partition();
+	//
+	chk_download = t3ch_httpd_get_param(req, "download", &out_download);
+	chk_upload   = t3ch_httpd_get_param(req, "upload", &out_upload);
+	
+	printf("ota_update_post_handler() total_len: %d\n",total_len);
+	printf("ota_update_post_handler() download debug chk_download: %d, out_download: %s\n",chk_download, out_download);
+	printf("ota_update_post_handler() upload debug chk_upload: %d, out_upload: %s\n",chk_upload, out_upload);
+	
+	//-- 1.) Option
+	// Download image from http url
+	if( strlen(out_download)>0 ) {
+		printf("ota_update_post_handler() download start, url: %s\n",out_download);
+		//
+		//if( t3ch_ota_download(out_download) ) {
+		//	esp_restart();
+		//}
+		//
+		sprintf(res,"{\"success\":true}");
+		httpd_resp_send(req, res, strlen(res));
+		printf("ota_update_post_handler() download done\n");
+	    return ESP_OK;
+	}
+	//-- 2.) Option
+	// Upload image as urlencoded chunks of data
+	if( strlen(out_upload)>0 ) {
+		char at[12]={0};
+		char of[12]={0};
+		char test[12]={0};
+		t3ch_httpd_get_param(req, "at", &at);
+		t3ch_httpd_get_param(req, "of", &of);
+		t3ch_httpd_get_param(req, "test", &test);
+		printf("ota_update_post_handler() upload start, data( %s / %s )\n",at,of);
+		// receive ota data
+		//char totalbuf[total_len+1];
+		char *totalbuf = (char*)malloc(total_len);
+		memset(totalbuf,'\0', total_len);
+		
+		int totallen = 0;
+		int bs = 320;
+		char buf[bs];
+		memset(buf,'\0',bs);
+		//
+	    while (remaining_len > 0) {
+	        received_len = httpd_req_recv(req, buf, bs); // Receive the file part by part into a buffer
+	        //received_len = esp_http_client_read(req,buf,bs);
+	        printf("ota_update_post_handler() received_len: %d, remaining: %d\n",received_len, remaining_len);
+	        if( received_len<=0 ) {
+				printf("ota_update_post_handler() received_len 0... breaking... remaining_len: %d\n",remaining_len);
+				
+				//esp_ota_end(update_handle);
+	            //goto err_handler;
+	            
+				break;
+			}
+	        
+	        //
+	        printf("ota_update_post_handler() appending to totalbuf, len: %d / %d\n",received_len, totallen);
+	        memcpy(totalbuf+totallen, buf, received_len);
+	        totallen += received_len;
+	        //char dec[received_len];
+	        //memset(dec,'\0',received_len);
+	        /*char *dec = b64decode( buf );
+	        printf("ota_update_post_handler() Got base64decoded dec: %s\n",dec);
+	        
+	        char newdec[received_len];
+	        memset(newdec,'\0', received_len);
+	        int tmpl = t3ch_urldecode(dec,newdec,received_len);
+	        printf("ota_update_post_handler() Got urldecoded newdec(%d): %s\n",tmpl,newdec);
+	        //free(dec);
+	        //
+	        if( len==0 ) {
+				printf("ota_update_post_handler() first chunk..\n");
+				//hexDump("debug1: ",&buf, received_len, 20);
+				hexDump("debug1: ",&newdec, sizeof(newdec)/sizeof(newdec[0]), 20);
+				//char *pch = strstr(buf,"\r\n\r\n");
+				//if( pch!=NULL ) {
+				//	printf("ota_update_post_handler() fixing header data pch: \n%s\n",(pch+4));
+				//	hexDump("debug2: ",(pch+4), sizeof(pch)/sizeof((pch-4)[0]), 20);
+				//}
+			}
+	        else {
+		        //buf[strcspn(buf, "\r\n")] = 0;
+		        printf("ota_update_post_handler() no fixing... received %d\n",sizeof(newdec)/sizeof(newdec[0]));
+		        //
+				//err = esp_ota_write(update_handle, buf, received_len);
+	            //if (err != ESP_OK) {
+	            //    printf("ota_update_post_handler() ota write failed (%s)\n", esp_err_to_name(err));
+	            //    esp_ota_end(update_handle);
+	            //    goto err_handler;
+	            //}
+			}*/
+	        remaining_len -= received_len;
+	        //len += received_len;
+		}
+		printf("ota_update_post_handler() leaving while loop..., totallen: %d\n",totallen);
+		
+		
+		char *dec = b64decode( totalbuf );
+        printf("ota_update_post_handler() Got base64decoded dec: %s\n",dec);
+        
+        char *newdec = (char*)malloc(strlen(dec));
+        memset(newdec,'\0', strlen(dec));
+        int tmpl = t3ch_urldecode(dec,newdec,strlen(dec));
+        printf("ota_update_post_handler() Got urldecoded newdec(%d)\n",tmpl);
+		
+		if( strlen(test)<=0 ) {
+			// First
+			if( getInt(at)==0 ) {
+				printf("ota_update_post_handler() upload, first chunk!\n");
+				//
+				update_partition = esp_web_get_ota_update_partition();
+				// check post data size
+			    /*if (update_partition->size < total_len) {
+			        printf("ota_update_post_handler() ota data too long, partition size is %u, bin size is %d", update_partition->size, total_len);
+			        goto err_handler;
+			    }*/
+			    // start ota
+			    err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
+			    if (err != ESP_OK) {
+			        printf("ota_update_post_handler() ota begin failed (%s)", esp_err_to_name(err));
+			        goto err_handler;
+			    }
+				//
+				err = esp_ota_write(update_handle, newdec, tmpl);
+	            if (err != ESP_OK) {
+	                printf("ota_update_post_handler() ota write failed (%s)", esp_err_to_name(err));
+	                esp_ota_end(update_handle);
+	                goto err_handler;
+	            }
+			}
+			// Last
+			else if( getInt(at)==getInt(of) ) {
+				printf("ota_update_post_handler() upload, last chunk!\n");
+				//
+				err = esp_ota_write(update_handle, newdec, tmpl);
+	            if (err != ESP_OK) {
+	                printf("ota_update_post_handler() ota write failed (%s)", esp_err_to_name(err));
+	                esp_ota_end(update_handle);
+	                goto err_handler;
+	            }
+	            //
+	            err = esp_ota_end(update_handle);
+			    if (err != ESP_OK) {
+			        if (err == ESP_ERR_OTA_VALIDATE_FAILED) {
+			            printf("ota_update_post_handler() Image validation failed, image is corrupted\n");
+			        }
+			        printf("ota_update_post_handler() esp_ota_end failed (%s)!\n", esp_err_to_name(err));
+			        goto err_handler;
+			    }
+			    err = esp_ota_set_boot_partition(update_partition);
+			    if (err != ESP_OK) {
+			        printf("ota_update_post_handler() esp_ota_set_boot_partition failed (%s)!\n", esp_err_to_name(err));
+			        goto err_handler;
+			    }
+				printf("ota_update_post_handler() upload, last chunk! Update success!!! :)\n");
+			}
+			// Other
+			else {
+				printf("ota_update_post_handler() upload, other chunk!\n");
+				//
+				err = esp_ota_write(update_handle, newdec, tmpl);
+	            if (err != ESP_OK) {
+	                printf("ota_update_post_handler() ota write failed (%s)", esp_err_to_name(err));
+	                esp_ota_end(update_handle);
+	                goto err_handler;
+	            }
+			}
+			
+			//
+			printf("ota_update_post_handler() DEBUG update_handle...\n");
+			printf("ota_update_post_handler() update_handle size: %d\n",esp_get_ota_handle_size(update_handle));
+		}
+		else {
+			printf("ota_update_post_handler() Got urldecoded newdec: %s\n", newdec);
+		}
+		
+		//
+		free(dec);
+		free(totalbuf);
+		free(newdec);
+		
+		//
+		sprintf(res,"{\"success\":true,\"at\":%s,\"of\":%s}",at,of);
+		httpd_resp_send(req, res, strlen(res));
+		printf("ota_update_post_handler() upload done\n");
+	    return ESP_OK;
+	
+	}
+	return ESP_FAIL; // to debug only
+//--
+	//
+    err_handler:
+	    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed.");
+	    printf("ota_update_post_handler() Failed!\n");
+	    return ESP_FAIL;
+	
+	/*
+	//-- 3.) Option
+	// POST download image as multipart/form-data
+	//int total_len = req->content_len;
+    int remaining_len = req->content_len;
+    int received_len = 0;
+    int bs = 320, cc = 0, abs=0;
+    char buf[bs+1];
+    memset(buf,'\0',bs+1);
+    //char ret[640]={0};
+    esp_err_t err;
+    char lastbuf[1025];
+    int lastbufsize=0;
+    memset(lastbuf,'\0',1025);
+    
+    esp_ota_handle_t update_handle = 0;
+    const esp_partition_t *update_partition = esp_web_get_ota_update_partition();
+    // check post data size
+    if (update_partition->size < total_len) {
+        printf("ota_update_post_handler() ota data too long, partition size is %u, bin size is %d", update_partition->size, total_len);
+        goto err_handler;
+    }
+    
+    // start ota
+    err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
+    if (err != ESP_OK) {
+        printf("ota_update_post_handler() ota begin failed (%s)", esp_err_to_name(err));
+        goto err_handler;
+    }
+    
+    printf("ota_update_post_handler() total_len: %d\n",total_len);
+	// receive ota data
+    while (remaining_len > 0) {
+        received_len = httpd_req_recv(req, buf, bs); // Receive the file part by part into a buffer
+        //received_len = esp_http_client_read(req,buf,bs);
+        printf("ota_update_post_handler() received_len: %d, remaining: %d\n",received_len, remaining_len);
+        if( received_len<=0 ) {
+			printf("ota_update_post_handler() received_len 0... breaking... remaining_len: %d\n",remaining_len);
+			
+			esp_ota_end(update_handle);
+            goto err_handler;
+            
+			break;
+		}
+        remaining_len -= received_len;
+        
+        //-- First Chunk looks like this:
+        //
+        // 
+	    //    ------WebKitFormBoundaryyWDvv9OrSE4pzWnm
+		//	Content-Disposition: form-data; name="file"; filename="esp-kos-bridge.bin"
+		//	Content-Type: application/macbinary
+		//
+		//-- Last chunk contain this as last line:
+		//
+		//------WebKitFormBoundaryyWDvv9OrSE4pzWnm--
+		//
+        
+        printf("ota_update_post_handler() buf(%d / %d): %s\n",sizeof(buf)/sizeof(buf[0]), strlen(buf), buf);
+        abs += strlen(buf);
+        //--
+        //
+		if( cc==0 ) {
+			printf("ota_update_post_handler() first chunk!\n");
+			// fix data from HTTP header and multipart/form-data strings
+			char *pch = strstr(buf,"\r\n\r\n");
+			if( pch!=NULL ) {
+				printf("ota_update_post_handler() fixing header data pch: \n%s\n",(pch+4));
+				char newbuf[bs+1];
+				memset(newbuf,'\0',bs+1);
+				int newbs = sizeof(pch)/sizeof( (pch+4)[0] );
+				printf("ota_update_post_handler() fixing header newbs: %d / %d\n",newbs,sizeof(pch));
+				//newbuf = (pch+4);
+				memcpy(newbuf,(pch+4), strlen(pch+4)+1);
+				printf("ota_update_post_handler() fixing header newbuf: \n%s\n",newbuf);
+				//
+				//size += sprintf(ret+size,"%s",(pch+4));
+				err = esp_ota_write(update_handle, newbuf, strlen(newbuf));
+	            if (err != ESP_OK) {
+	                printf("ota_update_post_handler() ota write failed (%s)", esp_err_to_name(err));
+	                esp_ota_end(update_handle);
+	                goto err_handler;
+	            }
+			}
+			else {
+				printf("ota_update_post_handler() first chunk! no match for .r.n!\n");
+				err = esp_ota_write(update_handle, buf, received_len);
+	            if (err != ESP_OK) {
+	                ESP_LOGE(TAG, "ota write failed (%s)", esp_err_to_name(err));
+	                esp_ota_end(update_handle);
+	                goto err_handler;
+	            }
+			}
+		}
+		else if( remaining_len<=0 ) {
+			printf("ota_update_post_handler() last chunk! lastbuf( %d ): %s\n",strlen(lastbuf), lastbuf);
+			//
+			//size += sprintf(ret+size,"%s",buf);
+			char newbuf[bs+1];
+			int size=0;
+			memset(newbuf,'\0',bs+1);
+			char *pch = strtok(buf,"\r\n");
+			if( pch!=NULL ) {
+				while(pch!=NULL) {
+					printf("ota_update_post_handler() last chunk debug: %s\n",pch);
+					// Remove last line ex.: ------WebKitFormBoundaryyWDvv9OrSE4pzWnm--
+					if( match("^\-.*WebKitFormBoundary.*\-\-",pch)==0 ) {
+						int pchsize = strlen(pch);//sizeof(pch)/sizeof(pch[0]);
+						printf("ota_update_post_handler() creating newbuf size: %d / %d\n", size, pchsize);
+						memcpy(newbuf+size, pch, pchsize);
+						size += pchsize;//sizeof(pch)-1;
+						//memcpy(newbuf+size, "\n", 1);
+						//size += 1;
+					}
+					pch = strtok(NULL,"\r\n");
+				}
+				printf("ota_update_post_handler() last chunk, newbuf: \n%s\n",newbuf);
+				err = esp_ota_write(update_handle, newbuf, strlen(newbuf));
+	            if (err != ESP_OK) {
+	                printf("ota_update_post_handler() ota write failed (%s)", esp_err_to_name(err));
+	                esp_ota_end(update_handle);
+	                goto err_handler;
+	            }
+			}
+			else {
+				printf("ota_update_post_handler() last chunk no match .r.n!\n");
+				err = esp_ota_write(update_handle, buf, received_len);
+	            if (err != ESP_OK) {
+	                printf("ota_update_post_handler() ota write failed (%s)", esp_err_to_name(err));
+	                esp_ota_end(update_handle);
+	                goto err_handler;
+	            }
+			}
+			break;
+		}
+		else if( remaining_len<=1024 ) {
+			printf("ota_update_post_handler() creating lastbuf\n");
+			memcpy(lastbuf+lastbufsize,buf,received_len);
+			lastbufsize+=received_len;
+		}
+		else {
+			printf("ota_update_post_handler() mid chunk no match .r.n! len: %d\n",received_len);
+			err = esp_ota_write(update_handle, buf, received_len);
+            if (err != ESP_OK) {
+                printf("ota_update_post_handler() ota write failed (%s)", esp_err_to_name(err));
+                esp_ota_end(update_handle);
+                goto err_handler;
+            }
+		}
+        cc++;
+	}
+	
+	err = esp_ota_end(update_handle);
+    if (err != ESP_OK) {
+        if (err == ESP_ERR_OTA_VALIDATE_FAILED) {
+            printf("ota_update_post_handler() Image validation failed, image is corrupted\n");
+        }
+        printf("ota_update_post_handler() esp_ota_end failed (%s)!\n", esp_err_to_name(err));
+        goto err_handler;
+    }
+    err = esp_ota_set_boot_partition(update_partition);
+    if (err != ESP_OK) {
+        printf("ota_update_post_handler() esp_ota_set_boot_partition failed (%s)!\n", esp_err_to_name(err));
+        goto err_handler;
+    }
+	sprintf(res,"{\"success\":true}");
+	httpd_resp_send(req, res, strlen(res));
+	printf("ota_update_post_handler() done\n");
+	//httpd_resp_send_chunk(req, NULL, 0);
+    return ESP_OK;
+//--
+//
+err_handler:
+    //esp_web_response_error(req, HTTPD_500);
+    //httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Not found.");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed.");
+    printf("ota_update_post_handler() Failed!\n");
+    return ESP_FAIL;*/
+}
+//
+static const httpd_uri_t ota_update_post = {
+    .uri       = "/update/*",
+    .method    = HTTP_POST,
+    .handler   = ota_update_post_handler,
+};
+
 //
 esp_err_t httpd_error(httpd_req_t *req, httpd_err_code_t err)
 {
@@ -495,7 +976,9 @@ esp_err_t httpd_error(httpd_req_t *req, httpd_err_code_t err)
         httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "/echo URI is not available");
         return ESP_FAIL;
     }*/
-    /* For any other URI send 404 and close socket */
+    /* For any other URI send 404 and close socket 
+     * More on error codes, here:
+     * https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_server.html*/
     httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Not found.");
     return ESP_FAIL;
 }
@@ -504,7 +987,7 @@ bool StartWeb(void) {
 	httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     //config.lru_purge_enable = true;
-
+    config.uri_match_fn = httpd_uri_match_wildcard;
 	//--
     // Start the httpd server
     ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
@@ -516,6 +999,7 @@ bool StartWeb(void) {
         httpd_register_uri_handler(server, &time_get);
         httpd_register_uri_handler(server, &timer_get);
         httpd_register_uri_handler(server, &wifi_get);
+        httpd_register_uri_handler(server, &ota_update_post);
         httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, httpd_error);
     }
     

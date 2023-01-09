@@ -11,6 +11,9 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <regex.h>
+#include "b64/cdecode.h"
+#include <errno.h>
 
 //
 int getInt(char *str) {
@@ -18,9 +21,45 @@ int getInt(char *str) {
 }
 
 //
+int getSize(char *buf) {
+	return sizeof(buf)/sizeof(buf[0]);
+}
+
+//
 int chrat(char *str, char key) {
 	char *pch = strchr(str,key);
 	return (int)(pch-str);
+}
+
+/**/
+int match(const char *rx, char *buf) {
+	regex_t regex;
+	int reti;
+	//char msgbuf[100];
+	//
+	reti = regcomp(&regex,rx,0);
+	if( reti ) {
+		printf("Failed!\n");
+		regfree(&regex);
+		return 0;
+	}
+	//
+	reti = regexec(&regex,buf,0,NULL,0);
+	if(!reti) {
+		printf("Match!\n");
+		regfree(&regex);
+		return 1;
+	}
+	else if(reti==REG_NOMATCH) {
+		printf("No match!\n");
+		regfree(&regex);
+		return 0;
+	}
+	else {
+		printf("Looks error!\n");
+		regfree(&regex);
+		return 0;
+	}
 }
 
 /**
@@ -144,4 +183,373 @@ int esp_web_url_encode(char* url, char* encode,  char* buffer, unsigned int size
         if(*url)
         while(*url) { if(chars[*url]) length+=2; url++; length++; }
         return length;
+}
+
+// Stupid helper function that returns the value of a hex char.
+int esp_web_char2hex(char c)
+{
+    if (c >= '0' && c <= '9') {
+        return c - '0';
+    }
+
+    if (c >= 'A' && c <= 'F') {
+        return c - 'A' + 10;
+    }
+
+    if (c >= 'a' && c <= 'f') {
+        return c - 'a' + 10;
+    }
+
+    return 0;
+}
+
+//
+int esp_web_url_decode(char *val, int valLen, char *ret, int retLen)
+{
+    int s = 0, d = 0;
+    int esced = 0, escVal = 0;
+
+    while (s < valLen && d < retLen) {
+        if (esced == 1) {
+            escVal = esp_web_char2hex(val[s]) << 4;
+            esced = 2;
+        } else if (esced == 2) {
+            escVal += esp_web_char2hex(val[s]);
+            ret[d++] = escVal;
+            esced = 0;
+        } else if (val[s] == '%') {
+            esced = 1;
+        } else if (val[s] == '+') {
+            ret[d++] = ' ';
+        } else {
+            ret[d++] = val[s];
+        }
+
+        s++;
+    }
+
+    if (d < retLen) {
+        ret[d] = 0;
+    }
+
+    return d;
+}
+
+//
+int t3ch_urldecode(char *in, char *out, int size) {
+	char *p, *e;
+	p = in;
+	e = p + strlen(p);
+	int ret = esp_web_url_decode(p, (e-p), out, size);
+	//printf("ret: %d\n", ret);
+	//printf("decoded: %s\n", out);
+	return ret;
+}
+
+//
+char* b64decode(const char* input)
+{
+	/* set up a destination buffer large enough to hold the encoded data */
+	char* output = (char*)malloc(strlen(input));
+	memset(output,'\0',strlen(input));
+	/* keep track of our decoded position */
+	char* c = output;
+	/* store the number of bytes decoded by a single call */
+	int cnt = 0;
+	/* we need a decoder state */
+	base64_decodestate s;
+	
+	/*---------- START DECODING ----------*/
+	/* initialise the decoder state */
+	base64_init_decodestate(&s);
+	/* decode the input data */
+	cnt = base64_decode_block(input, strlen(input), c, &s);
+	c += cnt;
+	/* note: there is no base64_decode_blockend! */
+	/*---------- STOP DECODING  ----------*/
+	
+	/* we want to print the decoded data, so null-terminate it: */
+	*c = 0;
+	
+	return output;
+}
+
+// Usage:
+//     hexDump(desc, addr, len, perLine);
+//         desc:    if non-NULL, printed as a description before hex dump.
+//         addr:    the address to start dumping from.
+//         len:     the number of bytes to dump.
+//         perLine: number of bytes on each output line.
+
+void hexDump (
+    const char * desc,
+    const void * addr,
+    const int len,
+    int perLine
+) {
+    // Silently ignore silly per-line values.
+
+    if (perLine < 4 || perLine > 64) perLine = 16;
+
+    int i;
+    unsigned char buff[perLine+1];
+    const unsigned char * pc = (const unsigned char *)addr;
+
+    // Output description if given.
+
+    if (desc != NULL) printf ("%s:\n", desc);
+
+    // Length checks.
+
+    if (len == 0) {
+        printf("  ZERO LENGTH\n");
+        return;
+    }
+    if (len < 0) {
+        printf("  NEGATIVE LENGTH: %d\n", len);
+        return;
+    }
+
+    // Process every byte in the data.
+
+    for (i = 0; i < len; i++) {
+        // Multiple of perLine means new or first line (with line offset).
+
+        if ((i % perLine) == 0) {
+            // Only print previous-line ASCII buffer for lines beyond first.
+
+            if (i != 0) printf ("  %s\n", buff);
+
+            // Output the offset of current line.
+
+            printf ("  %04x ", i);
+        }
+
+        // Now the hex code for the specific character.
+
+        printf (" %02x", pc[i]);
+
+        // And buffer a printable ASCII character for later.
+
+        if ((pc[i] < 0x20) || (pc[i] > 0x7e)) // isprint() may be better.
+            buff[i % perLine] = '.';
+        else
+            buff[i % perLine] = pc[i];
+        buff[(i % perLine) + 1] = '\0';
+    }
+
+    // Pad out last line if not exactly perLine characters.
+
+    while ((i % perLine) != 0) {
+        printf ("   ");
+        i++;
+    }
+
+    // And print the final ASCII buffer.
+
+    printf ("  %s\n", buff);
+}
+
+/*int GetUtf8CharacterLength( unsigned char utf8Char )
+{
+    if ( utf8Char < 0x80 ) return 1;
+    else if ( ( utf8Char & 0x20 ) == 0 ) return 2;
+    else if ( ( utf8Char & 0x10 ) == 0 ) return 3;
+    else if ( ( utf8Char & 0x08 ) == 0 ) return 4;
+    else if ( ( utf8Char & 0x04 ) == 0 ) return 5;
+
+    return 6;
+}
+
+char Utf8ToLatin1Character( char *s, int *readIndex )
+{
+    int len = GetUtf8CharacterLength( static_cast<unsigned char>( s[ *readIndex ] ) );
+    if ( len == 1 )
+    {
+        char c = s[ *readIndex ];
+        (*readIndex)++;
+
+        return c;
+    }
+
+    unsigned int v = ( s[ *readIndex ] & ( 0xff >> ( len + 1 ) ) ) << ( ( len - 1 ) * 6 );
+    (*readIndex)++;
+    for ( len-- ; len > 0 ; len-- )
+    {
+        v |= ( static_cast<unsigned char>( s[ *readIndex ] ) - 0x80 ) << ( ( len - 1 ) * 6 );
+        (*readIndex)++;
+    }
+
+    return ( v > 0xff ) ? 0 : (char)v;
+}
+
+// overwrites s in place
+char *Utf8ToLatin1String( char *s )
+{
+    for ( int readIndex = 0, writeIndex = 0 ; ; writeIndex++ )
+    {
+        if ( s[ readIndex ] == 0 )
+        {
+            s[ writeIndex ] = 0;
+            break;
+        }
+
+        char c = Utf8ToLatin1Character( s, &readIndex );
+        if ( c == 0 )
+        {
+            c = '_';
+        }
+
+        s[ writeIndex ] = c;
+    }
+
+    return s;
+}*/
+char *utf8_to_latin9(const char *const string)
+{
+    size_t         size = 0;
+    size_t         used = 0;
+    unsigned char *result = NULL;
+
+    if (string) {
+        const unsigned char  *s = (const unsigned char *)string;
+
+        while (*s) {
+
+            if (used >= size) {
+                void *const old = result;
+
+                size = (used | 255) + 257;
+                result = realloc(result, size);
+                if (!result) {
+                    if (old)
+                        free(old);
+                    errno = ENOMEM;
+                    return NULL;
+                }
+            }
+
+            if (*s < 128) {
+                result[used++] = *(s++);
+                continue;
+
+            } else
+            if (s[0] == 226 && s[1] == 130 && s[2] == 172) {
+                result[used++] = 164;
+                s += 3;
+                continue;
+
+            } else
+            if (s[0] == 194 && s[1] >= 128 && s[1] <= 191) {
+                result[used++] = s[1];
+                s += 2;
+                continue;
+
+            } else
+            if (s[0] == 195 && s[1] >= 128 && s[1] <= 191) {
+                result[used++] = s[1] + 64;
+                s += 2;
+                continue;
+
+            } else
+            if (s[0] == 197 && s[1] == 160) {
+                result[used++] = 166;
+                s += 2;
+                continue;
+
+            } else
+            if (s[0] == 197 && s[1] == 161) {
+                result[used++] = 168;
+                s += 2;
+                continue;
+
+            } else
+            if (s[0] == 197 && s[1] == 189) {
+                result[used++] = 180;
+                s += 2;
+                continue;
+
+            } else
+            if (s[0] == 197 && s[1] == 190) {
+                result[used++] = 184;
+                s += 2;
+                continue;
+
+            } else
+            if (s[0] == 197 && s[1] == 146) {
+                result[used++] = 188;
+                s += 2;
+                continue;
+
+            } else
+            if (s[0] == 197 && s[1] == 147) {
+                result[used++] = 189;
+                s += 2;
+                continue;
+
+            } else
+            if (s[0] == 197 && s[1] == 184) {
+                result[used++] = 190;
+                s += 2;
+                continue;
+
+            }
+
+            if (s[0] >= 192 && s[0] < 224 &&
+                s[1] >= 128 && s[1] < 192) {
+                s += 2;
+                continue;
+            } else
+            if (s[0] >= 224 && s[0] < 240 &&
+                s[1] >= 128 && s[1] < 192 &&
+                s[2] >= 128 && s[2] < 192) {
+                s += 3;
+                continue;
+            } else
+            if (s[0] >= 240 && s[0] < 248 &&
+                s[1] >= 128 && s[1] < 192 &&
+                s[2] >= 128 && s[2] < 192 &&
+                s[3] >= 128 && s[3] < 192) {
+                s += 4;
+                continue;
+            } else
+            if (s[0] >= 248 && s[0] < 252 &&
+                s[1] >= 128 && s[1] < 192 &&
+                s[2] >= 128 && s[2] < 192 &&
+                s[3] >= 128 && s[3] < 192 &&
+                s[4] >= 128 && s[4] < 192) {
+                s += 5;
+                continue;
+            } else
+            if (s[0] >= 252 && s[0] < 254 &&
+                s[1] >= 128 && s[1] < 192 &&
+                s[2] >= 128 && s[2] < 192 &&
+                s[3] >= 128 && s[3] < 192 &&
+                s[4] >= 128 && s[4] < 192 &&
+                s[5] >= 128 && s[5] < 192) {
+                s += 6;
+                continue;
+            }
+
+            s++;
+        }
+    }
+
+    {
+        void *const old = result;
+
+        size = (used | 7) + 1;
+
+        result = realloc(result, size);
+        if (!result) {
+            if (old)
+                free(old);
+            errno = ENOMEM;
+            return NULL;
+        }
+
+        memset(result + used, 0, size - used);
+    }
+
+    return (char *)result;
 }

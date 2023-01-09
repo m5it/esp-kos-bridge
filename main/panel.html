@@ -16,6 +16,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta charset="UTF-8">
+<!-- Page Style -->
 <style>
 /**/
 * {
@@ -100,6 +101,33 @@ button {
 	width:16%;
 	white-space:nowrap;
 }
+
+/**/
+#displayUpdate {}
+#displayUpdateProgress {}
+#displayUpdateProgress > div {
+	position:relative;
+	width:200px;
+	height:20px;
+}
+#displayUpdateProgress .progress {
+	position:absolute;
+	left:0px;
+	bottom:0px;
+	top:0px;
+	background:red;
+	z-index:1;
+}
+#displayUpdateProgress .progressInfo {
+	color:white;
+	position:absolute;
+	left:50%;
+	top:50%;
+	transform:translate(-50%,-50%);
+	z-index:2;
+	padding:4px;
+}
+
 /**/
 .clearfix:after {clear: both;content: ".";display: block;font-size: 0;height: 0;line-height: 0;visibility: hidden;}
 .clearfix { display: inline-block; }
@@ -121,6 +149,55 @@ button {
 	}
 }
 </style>
+<!-- Tabs Style -->
+<style>
+/*-- TAB MENuS CSS START --*/
+.fields .display:not(.active) {
+    display:none;
+}
+.fields .tabs {
+    color:white;
+    font-weight: bolder;
+    font-family: system-ui;
+}
+.fields .tabs > div {
+	display:inline-block;
+	padding:3px 13px;
+}
+.fields .tabs .name {
+    cursor:pointer;
+    background:#8fbc8f;
+}
+.fields .tabs .name:not(.active) {
+    color:lightblue;
+}
+.fields .tabs .name:not(.active):hover {color:white;}
+.fields .tabs .name.active {
+    box-shadow:0px 0px 2px 1px green;
+}
+
+.fields.vertical > .tabs {
+    float:left;
+}
+.fields.vertical > .tabs > div {
+    display:block;
+    width:100px;
+    text-align:center;
+    
+}
+.fields.vertical > .display {
+    margin-left:120px;
+}
+.fields.vertical > .display > div {
+    margin:0px 27px;
+}
+
+.fields:not(.vertical) > .display > div {
+    margin:13px 0px;
+}
+/*-- TAB MENuS CSS END --*/
+</style>
+
 <script>
 //
 var loading_d=null, loading_d1=null;
@@ -178,12 +255,19 @@ function Fetch( opt ) {
 		href = opt.href;
 	}
 	else return;
+	var opt_method  = (typeof(opt)=='object' && typeof(opt.method)!='undefined'?opt.method:"GET");
+	var opt_body    = (typeof(opt)=='object' && typeof(opt.body)!='undefined'?opt.body:null);
 	//
-	fetch(href+(href.match(/\?/i)?"&":"?"), {  
-	    method :'GET',
+	var fetchOpts = {  
+	    method :opt_method,
 	    cache:'no-store',
-	    headers:new Headers({'content-type': 'application/json'}), 
-    }).then(function (data) {
+	    //headers:new Headers({'content-type': 'application/json'}),
+	    //body:{},
+    };
+    //
+    if( opt_body!=null ) fetchOpts["body"] = opt_body;
+	//
+	fetch(href, fetchOpts).then(function (data) {
 		return data.json();
 	}).then(function(json) {
 		console.info("response",json);
@@ -197,6 +281,29 @@ function Fetch( opt ) {
 	}).catch(function(E) {
 		console.warn("Fetch() ERROR: ",E);
 	});
+}
+
+function urlencode(text) {
+    var tmp = encodeURIComponent( text );
+    tmp = tmp.replace(new RegExp('[*]', 'g'), '%2A');
+    return tmp;
+}
+function findParent(element,opt) {
+	var opt_classname = (typeof(opt)=='object' && typeof(opt.classname)!='undefined'?opt.classname:null);
+	var opt_maxtries  = (typeof(opt)=='object' && typeof(opt.maxtries)!='undefined'?opt.maxtries:10);
+	var cnt=0;
+	while(cnt<opt_maxtries) {
+		if( element.getAttribute("class").match( opt_classname ) ) {
+			console.info("findParent() got element!",element);
+			return element;
+		}
+		element = element.parentNode;
+		cnt++;
+	}
+	return null;
+}
+function random(min,max) {
+    return Math.round((Math.random(min,max)*max)+min);
 }
 //
 function infoLoop() {
@@ -287,6 +394,103 @@ window.onload = function() {
 	ready();
 }
 //
+var rd=null;
+//
+if (window.File && window.FileReader && window.FileList && window.Blob) {
+	rd = new FileReader();
+} 
+else {
+	console.warn("Outdated browser!");
+}
+//
+var parts      = [];
+var parts_pos  = 0;
+var part_size  = 512;
+var parts_size = 0;
+//
+function loadFile(fp) {
+	console.info("loadFile() started...",fp);
+	//
+	var out=null;
+	part_size = qS("input[name='chunksize']").value, parts_size=0, parts_pos =0, parts = [];
+	console.info("loadFile() using chunksize",part_size);
+	//
+	if(rd!=null && fp.files && fp.files[0]) {
+		rd.onload = function(e) {
+			out = e.target.result;
+			//
+			//out = out.replace(/\xc3\xa9/g,\x00\xe9);
+			
+			console.info("Got file size: ",out.length);
+			parts_size = out.length;
+			var data = out;
+			//
+			var cnt   = 0;
+			var part  = "";
+			//var parts = [];
+			for(var i=0; i<data.length; i++) {
+				part += data[i];
+				if(cnt>=part_size) {
+					parts.push(part);
+					part = "";
+					cnt=0;
+				}
+				else if(i>=(data.length-1)) {
+					parts.push(part);
+					part = "";
+				}
+				else {
+					cnt++;
+				}
+			}
+			
+			//
+			console.warn("Num of parts: ",parts.length);
+			sendFile();
+		};
+		rd.readAsText(fp.files[0],'ISO-8859-3');//'CP1251');//'ISO-8859-1');
+		//rd.readAsBinaryString(fp.files[0]);
+		//rd.readAsArrayBuffer(fp.files[0]);
+	}
+}
+//
+function sendFile() {
+	console.info("sendFile() STARTED!");
+	//var data = urlencode( parts[parts_pos] );
+	//var data = btoa( parts[parts_pos] ).replace(/[\=]+$|[\=\=]+$/g,"");
+	var data = btoa( escape(parts[parts_pos]) ).replace(/[\=]+$|[\=\=]+$/g,"");
+	//var data = window.btoa(unescape(encodeURIComponent( parts[parts_pos] )));
+	//var data = allparts;//parts[parts_pos];
+	//var data = new FormData();
+	//data.append("file",allparts);
+	console.info("sendFile() "+parts_pos+" / "+(parts.length-1)+" data("+data.length+"): "+data);
+	//
+	Fetch({
+		method:"POST",
+		body:data,
+		href:document.location.origin+"/update/?upload=1&at="+parts_pos+"&of="+(parts.length-1)+(qS("input[name='filetest']").checked?"&test=1":""),
+		onDone:function(json) {
+		//
+		console.info("/update/?upload, pos: "+parts_pos+" response",json);
+		
+		// 
+		var proc = ( parts_pos*100 ) / ( parts.length-1 );
+		qS("#displayUpdateProgress .progress").setAttribute("style","width:"+proc+"%;");
+		qS("#displayUpdateProgress .progressInfo").innerText = proc+"%";
+		
+		//
+		if( parts_pos>=(parts.length-1) ) {
+			console.info("Looks its done... "+proc+"%");
+		}
+		else {
+			console.info("Not done yet.. "+parts_pos+" / "+(parts.length-1)+" = "+proc+"%");
+			parts_pos++;
+			sendFile();
+		}
+	},});
+}
+
+//
 function ready() {
 	//-- Set some inputs
 	//
@@ -299,6 +503,27 @@ function ready() {
 	generate_select_hour({name:"endHour",appendElement:qS("#endHour"),});
 	generate_select_min({name:"startMin",appendElement:qS("#startMin"),});
 	generate_select_min({name:"endMin",appendElement:qS("#endMin"),});
+	
+	//--
+	// initialize tab menus
+	//
+	document.querySelectorAll(".fields > .tabs .name").forEach(function(elmx) {
+	    elmx.addEventListener("click",function(e) {
+		    var attrActive = this.getAttribute("attr-active");
+		    var elm = findParent(e.target,{classname:'fields',});
+		    var tmpid = elm.getAttribute("id");
+		    if(typeof(tmpid)=='undefined' || tmpid==null) {
+				tmpid = "tmpid"+(new Date().getTime())+random(100,99999);
+			    elm.setAttribute("id",tmpid);
+			}
+		    document.querySelectorAll("#"+tmpid+" > .tabs .name").forEach(function(el) { el.classList.remove("active"); });
+		    this.classList.add("active");
+		    document.querySelectorAll("#"+tmpid+" > .display").forEach(function(el) { el.classList.remove("active"); });
+		    document.querySelectorAll("#"+tmpid+" > .display."+attrActive).forEach(function(el) { el.classList.add("active"); });
+		    // Trigger attrActive event
+		    console.warn("adm/index -> Trigger","tabs_"+attrActive);
+        });
+	});
 	
 	//-- Start infinite loop to retrive Free and Time of server
 	//
@@ -461,12 +686,12 @@ function ready() {
 					html += "<div class='fieldrow titles'><div class='field w25'>SSID</div>";
 					html += "<div class='field w25'>RSSI</div>";
 					html += "<div class='field w25'>CHAN</div>";
-					html += "<div class='field w25'>MODE</div></div>";
+					html += "<div class='field w25'>MODE</div><div class='clearfix'></div></div>";
 					for(var i=0; i<json.data.length; i++) {
 						html += "<div class='fieldrow fieldsel' attr=\""+json.data[i].ssid+"\"><div class='field w25'>"+json.data[i].ssid+"</div>";
 						html += "<div class='field w25'>"+json.data[i].rssi+"</div>";
 						html += "<div class='field w25'>"+json.data[i].chan+"</div>";
-						html += "<div class='field w25'>"+json.data[i].mode+"</div></div>";
+						html += "<div class='field w25'>"+json.data[i].mode+"</div><div class='clearfix'></div></div>";
 					}
 					html += "</div>";
 					qS("#displaySCAN > div").innerHTML = html;
@@ -483,6 +708,22 @@ function ready() {
 			},});
 		},});
 		return false;
+	});
+
+	//--
+	//
+	qS("#otaUpdateDownload").addEventListener("click",function(e) {
+		var url = qS("input[name='otaUpdateDownload']").value;
+		
+		console.info("#otaUpdateDownload url",url);
+		
+		if( !url.match(/^http\:\/\/.*bin$/i) ) {
+			alert("Url should start with http://... and end with .bin!");
+			return false;
+		}
+		Fetch({method:"POST", href:document.location.origin+"/update/?download="+urlencode(url),onDone:function(json) {
+			console.info("/update/?download="+urlencode(url)+" response",json);
+		},});
 	});
 }
 </script>
@@ -513,6 +754,15 @@ function ready() {
 </div>
 
 
+<div class="fields hor">
+		<div class="tabs">
+            <div class="name active" attr-active="tab_wifiinfo" style="margin:2px;">Wifi</div>
+			<div class="name" attr-active="tab_timeinfo" style="margin:2px;">Time</div>
+			<div class="name" attr-active="tab_timerinfo" style="margin:2px;">Timer</div>
+			<div class="name" attr-active="tab_otaupdate" style="margin:2px;">Update</div>
+		</div>
+
+<div class="display tab_wifiinfo active">
 <div class="field w33">
 	<label>WiFi Informations</label>
 	<div>
@@ -556,8 +806,9 @@ function ready() {
 		</div>
 	</div>
 </div>
+</div>
 
-
+<div class="display tab_timeinfo">
 <div class="field w33">
 	<label>Set Server/Timer Time ( struct tm )</label>
 	<div><form id="tm">
@@ -576,7 +827,9 @@ function ready() {
 		<div align="center"><button name="submit" id="tm_submit">Set</button></div>
 	</form></div>
 </div>
+</div>
 
+<div class="display tab_timerinfo">
 <div class="field w33">
 	<label>Timer Settings</label>
     <div class="spec6">
@@ -613,6 +866,41 @@ function ready() {
 	    <div></div>
     </div>
 </div>
+</div>
+
+<div class="display tab_otaupdate">
+	<div class="field w33">
+		<label>OTA Updates</label>
+		<div>
+			<div id="displayUpdateProgress">
+				<div>
+					<div class="progress"></div>
+					<div class="progressInfo"></div>
+				</div>
+			</div>
+			<div id="displayUpdate">
+				<label>Update by selecting image.</label>
+				<div>
+					<form action="/update/" method="POST" enctype="multipart/form-data">
+						<input type="checkbox" name="filetest" value="1">
+						<input type="text" name="chunksize" value="512" size=4>
+						<input type="file" name="file" onchange="loadFile(this);">
+					</form>
+				</div>
+			</div>
+			
+			<div>
+				<label>Update by downloading from http://..</label>
+				<div>
+					<input type="text" name="otaUpdateDownload" value="">
+					<button id="otaUpdateDownload">Update</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+</div> <!-- .fields -->
 
 </body>
 </html>

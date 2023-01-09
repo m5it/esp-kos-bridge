@@ -23,3 +23,5 @@ esp_err_t register_test(void);
 esp_err_t register_free(void);
 esp_err_t register_list(void);
 esp_err_t register_dht(void);  // DHT sensor, humidity & temperature
+//
+static const uint8_t FULLCHAIN[] asm("_binary_fullchain_pem_start");

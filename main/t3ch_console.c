@@ -29,6 +29,12 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 //
+//#include "esp_ota_ops.h"
+//#include "esp_http_client.h"
+//#include "esp_https_ota.h"
+//#include "protocol_examples_common.h"
+
+//
 #include "driver/gpio.h"
 #include "driver/ledc.h"
 
@@ -354,6 +360,9 @@ static struct {
 	struct arg_str *nvsRead;
 	struct arg_str *nvsWrite;
 	//
+	struct arg_str *testOtaUpdate;
+	struct arg_lit *testOtaPartition;
+	struct arg_str *testB64Decode;
 	struct arg_lit *testScan;
 	struct arg_lit *testTime;
 	struct arg_lit *testLedc;
@@ -452,8 +461,37 @@ static int do_cmd_test(int argc, char **argv) {
 		else printf("nvsWrite commit Success!\n");
 	}
     //--
+    //
+    if (test_args.testOtaPartition->count > 0) {
+		printf("test ota partition starting.\n");
+		const esp_partition_t *partition = esp_web_get_ota_update_partition();
+		printf("test ota partition size: %d\n",partition->size);
+	}
+	//
+    if (test_args.testOtaUpdate->count > 0) {
+		char *url = test_args.testOtaUpdate->sval[0];
+		printf("test ota update starting, from url: %s\n",url);
+		// Check if url starts with http
+		if( match("^http\:\/\/.*",url)==0 ) {
+			printf("test ota update Failed. Url should start with http://...\n");
+			return 0;
+		}
+		
+		if( t3ch_ota_download(url) ) {
+			esp_restart();
+		}
+	}
+    //
+    if (test_args.testB64Decode->count > 0) {
+		char *tmp = test_args.testB64Decode->sval[0];
+		printf("B64Decode STARTED, trying to decode(%d): %s\n",strlen(tmp),tmp);
+		tmp = b64decode( tmp );
+		printf("B64Decode DECODED(%d): %s\n",strlen(tmp),tmp);
+		free(tmp);
+	}
+	//
     if (test_args.testScan->count > 0) {
-		printf("test scan starting.");
+		printf("test scan starting.\n");
 		StartScan();
 	}
     //--
@@ -510,6 +548,9 @@ esp_err_t register_test(void) {
 	test_args.nvsRead    = arg_str1("r","nvsRead","<s>","Read from nvs");
 	test_args.nvsWrite   = arg_str1("w","nvsWrite","<s>","Write to nvs");
 	// default options
+	test_args.testOtaPartition = arg_lit0("p", "testOtaPartition", "Test ota partition size..");
+	test_args.testOtaUpdate    = arg_str1("u", "testOtaUpdate", "<s>", "Test ota update");
+	test_args.testB64Decode    = arg_str1("D", "testB64Decode","<s>", "Test base64 decode.");
 	test_args.testScan   = arg_lit0("S", "testScan", "Test wifi scan");
 	test_args.testTime   = arg_lit0("T", "testTime", "Test time");
 	test_args.testLedc   = arg_lit0("L", "testLedc", "Test ledc");
