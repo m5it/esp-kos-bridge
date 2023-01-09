@@ -1,0 +1,61 @@
+#-- OTA SUCCESS
+test -u "http://88.25.17.216/esp-kos-bridge.bin"
+[0;32mI (688950) T3CH_CONSOLE: do_cmd_test() START Hello world by test!!! :)
+[0m
+test ota update starting, from url: http://88.25.17.216/esp-kos-bridge.bin
+Match!
+[0;32mI (688964) T3CH_OTA: Bind interface name is st3[0m
+[0;32mI (688965) T3CH_OTA: Attempting to download update from http://88.25.17.216/esp-kos-bridge.bin[0m
+[0;33mW (688977) esp_https_ota: Continuing with insecure option because CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP is set.[0m
+[0;32mI (689024) HTTP_CLIENT: Body received in fetch header state, 0x3ffdb158, 252[0m
+[0;32mI (689027) esp_https_ota: Starting OTA...[0m
+[0;32mI (689027) esp_https_ota: Writing to partition subtype 17 at offset 0x1f0000[0m
+esp_image_verify() STARTED!
+[0;32mI (712983) esp_image: segment 0: paddr=001f0020 vaddr=3f400020 size=35fc0h (221120) map[0m
+[0;32mI (713038) esp_image: segment 1: paddr=00225fe8 vaddr=3ffb0000 size=051c4h ( 20932) [0m
+[0;32mI (713046) esp_image: segment 2: paddr=0022b1b4 vaddr=40080000 size=04e64h ( 20068) [0m
+[0;32mI (713053) esp_image: segment 3: paddr=00230020 vaddr=400d0020 size=becf0h (781552) map[0m
+[0;32mI (713240) esp_image: segment 4: paddr=002eed18 vaddr=40084e64 size=110c0h ( 69824) [0m
+esp_image_verify() STARTED!
+[0;32mI (713264) esp_image: segment 0: paddr=001f0020 vaddr=3f400020 size=35fc0h (221120) map[0m
+[0;32mI (713322) esp_image: segment 1: paddr=00225fe8 vaddr=3ffb0000 size=051c4h ( 20932) [0m
+[0;32mI (713330) esp_image: segment 2: paddr=0022b1b4 vaddr=40080000 size=04e64h ( 20068) [0m
+[0;32mI (713338) esp_image: segment 3: paddr=00230020 vaddr=400d0020 size=becf0h (781552) map[0m
+[0;32mI (713525) esp_image: segment 4: paddr=002eed18 vaddr=40084e64 size=110c0h ( 69824) [0m
+[0;32mI (713582) T3CH_OTA: OTA Succeed, Rebooting...[0m
+
+
+
+#-- OTA FAILURE
+ota_update_post_handler() starting..., total_len: 0
+[0;32mI (142546) T3CH_HTTPD: Found URL query(55) => download=http%3A%2F%2F88.25.17.216%2Fesp-kos-bridge.bin[0m
+[0;32mI (142558) T3CH_HTTPD: Found separator(47) at 8[0m
+[0;32mI (142559) T3CH_HTTPD: Found URL query parameter => download => http%3A%2F%2F88.25.17.216%2Fesp-kos-bridge.bin[0m
+[0;32mI (142571) T3CH_HTTPD: Found URL query(55) => download=http%3A%2F%2F88.25.17.216%2Fesp-kos-bridge.bin[0m
+[0;32mI (142582) T3CH_HTTPD: Found separator(47) at 8[0m
+ota_update_post_handler() total_len: 0
+ota_update_post_handler() download debug chk_download: 56, out_download: http%3A%2F%2F88.25.17.216%2Fesp-kos-bridge.bin
+ota_update_post_handler() upload debug chk_upload: 56, out_upload: 
+ota_update_post_handler() download start, url: http%3A%2F%2F88.25.17.216%2Fesp-kos-bridge.bin
+ota_update_post_handler() updating from http://88.25.17.216/esp-kos-bridge.bin
+[0;32mI (142618) T3CH_OTA: Bind interface name is st3[0m
+[0;32mI (142629) T3CH_OTA: Attempting to download update from http://88.25.17.216/esp-kos-bridge.bin[0m
+[0;33mW (142631) esp_https_ota: Continuing with insecure option because CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP is set.[0m
+[0;32mI (142675) HTTP_CLIENT: Body received in fetch header state, 0x3ffdb7fc, 252[0m
+[0;32mI (142678) esp_https_ota: Starting OTA...[0m
+[0;32mI (142680) esp_https_ota: Writing to partition subtype 16 at offset 0x20000[0m
+
+
+Backtrace: 0x400818ea:0x3ffc63a0 0x40089ac1:0x3ffc63c0 0x4008c736:0x3ffc63e0 0x4008b33f:0x3ffc6460 0x4008c844:0x3ffc6480 0x4008c7f6:0x4000bff0 |<-CORRUPTED
+
+
+
+
+ELF file SHA256: b70a3169af0748a9
+
+[0;32mI (5351) esp_core_dump_flash: Save core dump to flash...[0m
+[0;32mI (5357) esp_core_dump_flash: Erase flash 20480 bytes @ 0x3c0000[0m
+[0;32mI (5574) esp_core_dump_flash: Write end offset 0x4a24, check sum length 4[0m
+[0;32mI (5574) esp_core_dump_flash: Core dump has been saved to flash.[0m
+Rebooting...
+ets Jun  8 2016 00:22:57

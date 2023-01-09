@@ -478,7 +478,7 @@ static int do_cmd_test(int argc, char **argv) {
 		}
 		
 		if( t3ch_ota_download(url) ) {
-			esp_restart();
+			//esp_restart();
 		}
 	}
     //

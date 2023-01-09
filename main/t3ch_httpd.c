@@ -568,7 +568,16 @@ err_handler:
 //static int update_upload_size;
 static esp_ota_handle_t update_handle = 0;
 static const esp_partition_t *update_partition;
-static int dl0=0, dl1=0, dl2=0; 
+static int dl0=0, dl1=0, dl2=0;
+
+//
+char task_url_download[256]={0};
+//
+void task_ota_download(void *pv) {
+	printf("task_ota_download STARTED!, url: %s\n",downloadUrl);
+	t3ch_ota_download(downloadUrl);
+}
+
 //
 static esp_err_t ota_update_post_handler(httpd_req_t *req)
 {
@@ -603,17 +612,24 @@ static esp_err_t ota_update_post_handler(httpd_req_t *req)
         
         printf("ota_update_post_handler() updating from %s\n",newdec);
         //
-		if( t3ch_ota_download(newdec) ) {
-			free(newdec);
-			esp_restart();
-		}
+		strcpy(task_url_download,newdec);
+		printf("before xTaskCreate, downloadUrl: %s\n", task_url_download);
+		xTaskCreate(
+		    task_ota_download,
+		    "task_ota_download",
+		    15000,
+		    NULL,
+		    1,
+		    NULL
+		);
+		
 		//
 		sprintf(res,"{\"success\":true}");
 		httpd_resp_send(req, res, strlen(res));
 		printf("ota_update_post_handler() download done\n");
 	    return ESP_OK;
 	}
-	//-- 2.) Option
+	//-- 2.) Option (NOT WORK YET)
 	// Upload image as urlencoded chunks of data
 	if( strlen(out_upload)>0 ) {
 		char at[12]={0};
@@ -740,7 +756,7 @@ static esp_err_t ota_update_post_handler(httpd_req_t *req)
 	            }
 	            printf("ota_update_post_handler() entering esp_ota_end()!!! luck!\n");
 	            //
-	            err = esp_ota_end(update_handle);
+	            err = t3ch_ota_end(update_handle);
 			    if (err != ESP_OK) {
 			        if (err == ESP_ERR_OTA_VALIDATE_FAILED) {
 			            printf("ota_update_post_handler() Image validation failed, image is corrupted\n");
