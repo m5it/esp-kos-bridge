@@ -109,23 +109,33 @@ button {
 	position:relative;
 	width:200px;
 	height:20px;
+	border-radius:13px;
+}
+#displayUpdateProgress.active > div {
+	background:lightgray;
 }
 #displayUpdateProgress .progress {
 	position:absolute;
 	left:0px;
-	bottom:0px;
-	top:0px;
+	top:50%;
+	transform:translate(0px,-50%);
+	height:7px;
 	background:red;
 	z-index:1;
 }
+#displayUpdateProgress:not(.active) .progressInfo { display:none; }
 #displayUpdateProgress .progressInfo {
-	color:white;
+	color:black;
+	background:white;
+	border-radius:33px;
+	box-shadow:0px 0px 2px 1px gray;
 	position:absolute;
 	left:50%;
 	top:50%;
 	transform:translate(-50%,-50%);
 	z-index:2;
 	padding:4px;
+	font-size:0.8em;
 }
 
 /**/
@@ -257,6 +267,8 @@ function Fetch( opt ) {
 	else return;
 	var opt_method  = (typeof(opt)=='object' && typeof(opt.method)!='undefined'?opt.method:"GET");
 	var opt_body    = (typeof(opt)=='object' && typeof(opt.body)!='undefined'?opt.body:null);
+	//headers:{"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"},
+	var opt_headers = (typeof(opt)=='object' && typeof(opt.headers)!='undefined'?opt.headers:null);
 	//
 	var fetchOpts = {  
 	    method :opt_method,
@@ -266,6 +278,7 @@ function Fetch( opt ) {
     };
     //
     if( opt_body!=null ) fetchOpts["body"] = opt_body;
+    if( opt_headers!=null ) fetchOpts["headers"] = opt_headers;
 	//
 	fetch(href, fetchOpts).then(function (data) {
 		return data.json();
@@ -280,6 +293,10 @@ function Fetch( opt ) {
 		}
 	}).catch(function(E) {
 		console.warn("Fetch() ERROR: ",E);
+		//
+		if( typeof(opt)!='undefined' && typeof(opt["onFail"])=='function' ) {
+			opt.onFail( E );
+		}
 	});
 }
 
@@ -403,91 +420,81 @@ else {
 	console.warn("Outdated browser!");
 }
 //
-var parts      = [];
-var parts_pos  = 0;
-var part_size  = 512;
-var parts_size = 0;
-//
-function loadFile(fp) {
-	console.info("loadFile() started...",fp);
-	//
-	var out=null;
-	part_size = qS("input[name='chunksize']").value, parts_size=0, parts_pos =0, parts = [];
-	console.info("loadFile() using chunksize",part_size);
-	//
-	if(rd!=null && fp.files && fp.files[0]) {
-		rd.onload = function(e) {
-			out = e.target.result;
-			//
-			//out = out.replace(/\xc3\xa9/g,\x00\xe9);
-			
-			console.info("Got file size: ",out.length);
-			parts_size = out.length;
-			var data = out;
-			//
-			var cnt   = 0;
-			var part  = "";
-			//var parts = [];
-			for(var i=0; i<data.length; i++) {
-				part += data[i];
-				if(cnt>=part_size) {
-					parts.push(part);
-					part = "";
-					cnt=0;
-				}
-				else if(i>=(data.length-1)) {
-					parts.push(part);
-					part = "";
-				}
-				else {
-					cnt++;
-				}
-			}
-			
-			//
-			console.warn("Num of parts: ",parts.length);
-			sendFile();
-		};
-		rd.readAsText(fp.files[0],'ISO-8859-3');//'CP1251');//'ISO-8859-1');
-		//rd.readAsBinaryString(fp.files[0]);
-		//rd.readAsArrayBuffer(fp.files[0]);
-	}
-}
+var parts        = [];
+var parts_pos    = 0;
+var part_size    = 512;
+var parts_size   = 0;
+var content_type = "";
+var parts_fail   = 0;
 //
 function sendFile() {
-	console.info("sendFile() STARTED!");
-	//var data = urlencode( parts[parts_pos] );
-	//var data = btoa( parts[parts_pos] ).replace(/[\=]+$|[\=\=]+$/g,"");
-	var data = btoa( escape(parts[parts_pos]) ).replace(/[\=]+$|[\=\=]+$/g,"");
-	//var data = window.btoa(unescape(encodeURIComponent( parts[parts_pos] )));
-	//var data = allparts;//parts[parts_pos];
-	//var data = new FormData();
-	//data.append("file",allparts);
-	console.info("sendFile() "+parts_pos+" / "+(parts.length-1)+" data("+data.length+"): "+data);
+	var part = parts.shift();
+	
 	//
 	Fetch({
 		method:"POST",
-		body:data,
-		href:document.location.origin+"/update/?upload=1&at="+parts_pos+"&of="+(parts.length-1)+(qS("input[name='filetest']").checked?"&test=1":""),
+		href:document.location.origin+"/update/?upload=1&at="+parts_pos+"&of="+(parts_size-1),
+		body:part,
 		onDone:function(json) {
-		//
-		console.info("/update/?upload, pos: "+parts_pos+" response",json);
-		
-		// 
-		var proc = ( parts_pos*100 ) / ( parts.length-1 );
-		qS("#displayUpdateProgress .progress").setAttribute("style","width:"+proc+"%;");
-		qS("#displayUpdateProgress .progressInfo").innerText = proc+"%";
-		
-		//
-		if( parts_pos>=(parts.length-1) ) {
-			console.info("Looks its done... "+proc+"%");
-		}
-		else {
-			console.info("Not done yet.. "+parts_pos+" / "+(parts.length-1)+" = "+proc+"%");
-			parts_pos++;
-			sendFile();
-		}
-	},});
+			// 
+			var proc = parseInt( ( parts_pos*100 ) / ( parts_size-1 ) );
+			qS("#displayUpdateProgress .progress").setAttribute("style","width:"+proc+"%;");
+			qS("#displayUpdateProgress .progressInfo").innerText = proc+"%"+(parts_fail>0?". Failures: "+parts_fail:"");
+			
+			//
+			if( parts_pos >= (parts_size-1) ) {
+				//console.info("Last chunk! at: "+parts_pos+", of: "+(parts_size-1));
+				//qS("#displayUpdateProgress").classList.remove("active");
+				//qS("#displayUpdateProgress .progress").removeAttribute("style");
+				qS("#displayUpdateProgress .progressInfo").innerText = "Please wait...";
+				setTimeout(function() {document.location.href=document.location.href;},5000);
+			}
+			else {
+				//console.info("Work chunk at: "+parts_pos+", of: "+(parts_size-1));
+				//
+				parts_pos++;
+				sendFile();
+			}
+		},
+		onFail:function(E) {
+			parts_fail++;
+			if( parts_fail<100 ) {
+				//console.warn("update?upload Failed, repeating...",parts_fail);
+				setTimeout(function() {
+					sendFile();
+				},1000);
+			}
+		},
+	});
+}
+//
+function loadFile(fp) {
+	//console.info("loadFile() started...",fp);
+	var file = fp.files[0];
+	qS("#displayUpdateProgress").classList.add("active");
+	qS("#displayUpdateProgress .progressInfo").innerText = "Please wait...";
+	//-- OPTION 1.) with usage of input type=file & dirrect send.
+	//----------------------
+	/*
+	content_type = file.type;
+	sendFile(fp.files[0]);
+	*/
+	
+	//-- OPTION 2.) with usage of input type=file and chunks
+	//
+	/*part_size = parseInt(qS("input[name='chunksize']").value), */parts_size=0, parts_pos =0, parts = [];
+	part_size = file.size/10;
+	var start=0;
+	var end=file.size;
+	while( start<end ) {
+		var tmp = start+part_size;
+		parts.push(file.slice(start,tmp));
+		start = tmp;
+	}
+	//console.info("parts.length",parts.length);
+	parts_size = parts.length;
+	//
+	sendFile();
 }
 
 //
@@ -882,8 +889,8 @@ function ready() {
 				<label>Update by selecting image.</label>
 				<div>
 					<form action="/update/" method="POST" enctype="multipart/form-data">
-						<input type="checkbox" name="filetest" value="1">
-						<input type="text" name="chunksize" value="512" size=4>
+						<!--<input type="checkbox" name="filetest" value="1">
+						<input type="text" name="chunksize" value="512" size=4>-->
 						<input type="file" name="file" onchange="loadFile(this);">
 					</form>
 				</div>

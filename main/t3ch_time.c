@@ -370,3 +370,7 @@ void t3ch_time_get(char * buf) {
 	strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
 	strcpy(buf,strftime_buf);
 }
+//
+time_t t3ch_time_ts() {
+	return time(&now);
+}
