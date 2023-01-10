@@ -4,11 +4,6 @@
 This version of esp-iot-bridge is focused on wifi extender and timer for gpio pins.
 Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
 
-# What is comming aka version ( 0.2 - Conejo blanco ):
-- scan for wifis. ( already supported in ESP-IOT-BRIDGE so is simple to reuse it.. :) )
-- ota updates. (same already supported in ESP-IOT-BRIDGE so will use same or similar code.. )
-- more you should say if you like more.
-
 
 # How to start<br>
 1.) Upload to your MCU.<br>
@@ -34,21 +29,13 @@ Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
 
 # Support up to 100 timer configurations and can be configured more if necessary but i guess no. :)
 
-# Supported HTTP Requests
-  * /free
-  * /time/
-    - settm
-  * /timer/
-    - start
-    - stop
-    - add
-    - del
-    - stat
-  * /wifi/
-
 # Supported uart, jtag, x console commands.. (useful for testing, developing)
 
 # Supported cJSON ! :)
+
+# Supported OTA Updates!
+
+# Supported WiFi Scan!
 
 # Screenshoots
 ![alt text](https://github.com/m5it/esp-kos-bridge/blob/main/imgs/v0.2a.png) <br>
