@@ -51,7 +51,10 @@ Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
 # Supported cJSON ! :)
 
 # Screenshoots
-![alt text](https://github.com/m5it/esp-kos-bridge/blob/main/screenshot_version-0.1a.png)
+![alt text](https://github.com/m5it/esp-kos-bridge/blob/main/imgs/v0.2a.png) <br>
+![alt text](https://github.com/m5it/esp-kos-bridge/blob/main/imgs/v0.2b.png) <br>
+![alt text](https://github.com/m5it/esp-kos-bridge/blob/main/imgs/v0.2c.png) <br>
+![alt text](https://github.com/m5it/esp-kos-bridge/blob/main/imgs/v0.2d.png) <br>
 
 <hr>
 
