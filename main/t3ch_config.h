@@ -12,7 +12,7 @@
 //--
 //
 #define VERSION_STRING "Conejo blanco"
-#define VERSION "0.2"
+#define VERSION "0.3"
 
 //--
 // Default AP SSID & PWD

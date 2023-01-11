@@ -357,6 +357,7 @@ bool t3ch_time_chk( struct tm starttime, struct tm endtime ) {
 	int endsec   = ((endtime.tm_hour*60)*60) + (endtime.tm_min*60);// + endtime.tm_sec;
 	int cursec   = ((timeinfo.tm_hour*60)*60) + (timeinfo.tm_min*60) + timeinfo.tm_sec;
 	printf("t3ch_time_chk() startsec: %i, endsec: %i, cursec: %i\n", startsec, endsec, cursec);
+	if( startsec>endsec && (cursec<endsec) ) return true;
 	if( startsec<=cursec && endsec>=cursec ) return true;
 	return false;
 }
