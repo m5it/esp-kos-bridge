@@ -11,7 +11,7 @@
 
 //--
 //
-#define VERSION_STRING "Conejo blanco"
+#define VERSION_STRING "Gallina Inglesa"
 #define VERSION "0.3"
 
 //--

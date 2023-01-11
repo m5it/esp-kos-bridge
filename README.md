@@ -47,6 +47,13 @@ Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
 ![alt text](https://github.com/m5it/esp-kos-bridge/blob/main/imgs/v0.2c.png) <br>
 ![alt text](https://github.com/m5it/esp-kos-bridge/blob/main/imgs/v0.2d.png) <br>
 
+# Releases
+- comming: v0.3 aka Gallina Inglesa
+- 11.1.23: v0.2 aka Conejo Blanco
+  added
+    * wifi scan
+    * ota updates
+
 <hr>
 
 # Here is original esp-iot-bridge README.md and location https://github.com/espressif/esp-iot-bridge
