@@ -28,7 +28,6 @@ Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
   - timer settings
   - ap settings
   - sta settings
-
 (Time still needs to be set if device gets out of power! :/)
 
 # Support up to 100 timer configurations and can be configured more if necessary but i guess no. :)
@@ -38,6 +37,7 @@ Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
 # Supported cJSON ! :)
 
 # Supported OTA Updates!
+(On OTA update time stay saved!)
 
 # Supported WiFi Scan!
 
