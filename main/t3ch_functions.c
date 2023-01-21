@@ -14,7 +14,7 @@
 #include <regex.h>
 #include "b64/cdecode.h"
 #include <errno.h>
-
+#include <stdbool.h>
 //
 int getInt(char *str) {
 	return strtol(str, (char**)NULL, 10);
@@ -125,13 +125,62 @@ unsigned int crc32b(unsigned char *message) {
    return ~crc;
 }
 
+//
+bool Contain(char inArray[], int inArraySize, char chk) {
+	for(int i=0; i<inArraySize; i++) {
+		if(inArray[i] == chk) return true;
+	}
+	return false;
+}
+
+/**
+ * myUrlEncode... by t3ch aka w4d4f4k
+ * required:
+ * - (function) Contain()
+ * - (char array) myUrlEncodeChars
+ * - (function) myUrlEncodeSize()
+ * - (function) myUrlEncode()
+ * */
+//
+char myUrlEncodeChars[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,' ','!','"','@',39,'.','+','-','_',27,':',';','[',']',',','%','}','{','&'};
+//
+int myUrlEncodeSize(char *in) {
+	int chk=0, cnt=0, size=strlen(in);
+	//                                        '
+	// calc new ret size
+	while(in[chk]!=NULL) {
+		if(Contain(myUrlEncodeChars,sizeof(myUrlEncodeChars)/sizeof(myUrlEncodeChars[0]),in[chk])) cnt+=3;
+		chk++;
+	}
+	return (size+cnt);
+}
+//
+void myUrlEncode(char *in, char *out, int newSize) {
+	int chk=0, cnt=0, size=strlen(in);
+	//                                        '
+	char ret[newSize];
+	memset(ret,'\0',newSize);
+	chk=0,cnt=0;
+	//
+	while(in[chk]!=NULL) {
+		if( Contain(myUrlEncodeChars,sizeof(myUrlEncodeChars)/sizeof(myUrlEncodeChars[0]),in[chk]) ) {
+			cnt += sprintf(ret+cnt,"%%%s%x",((int)in[chk]<16?"0":""),in[chk]);
+		}
+		else {
+			cnt += sprintf(ret+cnt,"%c",in[chk]);
+		}
+		chk++;
+	}
+	strcpy(out,ret);
+}
+
 /**
  * from here:
  * https://stackoverflow.com/questions/5842471/c-url-encoding
  * modified by t3ch for warnings
  * */
 // web_server.c => static int esp_web_url_decode()
-int esp_web_url_encode(char* url, char* encode,  char* buffer, unsigned int size) {
+/*int esp_web_url_encode(char* url, char* encode,  char* buffer, unsigned int size) {
         char chars[127] = {0};
         unsigned int length = 0;
 
@@ -183,7 +232,7 @@ int esp_web_url_encode(char* url, char* encode,  char* buffer, unsigned int size
         if(*url)
         while(*url) { if(chars[*url]) length+=2; url++; length++; }
         return length;
-}
+}*/
 
 // Stupid helper function that returns the value of a hex char.
 int esp_web_char2hex(char c)
@@ -405,7 +454,7 @@ char *Utf8ToLatin1String( char *s )
 
     return s;
 }*/
-char *utf8_to_latin9(const char *const string)
+/*char *utf8_to_latin9(const char *const string)
 {
     size_t         size = 0;
     size_t         used = 0;
@@ -552,4 +601,4 @@ char *utf8_to_latin9(const char *const string)
     }
 
     return (char *)result;
-}
+}*/

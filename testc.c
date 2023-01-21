@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <regex.h>
+#include <stdarg.h>
+#include <stdbool.h>
 //#include <b64/cencode.h>
 //#include <b64/cdecode.h>
 int chrat(char *str, char key) {
@@ -194,24 +196,117 @@ int match(const char *rx, char *buf) {
 	}
 }
 
+/*void _printf(const char *fmt, FILE *out, va_list ap) {
+	char tmp[256]={0};
+    //vfprintf(out, fmt, ap);
+    sprintf(out, fmt, ap);
+    //strcpy(tmp,out);
+    //printf("DEBUG xxx tmp: %s\n", tmp);
+    //printf("DEBUG xxx out: %s\n", out);
+}*/
+
+void mprintf(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    //_printf(fmt, stdout, ap);
+    char tmp[256]={0};
+    //vfprintf(stdout, fmt, ap);
+    vsprintf(tmp, fmt, ap);
+    printf(tmp);
+    va_end(ap);
+}
+
+struct MyStruct {
+	int id;
+	char name[64];
+	char desc[256];
+};
+int pmys=0; // position current
+struct MyStruct amys[10]={0};
+void addStruct(char *name, char *desc) {
+	struct MyStruct mys;
+	strcpy(mys.name,name);
+	strcpy(mys.desc,desc);
+	mys.id = pmys;
+	amys[pmys] = mys;
+	pmys++;
+}
+//void delStruct(struct MyStruct[], int at) {
+//	printf("delStruct() starting, MyStruct size: %d\n", (sizeof(MyStruct) / sizeof(MyStruct[0]) ) );
+//}
+void viewStruct() {
+	printf("DEBUG MyStruct start, pmys: %i, try get size of amys: %d\n",pmys, (sizeof(amys)/(sizeof(amys[0]))) );
+	//
+	//for(int i=0; i<pmys; i++) {
+	for(int i=0; i<(sizeof(amys)/(sizeof(amys[0]))); i++) {
+		printf("DEBUG MyStruct i at: %i\n",i);
+		if(strlen(amys[i].name)<=0) break;
+		struct MyStruct mys = amys[i];
+		printf("DEBUG MyStruct at %i, name: %s, desc: %s\n",mys.id, mys.name, mys.desc);
+	}
+	printf("DEBUG MyStruct done.\n");
+}
+//
+bool Contain(char inArray[], int inArraySize, char chk) {
+	for(int i=0; i<inArraySize; i++) {
+		if(inArray[i] == chk) return true;
+	}
+	return false;
+}
+//
+int myUrlEncodeSize(char *in) {
+	int chk=0, cnt=0, size=strlen(in);
+	//                                        '
+	char chars[] = {'\r','\n',' ','!','"','@',39,'.','+','-','_'};
+	// calc new ret size
+	while(in[chk]!=NULL) {
+		if(Contain(chars,sizeof(chars)/sizeof(chars[0]),in[chk])) cnt+=3;
+		chk++;
+	}
+	return (size+cnt);
+}
+//
+void myUrlEncode(char *in, char *out, int newSize) {
+	int chk=0, cnt=0, size=strlen(in);
+	//                                        '
+	char chars[] = {'\r','\n',' ','!','"','@',39,'.','+','-','_'};
+	char ret[newSize];
+	memset(ret,'\0',newSize);
+	chk=0,cnt=0;
+	//
+	while(in[chk]!=NULL) {
+		//printf("myUrlEncode() debug char at %i - %c - %x\n",in[chk],in[chk],in[chk]);
+		if( Contain(chars,sizeof(chars)/sizeof(chars[0]),in[chk]) ) {
+			cnt += sprintf(ret+cnt,"%%%s%x",((int)in[chk]<16?"0":""),in[chk]);
+		}
+		else {
+			cnt += sprintf(ret+cnt,"%c",in[chk]);
+		}
+		chk++;
+	}
+	strcpy(out,ret);
+}
+
 void main() {
+	for(int i=0; i<30; i++) {
+		printf("DEBUG hex at: %i - %x\n",i,i);
+	}
+	/*//
+	addStruct("test 1", "test 1 description...");
+	addStruct("test 2", "test 2 description...");
+	viewStruct();
+	//delStruct(amys, 1);
+	//viewStruct();
 	//
 	char xxx[] = "aG9sYQ==";
-	printf("xxx: %d\n",strlen(xxx));
+	mprintf("xxx: %d\n",strlen(xxx));
 	//
 	char tmp[] = "test=123";
 	int x = chrat(tmp,'=');
-	printf("hola! pos: %i\n",x);
+	mprintf("hola! pos: %i\n",x);
 	
 	//
 	char tmp1[] = "hello%20World";
-	/*char *p, *e;
-	p = tmp1;
-	e = p + strlen(p);
-	char buff[128]={0};
-	int ret = esp_web_url_decode(p, (e - p), buff, 128);
-	printf("ret: %i, buf: %s\n",ret,buff);
-	*/
 	int buffsize = (strlen(tmp1)+1);
 	char buff[buffsize];
 	memset(buff,'\0',buffsize);
@@ -220,11 +315,16 @@ void main() {
 	char out[128]={0};
 	UrlEncode(buff, buff, out, 128);
 	printf("Encoded: %s\n",out);
-	
+	*/
 	//
-	char tmp2[] = "hello\r\n\r\nWorld\r\n";
+	char tmp2[] = "\x1b hello\r\n\r\nWorld\r\nAa Hmm test@\"'-. Done!+";
 	printf("seaching World...in: %s\n",tmp2);
-	// example retrive of length of string
+	//
+	int newSize = myUrlEncodeSize(tmp2);
+	char tmp3[newSize];
+	myUrlEncode(tmp2,tmp3,newSize);
+	printf("tmp3: %s\n", tmp3);
+	/*// example retrive of length of string
 	printf("tmp2 size: %d, sizeof: %d\n", ( sizeof(tmp2)/sizeof(tmp2[0])), sizeof(tmp2));
 	
 	char * pch = strstr(tmp2,"\r\n\r\n");
@@ -246,5 +346,5 @@ void main() {
 	else {
 		printf("Looks didnt match nothing!\n");
 	}
-	
+	*/
 }

@@ -51,15 +51,15 @@ size_t t3ch_httpd_get_param(httpd_req_t *req, const char *key, char *paramout) {
 		char *buf = malloc(buf_len);
 		memset(buf,'\0',buf_len);
         if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
-            ESP_LOGI(TAG, "Found URL query(%i) => %s", strlen(buf),buf);
+            //ESP_LOGI(TAG, "Found URL query(%i) => %s", strlen(buf),buf);
             int x = chrat(buf,'=');
-            ESP_LOGI(TAG, "Found separator(%i) at %i", strlen(buf)-x, x);
+            //ESP_LOGI(TAG, "Found separator(%i) at %i", strlen(buf)-x, x);
             //
             //char tmpbuf[strlen(buf)-x];
             //memset(tmpbuf,'\0',strlen(buf)-x);
             //
             if (httpd_query_key_value(buf, key, paramout, strlen(buf)-x) == ESP_OK) {
-                ESP_LOGI(TAG, "Found URL query parameter => %s => %s", key, paramout);
+            //    ESP_LOGI(TAG, "Found URL query parameter => %s => %s", key, paramout);
             //    strcpy(paramout,tmpbuf);
             }
 		}
@@ -73,6 +73,13 @@ size_t t3ch_httpd_get_param(httpd_req_t *req, const char *key, char *paramout) {
 //-- REQUESTS - RESPONSES
 //
 //-- HOME
+//
+//static int user_ctx = 0;
+/*//
+void free_user_ctx(void *ctx) {
+	printf("free_user_ctx() STARTING!!!\n");
+	free(ctx);
+}*/
 //
 static esp_err_t home_get_handler(httpd_req_t *req)
 {
@@ -108,8 +115,42 @@ static esp_err_t home_get_handler(httpd_req_t *req)
     //httpd_resp_set_hdr(req, "Custom-Header-2", "Custom-Value-2");
     //const char* resp_str = (const char*) req->user_ctx;
     //httpd_resp_send(req, resp_str, HTTPD_RESP_USE_STRLEN);
-
-
+	
+	//
+	/*if(!req->sess_ctx) {
+		printf("Missing session!\n");
+		//req->sess_ctx = (time_t*)malloc(sizeof(time_t));
+		//req->sess_ctx = t3ch_time_ts();
+		req->sess_ctx   = malloc(sizeof(int));
+		req->free_ctx = free_user_ctx;
+	}
+	//
+	else {
+		printf("Got session: %d\n",req->sess_ctx);
+	}
+	
+	if(!req->user_ctx) {
+		printf("User ctx missing..\n");
+	}
+	else {
+		printf("User ctx: %d\n",*(int*)req->user_ctx);
+		user_ctx = *(int*)req->user_ctx;
+		if( user_ctx==0 ) {
+			printf("Setting user_ctx...\n");
+			user_ctx = t3ch_time_ts();
+			req->user_ctx = user_ctx;
+		}
+		else {
+			printf("Exists user_ctx: %d\n",user_ctx);
+		}
+		//
+		char sessionId[8]={0};
+		sprintf(sessionId,"%d",user_ctx);
+		httpd_resp_set_hdr(req, "SessionID", sessionId);
+	}*/
+	
+	httpd_resp_set_hdr(req, "Server", "KOS");
+	//
     httpd_resp_send(req, HTTP_PANEL, strlen(HTTP_PANEL));
     return ESP_OK;
 }
@@ -119,13 +160,14 @@ static const httpd_uri_t home_get = {
     .method    = HTTP_GET,
     .handler   = home_get_handler,
     //.user_ctx  = "Hello World!"
+    //.user_ctx  = &user_ctx,
 };
 
 //
 static esp_err_t dht_get_handler(httpd_req_t *req)
 {
 	float temp, humi;
-	dht_read_float_data(DHT_TYPE_DHT11,26,&humi,&temp);
+	dht_read_float_data(DHT_TYPE_DHT11,4,&humi,&temp);
 	char res[256];
 	sprintf(res,"DHT response Humidity: %.1f, Temperature: %.1f<br>\n", humi, temp);
 	httpd_resp_send(req, res, strlen(res));
@@ -136,6 +178,7 @@ static const httpd_uri_t dht_get = {
     .uri       = "/dht",
     .method    = HTTP_GET,
     .handler   = dht_get_handler,
+    //.user_ctx  = &user_ctx,
 };
 
 //
@@ -152,6 +195,7 @@ static const httpd_uri_t reset_get = {
     .uri       = "/reset",
     .method    = HTTP_GET,
     .handler   = reset_get_handler,
+    //.user_ctx  = &user_ctx,
 };
 
 //-- TIMER
@@ -258,6 +302,7 @@ static const httpd_uri_t timer_get = {
     .uri       = "/timer/",
     .method    = HTTP_GET,
     .handler   = timer_get_handler,
+    //.user_ctx  = &user_ctx,
 };
 
 //-- WIFI INFO
@@ -394,6 +439,7 @@ static const httpd_uri_t wifi_get = {
     .uri       = "/wifi/",
     .method    = HTTP_GET,
     .handler   = wifi_get_handler,
+    //.user_ctx  = &user_ctx,
 };
 
 //-- TIME
@@ -472,6 +518,7 @@ static const httpd_uri_t time_get = {
     .uri       = "/time/",
     .method    = HTTP_GET,
     .handler   = time_get_handler,
+    //.user_ctx  = &user_ctx,
 };
 
 //-- FREE
@@ -479,15 +526,8 @@ static const httpd_uri_t time_get = {
 static esp_err_t free_get_handler(httpd_req_t *req)
 {
 	char res[64];
-	/*char tmp_start_time[8];
-	char tmp_restart_time[8];
-	char tmp_restart_count[8];
-	// append additional statistics: start_time, restart_time, restart_count
-	nvs_open("httpd_storage",NVS_READWRITE,&nvsh);
-	t3ch_nvs_get_str(nvsh,"start_time",tmp_start_time);
-	t3ch_nvs_get_str(nvsh,"restart_time",tmp_restart_time);
-	t3ch_nvs_get_str(nvsh,"restart_count",tmp_restart_count);*/
 	//
+	//printf("free_get_handler() STARTING, user_ctx: %d, sess_ctx: %d\n",*(int *)req->user_ctx, req->sess_ctx);
 	//sprintf(res,"{\"success\":true,\"data\":\"%d\",\"start_time\":\"%s\",\"restart_time\":\"%s\",\"restart_count\":\"%s\"}", heap_caps_get_free_size(MALLOC_CAP_8BIT), tmp_start_time, tmp_restart_time, tmp_restart_count);
 	sprintf(res,"{\"success\":true,\"data\":\"%d\"}", heap_caps_get_free_size(MALLOC_CAP_8BIT));
 	//
@@ -501,9 +541,75 @@ static const httpd_uri_t free_get = {
     .uri       = "/free",
     .method    = HTTP_GET,
     .handler   = free_get_handler,
+    //.user_ctx  = &user_ctx,
 };
 
-//static int update_upload_size;
+//-- LOG
+//
+static esp_err_t log_get_handler(httpd_req_t *req)
+{
+	printf("log_get_handler() STARTING!\n");
+	int fromPos=0;
+	char arg_fromPos[8]={0};
+	char arg_update[8]={0};
+	t3ch_httpd_get_param(req, "fromPos", &arg_fromPos);
+	t3ch_httpd_get_param(req, "update", &arg_update);
+	
+	printf("log_get_handler() DEBUG arg_fromPos(%i): %s\n",strlen(arg_fromPos),arg_fromPos);
+	printf("log_get_handler() DEBUG arg_update(%i): %s\n",strlen(arg_update),arg_update);
+	//
+	if( strlen(arg_update)>0 ) {
+		//
+		int size = t3ch_log_gen_new(getInt(arg_update));
+		if( size>0 ) {
+			char res[size];
+			memset(res,'\0',size);
+			t3ch_log_get(res);
+			printf("log_get_handler() test get log d1 UPDATE res: %s\n",res);
+			httpd_resp_send(req, res, strlen(res));
+			return ESP_OK;
+		}
+		else {
+			char res[64];
+			sprintf(res,"{\"success\":false}");
+			printf("log_get_handler() test get log d2 UPDATE res: %s\n",res);
+			httpd_resp_send(req, res, strlen(res));
+			return ESP_OK;
+		}
+	}
+	else if( strlen(arg_fromPos)>0 ) {
+		fromPos = getInt( arg_fromPos );
+		printf("log_get_handler() changing fromPos: %i\n",fromPos);
+	}
+	
+	int size = t3ch_log_gen_old(fromPos);
+	
+	// No more results or just there is no results.
+	if( size<=0 ) {
+		char res[64];
+		sprintf(res,"{\"success\":false}");
+		printf("log_get_handler() test get log size 0, res: %s\n",res);
+		httpd_resp_send(req, res, strlen(res));
+		return ESP_OK;
+	}
+	
+	// Looks we got results
+	printf("log_get_handler() test get log size: %i\n",size);
+	char res[size];
+	memset(res,'\0',size);
+	t3ch_log_get(res);
+	printf("log_get_handler() test get log: %s\n",res);
+	httpd_resp_send(req, res, strlen(res));
+    return ESP_OK;
+}
+//
+static const httpd_uri_t log_get = {
+    .uri       = "/log/*",
+    .method    = HTTP_GET,
+    .handler   = log_get_handler,
+    //.user_ctx  = &user_ctx,
+};
+
 static esp_ota_handle_t update_handle = 0;
 static const esp_partition_t *update_partition;
 static time_t update_ts;
@@ -543,7 +649,7 @@ void task_ota_upload(void *pv) {
 //
 static esp_err_t ota_update_post_handler(httpd_req_t *req)
 {
-	printf("ota_update_post_handler() starting..., total_len: %d\n",req->content_len);
+	printf("ota_update_post_handler() STARTING..., total_len: %d\n",req->content_len);
 	char res[64];
 	int total_len = req->content_len;
     int remaining_len = req->content_len;
@@ -557,6 +663,8 @@ static esp_err_t ota_update_post_handler(httpd_req_t *req)
 	//
 	chk_download = t3ch_httpd_get_param(req, "download", &out_download);
 	chk_upload   = t3ch_httpd_get_param(req, "upload", &out_upload);
+	
+	ESP_LOGI(TAG,"ota_update_post_handler() DEBUG out_download: %s, out_upload: %s",out_download,out_upload);
 	
 	//-- 1.) Option
 	// Download image from http url
@@ -710,6 +818,7 @@ static const httpd_uri_t ota_update_post = {
     .uri       = "/update/*",
     .method    = HTTP_POST,
     .handler   = ota_update_post_handler,
+    //.user_ctx  = &user_ctx,
 };
 
 //
@@ -725,6 +834,7 @@ esp_err_t httpd_error(httpd_req_t *req, httpd_err_code_t err)
     /* For any other URI send 404 and close socket 
      * More on error codes, here:
      * https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_server.html*/
+    ESP_LOGI(TAG,"t3ch_httpd => NOT FOUND: %s",req->uri);
     httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Not found.");
     return ESP_FAIL;
 }
@@ -738,14 +848,18 @@ bool StartWeb(void) {
     // Start the httpd server
     ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
     if (httpd_start(&server, &config) == ESP_OK) {
+		//
+        httpd_register_uri_handler(server, &ota_update_post);
+        //
         httpd_register_uri_handler(server, &home_get);
-        httpd_register_uri_handler(server, &dht_get);
+        //httpd_register_uri_handler(server, &dht_get);
         httpd_register_uri_handler(server, &reset_get);
         httpd_register_uri_handler(server, &free_get);
         httpd_register_uri_handler(server, &time_get);
         httpd_register_uri_handler(server, &timer_get);
         httpd_register_uri_handler(server, &wifi_get);
-        httpd_register_uri_handler(server, &ota_update_post);
+        httpd_register_uri_handler(server, &log_get);
+        //
         httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, httpd_error);
     }
     

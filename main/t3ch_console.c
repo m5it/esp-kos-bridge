@@ -11,7 +11,6 @@
 #include "esp_wifi.h"
 #include "t3ch_console.h"
 #include "t3ch_events.h"
-//#include "t3ch_config.h"
 #include "esp_console.h"
 #include "esp_netif.h"
 #include "esp_event.h"
@@ -22,18 +21,12 @@
 #include "lwip/netdb.h"
 #include "lwip/sockets.h"
 #include "esp_heap_caps.h"
-//#include "sdkconfig.h"
 #include "esp32/himem.h"
 #include "dht.h"
 //
 #include "nvs.h"
 #include "nvs_flash.h"
-//
-//#include "esp_ota_ops.h"
-//#include "esp_http_client.h"
-//#include "esp_https_ota.h"
-//#include "protocol_examples_common.h"
-
+#include "cJSON.h" // https://github.com/DaveGamble/cJSON
 //
 #include "driver/gpio.h"
 #include "driver/ledc.h"
@@ -360,6 +353,7 @@ static struct {
 	struct arg_str *nvsRead;
 	struct arg_str *nvsWrite;
 	//
+	struct arg_int *testGetLog;
 	struct arg_str *testOtaUpdate;
 	struct arg_lit *testOtaPartition;
 	struct arg_str *testB64Decode;
@@ -462,6 +456,21 @@ static int do_cmd_test(int argc, char **argv) {
 	}
     //--
     //
+    if (test_args.testGetLog->count > 0) {
+		int fromPos = (uint32_t)(test_args.testGetLog->ival[0]);
+		printf("test get log starting, fromPos: %i\n",fromPos);
+		
+		int size = t3ch_log_gen_old(fromPos);
+		printf("test get log size: %i\n",size);
+		char out[size];
+		t3ch_log_get(out);
+		printf("test get log: %s\n",out);
+		cJSON *ary = cJSON_Parse( out );
+		size = cJSON_GetArraySize( ary );
+		printf("test get log json size: %i\n",size);
+		free(ary);
+	}
+    //
     if (test_args.testOtaPartition->count > 0) {
 		printf("test ota partition starting.\n");
 		const esp_partition_t *partition = esp_web_get_ota_update_partition();
@@ -548,6 +557,7 @@ esp_err_t register_test(void) {
 	test_args.nvsRead    = arg_str1("r","nvsRead","<s>","Read from nvs");
 	test_args.nvsWrite   = arg_str1("w","nvsWrite","<s>","Write to nvs");
 	// default options
+	test_args.testGetLog       = arg_int0("l", "testGetLog","<i>", "Test log...");
 	test_args.testOtaPartition = arg_lit0("p", "testOtaPartition", "Test ota partition size..");
 	test_args.testOtaUpdate    = arg_str1("u", "testOtaUpdate", "<s>", "Test ota update");
 	test_args.testB64Decode    = arg_str1("D", "testB64Decode","<s>", "Test base64 decode.");

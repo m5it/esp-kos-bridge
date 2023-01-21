@@ -10,12 +10,17 @@
  */
 
 //--
+
+//
+#define AP_SSID "STARTING_SSID"
+#define AP_PWD "STARTING_PWD"
+
+// Uncomment #define ENABLE_LOG to enable WEB log.
+#define ENABLE_LOG
+
 //
 #define VERSION_STRING "Gallina Inglesa"
 #define VERSION "0.3"
-
+// main/VERSION should be generated with every build. (increased)
 //--
-// Default AP SSID & PWD
-// Then is saved in nvs flash
-char AP_SSID[]  = "STARTING_SSID";
-char AP_PWD[]   = "STARTING_PWD";
+// extern const char VERSION[] asm("_binary_VERSION_start"); // main/VERSION

@@ -13,16 +13,16 @@
 #include "nvs_flash.h"
 #include "esp_wifi.h"
 #include "esp_log.h"
-#include "t3ch_config.h"
-
-//--
+//
 static const char *TAG = "T3CH_WIFI";
-char APSSID[32]={0};
-char APPWD[64]={0};
+//
 char STASSID[32]={0};
 char STAPWD[64]={0};
-
-//--
+//
+char VERSION[12]         = {0};
+char VERSION_STRING[128] = {0};
+char AP_SSID[32]         = {0};
+char AP_PWD[64]          = {0};
 //
 bool t3ch_wifi_scan_running = false;
 #define T3CH_WIFI_MAX_SCAN_SIZE 10
@@ -30,9 +30,6 @@ uint16_t t3ch_wifi_scan_number = T3CH_WIFI_MAX_SCAN_SIZE;
 wifi_ap_record_t t3ch_wifi_scan_ap_info[T3CH_WIFI_MAX_SCAN_SIZE];
 uint16_t t3ch_wifi_scan_ap_count = 0;
 char t3ch_wifi_scan_json[256]={0};
-//
-//t3ch_wifi_scan_ap_count = 0;
-//memset(t3ch_wifi_scan_ap_info, 0, sizeof(t3ch_wifi_scan_ap_info));
 
 //--
 // Check if STA interface is up
@@ -302,4 +299,14 @@ bool t3ch_wifi_update_ap(char *ssid, char *pwd) {
 	esp_bridge_wifi_set(WIFI_MODE_AP, ssid, pwd, NULL);
 	    
 	return true;
+}
+
+//
+void t3ch_wifi_init(char ap_ssid[], char ap_pwd[], char version[], char version_string[]) {
+	ESP_LOGI(TAG,"t3ch_wifi_init() STARTING. AP_SSID: %s, AP_PWD: %s, VERSION: %s, VS: %s",
+	    ap_ssid, ap_pwd, version, version_string);
+	strcpy(AP_SSID,ap_ssid);
+	strcpy(AP_PWD,ap_pwd);
+	strcpy(VERSION,version);
+	strcpy(VERSION_STRING,version_string);
 }

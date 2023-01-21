@@ -15,6 +15,7 @@
 #include "cJSON.h" // https://github.com/DaveGamble/cJSON
 #include <string.h>
 #define TIMER_SIZE 100
+#define TIMER_DATA_SIZE 256
 //--
 static const char *TAG = "T3CH_TIME";
 //
@@ -22,11 +23,9 @@ static time_t now;
 static struct tm timeinfo;
 char strftime_buf[64];
 //
-char timer_data[256];
+char timer_data[TIMER_DATA_SIZE];
 //
 static struct mytimer {
-	//
-	//char *idCRC;
     //
     struct tm start_time;
     struct tm end_time;
@@ -80,37 +79,25 @@ int time_timer_pos(void) {
 //
 int time_timer_gen(void) {
 	printf("time_timer_gen() STARTING, myt_pos: %i\n",myt_pos);
-	int startsize = 256;
-	//char ret[startsize];
+	int startsize = TIMER_DATA_SIZE;
+	int halfsize  = startsize/2;
 	timer_data[startsize];
 	memset(timer_data,'\0',startsize);
-	//char ret[256]={0};
 	int jsonlen=0;
 	jsonlen = sprintf(timer_data+jsonlen,"[");
 	for(int i=0; i<myt_pos; i++) {
-		printf("time_timer_gen() at: %i, jsonlen: %i\n",i,jsonlen);
 		jsonlen += sprintf(timer_data+jsonlen,"{\"gpio\":%i,\"startHour\":%i,\"startMin\":%i,\"endHour\":%i,\"endMin\":%i,\"running\":%s}%s",
 		    myt[i].gpio, myt[i].start_time.tm_hour, myt[i].start_time.tm_min,myt[i].end_time.tm_hour, myt[i].end_time.tm_min, (myt[i].running?"true":"false"), (i>=(myt_pos-1)?"":",") );
 		// dinamically allocate / increase ret size if necessary
-		if( jsonlen>=(startsize-128) ) {
-			printf("time_timer_gen() fixing ret[] size! startsize: %i\n",startsize);
-			startsize += 128;
+		if( jsonlen>=(startsize-halfsize) ) {
+			startsize += halfsize;
 			char tmpret[startsize];
-			printf("time_timer_gen() d1\n");
-			//memset(tmpret,'\0',startsize);
 			strcpy(tmpret,timer_data);
-			printf("time_timer_gen() d2\n");
 			timer_data[startsize];
-			printf("time_timer_gen() d3\n");
-			//memset(ret,'\0',startsize);
 			strcpy(timer_data,tmpret);
-			printf("time_timer_gen() d4\n");
 		}
 	}
 	jsonlen += sprintf(timer_data+jsonlen,"]");
-	//printf("time_timer_gen() done, jsonlen: %i, data: %s\n",jsonlen,ret);
-	printf("time_timer_gen() done, jsonlen: %i, data: %s\n",jsonlen,timer_data);
-	//strcpy(out,ret);
 	return jsonlen;
 }
 //
@@ -241,6 +228,7 @@ void time_timer_save(void) {
 	printf("time_timer_save() d4\n");
 	nvs_close( nvsh );
 	printf("time_timer_save() d5\n");
+	free( myt_ary );
 }
 // retrive timer settings if exists. (timer_storage)
 void time_timer_init(void) {
@@ -271,11 +259,13 @@ void time_timer_init(void) {
 			    getInt( cJSON_Print(cJSON_GetObjectItemCaseSensitive(myt_obj,"gpio")) )
 			);
 		}
+		free(myt_ary);
 	}
 	else {
 		printf("time_timer_init() tmpout empty!\n");
 	}
 }
+
 //-- UPDATE TIME TROUGH NET
 //
 void time_sync_notification_cb(struct timeval *tv) {

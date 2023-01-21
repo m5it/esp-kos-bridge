@@ -45,32 +45,32 @@
 #endif
 //--
 //
-//#include "t3ch_config.h"
+#include "t3ch_config.h"
 //-- 
 // Includes for console & ping
 #include "esp_mac.h"              // contain MAC2STR()
 #include "esp_console.h"
 #include "t3ch_console.h"
+#include "t3ch_log.h"
 //--
 // Includes for DHT sensor
 #include "dht.h"
 #include <esp_http_server.h>
 //
-//#include "cJSON.h"
-//--
-//
 static esp_console_repl_t *s_repl = NULL;
-
+//
 #define BUTTON_NUM            1
 #define BUTTON_SW1            CONFIG_GPIO_BUTTON_SW1
 #define BUTTON_PRESS_TIME     5000000
 #define BUTTON_REPEAT_TIME    5
-
+//
 static const char *TAG = "MAIN";
 static button_handle_t g_btns[BUTTON_NUM] = {0};
 static bool button_long_press = false;
 static esp_timer_handle_t restart_timer;
 
+//--
+//
 static esp_err_t esp_storage_init(void)
 {
     esp_err_t ret = nvs_flash_init();
@@ -136,13 +136,22 @@ static void esp_bridge_create_button(void)
 
 void app_main(void)
 {
+	//
     esp_log_level_set("*", ESP_LOG_INFO);
-	printf("#--\n");
-	printf("# ESP-KOS-BRIDGE Starting v%i - %s\n",t3ch_version(), t3ch_version_string());
-	printf("#--\n");
+    //
+#ifdef ENABLE_LOG
+    esp_log_set_vprintf( &t3ch_log ); // set our function for logging from t3ch_log.c
+    ESP_LOGI(TAG,"Enabling t3ch_log()...!");
+#endif
+	//
+	t3ch_wifi_init(AP_SSID, AP_PWD, VERSION, VERSION_STRING);
+    //
+	ESP_LOGI(TAG,"#--\n");
+	ESP_LOGI(TAG,"# ESP-KOS-BRIDGE Starting v%s - %s\n",t3ch_version(), t3ch_version_string());
+	ESP_LOGI(TAG,"#--\n");
 	
 	//
-	printf("Initializing storage.");
+	ESP_LOGI(TAG,"Initializing storage.");
     esp_err_t err = esp_storage_init();
     ESP_ERROR_CHECK( err );
     
@@ -151,12 +160,12 @@ void app_main(void)
     //--
     
     //
-    printf("Initializing network interfaces.");
+    ESP_LOGI(TAG,"Initializing network interfaces.");
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
 	//
-	printf("Preparing console.");
+	ESP_LOGI(TAG,"Preparing console.");
     esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
     //
     repl_config.prompt = "kos>";
@@ -215,6 +224,6 @@ void app_main(void)
 	/*char *json_string = "[{\"id\":\"25139\",\"date\":\"2016-10-27\",\"name\":\"Komfy Switch With Camera DKZ-201S\\/W Password Disclosure\"},{\"id\":\"25117\",\"date\":\"2016-10-24\",\"name\":\"NETDOIT weak password Vulnerability\"}]";
 	cJSON *root = cJSON_Parse(json_string);
 	int n = cJSON_GetArraySize(root);
-	printf("DEBUG JSON...: %i\n",n);
+	ESP_LOGI(TAG,"DEBUG JSON...: %i\n",n);
 	*/
 }

@@ -137,6 +137,23 @@ button {
 	padding:4px;
 	font-size:0.8em;
 }
+/**/
+#displayLog {}
+#displayLog > label {}
+#displayLog.updating > label {
+	color:red;
+}
+#displayLog.updating > label:after {
+	content:" updating, please wait...";
+}
+#displayLog.done_old > label:after {
+	content:" done or log not enabled.";
+}
+#displayLog > div {
+	overflow:auto;
+	min-height:200px;
+	max-height:65vh;
+}
 
 /**/
 .clearfix:after {clear: both;content: ".";display: block;font-size: 0;height: 0;line-height: 0;visibility: hidden;}
@@ -209,6 +226,7 @@ button {
 </style>
 
 <script>
+//-- random function things
 //
 var loading_d=null, loading_d1=null;
 function loadingStart() {
@@ -225,7 +243,6 @@ function loadingStop() {
 	loading_d1.remove();
 	loading_d=null, loading_d1=null;
 }
-//
 function generate_select_hour(opt) {
 	var opt_name = (typeof(opt)=='object' && typeof(opt.name)!='undefined'?opt.name:"startHour");
 	var opt_appendElement = (typeof(opt)=='object' && typeof(opt.appendElement)!='undefined'?opt.appendElement:null);
@@ -269,6 +286,7 @@ function Fetch( opt ) {
 	var opt_body    = (typeof(opt)=='object' && typeof(opt.body)!='undefined'?opt.body:null);
 	//headers:{"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"},
 	var opt_headers = (typeof(opt)=='object' && typeof(opt.headers)!='undefined'?opt.headers:null);
+	var opt_signal  = (typeof(opt)=='object' && typeof(opt.signal)!='undefined'?opt.signal:null);
 	//
 	var fetchOpts = {  
 	    method :opt_method,
@@ -279,8 +297,9 @@ function Fetch( opt ) {
     //
     if( opt_body!=null ) fetchOpts["body"] = opt_body;
     if( opt_headers!=null ) fetchOpts["headers"] = opt_headers;
+    if( opt_signal!=null ) fetchOpts["signal"] = opt_signal; // controller.signal
 	//
-	fetch(href, fetchOpts).then(function (data) {
+	return fetch(href, fetchOpts).then(function (data) {
 		return data.json();
 	}).then(function(json) {
 		console.info("response",json);
@@ -299,10 +318,15 @@ function Fetch( opt ) {
 		}
 	});
 }
-
 function urlencode(text) {
     var tmp = encodeURIComponent( text );
     tmp = tmp.replace(new RegExp('[*]', 'g'), '%2A');
+    return tmp;
+}
+function urldecode(text) {
+    var tmp=text;
+    tmp = decodeURIComponent(tmp);
+    tmp = tmp.replace(new RegExp('[+]', 'g'), ' ');
     return tmp;
 }
 function findParent(element,opt) {
@@ -322,6 +346,7 @@ function findParent(element,opt) {
 function random(min,max) {
     return Math.round((Math.random(min,max)*max)+min);
 }
+//-- loop things
 //
 function infoLoop() {
 	//
@@ -336,7 +361,7 @@ function infoLoop() {
 	// Repeat loop in 5s
 	setTimeout(function() { infoLoop(); },5000);
 }
-//--
+//-- timer things
 //
 function timerGet( opt ) {
 	Fetch({href:document.location.origin+"/timer/",onDone:function(json) {
@@ -406,10 +431,12 @@ function timerDelete() {
 		}
 	}
 }
+//-- onload / ready things
 //
 window.onload = function() {
 	ready();
 }
+//-- filereader & ota things
 //
 var rd=null;
 //
@@ -429,11 +456,14 @@ var parts_fail   = 0;
 //
 function sendFile() {
 	var part = parts.shift();
-	
+	//
+	var href = document.location.origin+"/update/?upload=1&at="+parts_pos+"&of="+(parts_size-1);
+	console.info("sendFile() href: ",href);
 	//
 	Fetch({
 		method:"POST",
-		href:document.location.origin+"/update/?upload=1&at="+parts_pos+"&of="+(parts_size-1),
+		//headers:new Headers({'content-type': 'application/json'}),
+		href:href,
 		body:part,
 		onDone:function(json) {
 			// 
@@ -469,7 +499,7 @@ function sendFile() {
 }
 //
 function loadFile(fp) {
-	//console.info("loadFile() started...",fp);
+	console.info("loadFile() started...",fp);
 	var file = fp.files[0];
 	qS("#displayUpdateProgress").classList.add("active");
 	qS("#displayUpdateProgress .progressInfo").innerText = "Please wait...";
@@ -496,7 +526,7 @@ function loadFile(fp) {
 	//
 	sendFile();
 }
-
+//-- ready things
 //
 function ready() {
 	//-- Set some inputs
@@ -529,12 +559,15 @@ function ready() {
 		    document.querySelectorAll("#"+tmpid+" > .display."+attrActive).forEach(function(el) { el.classList.add("active"); });
 		    // Trigger attrActive event
 		    console.warn("adm/index -> Trigger","tabs_"+attrActive);
+		    //
+		    document.dispatchEvent(new CustomEvent("tab_opening",{"detail":attrActive}));
         });
 	});
 	
 	//-- Start infinite loop to retrive Free and Time of server
 	//
 	infoLoop();
+	//logUpdate();
 	
 	// fire once, retrive wifi info
 	Fetch({href:document.location.origin+"/wifi/",onDone:function(json) {
@@ -733,6 +766,138 @@ function ready() {
 		},});
 	});
 }
+
+//-- tab, document ready things
+//
+var tab_log_opts = {
+	"visible":false,
+	"running_new":false,
+	"running_old":false,
+	"done_old":false, // when scrolling down we load old posts. if we retrive succes:false then its done for old posts.
+	"position":0,
+	"last_id":0,
+	"controller_old":new AbortController(),
+	"controller_new":new AbortController(),
+	"timeout_new":null,
+};
+//
+document.addEventListener("tab_opening",function(e) {
+	console.info("tab_opening STARTIng. e: ",e);
+	var detail = e.detail;
+	console.info("tab_opening",detail);
+	//
+	if( detail=="tab_log" ) {
+		tab_log_opts.visible = true;
+		tab_log_opts.timeout_new = setTimeout(function() {logUpdate();},7000);
+		//
+		qS("#displayLog>div").addEventListener("scroll",function(e1) {
+			
+			console.info("debug offsetTop: ",qS("#displayLog>div").offsetTop);
+			console.info("debug offsetHeight: ",qS("#displayLog>div").offsetHeight);
+			console.info("debug scrollHeight: ",qS("#displayLog>div").scrollHeight);
+			console.info("debug displayLogOffset top: ",qS(".displayLogOffset").offsetTop);
+			
+			if( qS("#displayLog>div").scrollHeight <= qS("#displayLog>div").offsetHeight ) {
+				console.warn("logLoad() load more... from",tab_log_opts.position);
+				logLoad();
+			}
+			else if( (qS("#displayLog>div").offsetHeight + qS("#displayLog>div").scrollTop) >= qS("#displayLog>div").scrollHeight-33 ) {
+				console.info("#displayLog scroll at end (d1)... loadng more...");
+				logLoad();
+			}
+			else {
+				console.warn("Something went wrong...");
+			}
+		});
+		logLoad();
+	}
+	else {
+		tab_log_opts.visible = false;
+		clearTimeout(tab_log_opts.timeout_new);
+	}
+});
+//
+function logUpdate() {
+	//
+	if( tab_log_opts.running_new || tab_log_opts.visible==false ) {
+		return false;
+	}
+	tab_log_opts.running_new = true;
+	//
+	Fetch({
+		href:document.location.origin+"/log/?update="+tab_log_opts.last_id,
+		signal:tab_log_opts.controller_old.signal,
+		onDone:function(json) {
+			console.info("logUpdate() onDone()",json);
+			//
+			for(var i=(json.length-1); i>=0; i--) {
+				if( json[i].id>tab_log_opts.last_id ) tab_log_opts.last_id = json[i].id; // save last log id
+				qS("#displayLog>div").insertAdjacentHTML('afterbegin', "<div>"+urldecode(json[i].text)+"</div>" );
+			}
+			//
+			tab_log_opts.running_new = false;
+			setTimeout(function() { logUpdate(); },7000);
+		},
+		onFail:function(E) {
+			console.info("logUpdate() onFail()",E);
+		}
+	});
+}
+//
+function logLoad() {
+	//
+	if( tab_log_opts.running_old || tab_log_opts.done_old ) {
+		if( tab_log_opts.done_old ) qS("#displayLog").classList.remove("updating");
+		return false;
+	}
+	tab_log_opts.running_old = true;
+	qS("#displayLog").classList.add("updating");
+	//
+	Fetch({
+		href:document.location.origin+"/log/?fromPos="+tab_log_opts.position,
+		signal:tab_log_opts.controller_old.signal,
+		onDone:function(json) {
+			console.info("logLoad() onDone()",json);
+			if( json.success==false ) {
+				console.info("logLoad() onDone() looks we have all old posts.");
+				tab_log_opts.done_old = true;
+				qS("#displayLog").classList.remove("updating");
+				qS("#displayLog").classList.add("done_old");
+				return;
+			}
+			//
+			tab_log_opts.position += json.length;
+			console.info("logLoad() tab_log_opts",tab_log_opts);
+			for(var i=0; i<json.length; i++) {
+				if( json[i].id>tab_log_opts.last_id ) tab_log_opts.last_id = json[i].id; // save last log id
+				qS("#displayLog>div").insertAdjacentHTML('beforeend', "<div>"+urldecode(json[i].text)+"</div>" );
+			}
+			//
+			tab_log_opts.running_old = false;
+			qS("#displayLog").classList.remove("updating");
+			//
+			console.info("debug offsetTop: ",qS("#displayLog>div").offsetTop);
+			console.info("debug offsetHeight: ",qS("#displayLog>div").offsetHeight);
+			console.info("debug scrollHeight: ",qS("#displayLog>div").scrollHeight);
+			console.info("debug displayLogOffset top: ",qS(".displayLogOffset").offsetTop);
+			
+			if( qS("#displayLog>div").scrollHeight <= qS("#displayLog>div").offsetHeight ) {
+				console.warn("logLoad() load more... from",tab_log_opts.position);
+				logLoad();
+			}
+			else if( (qS("#displayLog>div").offsetHeight + qS("#displayLog>div").scrollTop) >= qS("#displayLog>div").scrollHeight-33 ) {
+				console.info("#displayLog scroll at end (d2)... loadng more...");
+				logLoad();
+			}
+			else {
+				qS(".displayLogOffset").innerHTML = "Done! Or try to scroll.";
+			}
+		},
+		onFail:function(E) {
+			console.info("logLoad() onFail()",E);
+		}
+	});
+}
 </script>
 </head>
 <body>
@@ -766,11 +931,12 @@ function ready() {
             <div class="name active" attr-active="tab_wifiinfo" style="margin:2px;">Wifi</div>
 			<div class="name" attr-active="tab_timeinfo" style="margin:2px;">Time</div>
 			<div class="name" attr-active="tab_timerinfo" style="margin:2px;">Timer</div>
+			<div class="name" attr-active="tab_log" style="margin:2px;">Log</div>
 			<div class="name" attr-active="tab_otaupdate" style="margin:2px;">Update</div>
 		</div>
 
 <div class="display tab_wifiinfo active">
-<div class="field w33">
+<div>
 	<label>WiFi Informations</label>
 	<div>
 		<div>
@@ -816,7 +982,7 @@ function ready() {
 </div>
 
 <div class="display tab_timeinfo">
-<div class="field w33">
+<div>
 	<label>Set Server/Timer Time ( struct tm )</label>
 	<div><form id="tm">
 		<!-- struct tm -->
@@ -837,7 +1003,7 @@ function ready() {
 </div>
 
 <div class="display tab_timerinfo">
-<div class="field w33">
+<div>
 	<label>Timer Settings</label>
     <div class="spec6">
         <div class="dfield">
@@ -873,6 +1039,19 @@ function ready() {
 	    <div></div>
     </div>
 </div>
+</div>
+
+<div class="display tab_log">
+	<div>
+		<label>Log</label>
+		<div>
+			<div id="displayLog">
+				<label></label>
+				<div></div>
+				<p class="clearfix displayLogOffset"></p>
+			</div>
+		</div>
+	</div>
 </div>
 
 <div class="display tab_otaupdate">
