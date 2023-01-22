@@ -122,7 +122,7 @@ void time_timer_del(int pos) {
 
 //
 bool time_timer_exists(struct tm starttime, struct tm endtime, int gpio) {
-	printf("time_timer_exists() STARTING myt_pos: %i\n");
+	ESP_LOGI(TAG,"time_timer_exists() STARTING myt_pos: %i\n");
 	//
 	int startsec = ((starttime.tm_hour*60)*60) + (starttime.tm_min*60);// + starttime.tm_sec;
 	int endsec   = ((endtime.tm_hour*60)*60) + (endtime.tm_min*60);// + endtime.tm_sec;
@@ -130,21 +130,21 @@ bool time_timer_exists(struct tm starttime, struct tm endtime, int gpio) {
 		int chkstartsec = ((myt[i].start_time.tm_hour*60)*60) + (myt[i].start_time.tm_min*60);// + myt[i].start_time.tm_sec;
 		int chkendsec   = ((myt[i].end_time.tm_hour*60)*60) + (myt[i].end_time.tm_min*60);// + myt[i].end_time.tm_sec;
 		
-		printf("time_timer_exists() startsec: %i vs chkstartsec: %i\n",startsec, chkstartsec);
-		printf("time_timer_exists() endsec: %i vs chkendsec: %i\n",endsec, chkendsec);
+		ESP_LOGI(TAG,"time_timer_exists() startsec: %i vs chkstartsec: %i\n",startsec, chkstartsec);
+		ESP_LOGI(TAG,"time_timer_exists() endsec: %i vs chkendsec: %i\n",endsec, chkendsec);
 		
 		if( myt[i].gpio==gpio && startsec <= chkstartsec && endsec >= chkendsec ) {
-			printf("time_timer_exists() looks exists!\n");
+			ESP_LOGI(TAG,"time_timer_exists() looks exists!\n");
 			return true;
 		}
 	}
-	printf("time_timer_exists() DONE\n");
+	ESP_LOGI(TAG,"time_timer_exists() DONE\n");
 	return false;
 }
 
 //
 bool time_timer_add(int startHour, int startMin, int endHour, int endMin, int gpio) {
-	printf("time_timer_add() STARTING, startHour: %i, startMin: %i, endHour: %i, endMin: %i, gpio: %i\n",
+	ESP_LOGI(TAG,"time_timer_add() STARTING, startHour: %i, startMin: %i, endHour: %i, endMin: %i, gpio: %i",
 	    startHour, startMin, endHour, endMin, gpio);
 	//
 	struct tm tmp_start;
@@ -157,7 +157,7 @@ bool time_timer_add(int startHour, int startMin, int endHour, int endMin, int gp
 	tmp_end.tm_sec    = 0;
 	// Check if already exists
 	if( time_timer_exists(tmp_start, tmp_end, gpio) ) {
-		printf("time_timer_add() Failed exists!\n");
+		ESP_LOGI(TAG,"time_timer_add() Failed exists!");
 		return false;
 	}
 	myt[myt_pos].start_time = tmp_start;

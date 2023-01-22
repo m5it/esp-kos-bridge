@@ -847,6 +847,7 @@ function logUpdate() {
 function logLoad() {
 	//
 	if( tab_log_opts.running_old || tab_log_opts.done_old ) {
+		console.warn("logLoad() skipping",tab_log_opts);
 		if( tab_log_opts.done_old ) qS("#displayLog").classList.remove("updating");
 		return false;
 	}

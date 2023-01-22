@@ -19,8 +19,8 @@
 #define ENABLE_LOG
 
 //
-#define VERSION_STRING "Gallina Inglesa"
-#define VERSION "0.3"
+#define VERSION_STRING "Rasca Pantalla"
+#define VERSION "0.4"
 // main/VERSION should be generated with every build. (increased)
 //--
 // extern const char VERSION[] asm("_binary_VERSION_start"); // main/VERSION

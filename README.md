@@ -51,7 +51,8 @@ Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
 ![alt text](https://github.com/m5it/esp-kos-bridge/blob/main/imgs/v0.2d.png) <br>
 
 # Releases
-- comming: v0.3 aka Gallina Inglesa
+- Comming: v0.4 aka Rasca Pantalla
+- 22.1.23: v0.3 aka Gallina Inglesa
 - 11.1.23: v0.2 aka Conejo Blanco
   added
     * wifi scan
