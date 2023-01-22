@@ -53,8 +53,10 @@ Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
 # Releases
 - Comming: v0.4 aka Rasca Pantalla
 - 22.1.23: v0.3 aka Gallina Inglesa
+  added:
+    * web log
 - 11.1.23: v0.2 aka Conejo Blanco
-  added
+  added:
     * wifi scan
     * ota updates
 
