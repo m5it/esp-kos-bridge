@@ -44,7 +44,7 @@ Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
 # Supported WiFi Scan!
 
 # Supported Web Log! (v0.3)
-(Should be used ESP_LOGI(.. so logs are logged.)
+(Should be used ESP_LOGI(.. so logs are logged, with printf wont take effect.. :) )
 
 # Screenshoots
 ![alt text](https://github.com/m5it/esp-kos-bridge/blob/main/imgs/v0.2a.png) <br>
