@@ -6,7 +6,7 @@ Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
 
 
 # How to start<br>
-1.) Upload to your MCU.<br>
+1a.) Upload to your MCU.<br>
     (Choose correct PORT for your device! (-p) )<br>
     Ex.:<br>
       idf.py menuconfig (OPTIONAL)<br>
@@ -20,7 +20,7 @@ Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
 
 4.) configure time, ap, sta, timer... enjoy.<br>
 
-5.) Image for OTA updates can be found in build/esp-kos-bridge.bin
+1b.) Image for OTA updates can be found in build/esp-kos-bridge.bin
 
 <hr>
 
