@@ -36,15 +36,6 @@ static struct stats {
 //-- FUnctioNS
 //-------------
 // check if any request attribute exists
-/*
-[0;32mI (207308) T3CH_HTTPD: Found URL query(209) => upload=%EF%BF%BD%06%02%20%EF%BF%BD%14%08%40%EF%BF%BD%00%00%00%00%00%00%00%00%EF%BF%BD%01%00%00%00%00%01%20%00%40%3F%EF%BF%BD5%03%002T%CD%AB%00%00%00%00%00%00%00%00%00%00%00%00v1.0.0-217-g9d64b6&POS=0&ALL=16872[0m
-[0;32mI (207332) T3CH_HTTPD: Found separator(203) at 6[0m
-[0;32mI (207343) T3CH_HTTPD: Found URL query parameter => POS => 0[0m
-[0;32mI (207343) T3CH_HTTPD: Found URL query(209) => upload=%EF%BF%BD%06%02%20%EF%BF%BD%14%08%40%EF%BF%BD%00%00%00%00%00%00%00%00%EF%BF%BD%01%00%00%00%00%01%20%00%40%3F%EF%BF%BD5%03%002T%CD%AB%00%00%00%00%00%00%00%00%00%00%00%00v1.0.0-217-g9d64b6&POS=0&ALL=16872[0m
-[0;32mI (207367) T3CH_HTTPD: Found separator(203) at 6[0m
-[0;32mI (207378) T3CH_HTTPD: Found URL query parameter => ALL => 16872[0m
-ota_update_post_handler() upload start, data( 2 / 16872 )
-*/
 size_t t3ch_httpd_get_param(httpd_req_t *req, const char *key, char *paramout) {
 	size_t buf_len = httpd_req_get_url_query_len(req) + 1;
     if (buf_len > 1) {
