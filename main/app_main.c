@@ -212,22 +212,10 @@ void app_main(void)
 	StartHTTP();
 #endif
     
-    ESP_LOGI(TAG,"Using VERSION: %s\n",VERSION);
     //--
-    //StartScan();
-    
-    //--
-    /*t3ch_time_sntp_init();
+    t3ch_time_sntp_init();
     if( t3ch_time_sntp_updated()==false ) {
 		ESP_LOGI(TAG, "Time is not set yet. Updating trough NTP.");
 		t3ch_time_sntp_update();
-	}*/
-	
-	//--
-	//
-	/*char *json_string = "[{\"id\":\"25139\",\"date\":\"2016-10-27\",\"name\":\"Komfy Switch With Camera DKZ-201S\\/W Password Disclosure\"},{\"id\":\"25117\",\"date\":\"2016-10-24\",\"name\":\"NETDOIT weak password Vulnerability\"}]";
-	cJSON *root = cJSON_Parse(json_string);
-	int n = cJSON_GetArraySize(root);
-	ESP_LOGI(TAG,"DEBUG JSON...: %i\n",n);
-	*/
+	}
 }
