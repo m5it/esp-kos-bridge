@@ -12,7 +12,7 @@
 -->
 <html>
 <head>
-<title>Welcome To ESP-KOS-BRIDGE</title>
+<title>(WSS) Welcome To ESP-KOS-BRIDGE</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta charset="UTF-8">
@@ -346,6 +346,11 @@ function findParent(element,opt) {
 function random(min,max) {
     return Math.round((Math.random(min,max)*max)+min);
 }
+
+//--
+//
+var wss = null;
+
 //-- loop things
 //
 function infoLoop() {
@@ -529,6 +534,22 @@ function loadFile(fp) {
 //-- ready things
 //
 function ready() {
+	//--
+	// wss
+	setTimeout(function() {
+		console.info("wss start...");
+		wss = new WebSocket( "wss://"+document.location.host+"/wss" );
+		//
+		wss.onopen = function(event) {
+			console.info("wss.onopen",event);
+			wss.send("TEST FROM BROWSER TO ESP WSS !!! :)");
+		}
+		//
+		wss.onmessage = function (event) {
+			console.info("wss.onmessage",event);
+	        var data = event.data;
+		}
+	},5000);
 	//-- Set some inputs
 	//
 	qS("input[name='tm_year']").value  = (new Date()).getFullYear();

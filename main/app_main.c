@@ -198,17 +198,21 @@ void app_main(void)
     //--
     t3ch_events_init();
     time_timer_init();
-    //
-    //esp_bridge_create_all_netif();
-    
-    //
-    StartWeb();
     
     //--
     // configure sta & ap from t3ch_config or console or web
     t3ch_wifi_start_ap();
     t3ch_wifi_start_sta();
     
+    //--
+    //
+#ifdef ENABLE_HTTPS
+    StartHTTPS();
+#else
+	StartHTTP();
+#endif
+    
+    ESP_LOGI(TAG,"Using VERSION: %s\n",VERSION);
     //--
     //StartScan();
     

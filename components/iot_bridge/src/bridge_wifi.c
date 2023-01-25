@@ -50,8 +50,7 @@ OVERRIDE_AP_PWD[128]={0};
 esp_err_t esp_bridge_wifi_set(wifi_mode_t mode,
                               const char *ssid,
                               const char *password,
-                              const char *bssid)
-{
+                              const char *bssid) {
 	ESP_LOGI(TAG, "bridge_wifi.c ->  esp_bridge_wifi_set() starting, ssid: %s, pwd: %s\n",ssid, password);
 	
     ESP_PARAM_CHECK(ssid);
@@ -121,31 +120,38 @@ static void ip_event_sta_got_ip_handler(void *arg, esp_event_base_t event_base,
     xEventGroupSetBits(s_wifi_event_group, BRIDGE_EVENT_STA_CONNECTED);
 }
 
-static void wifi_event_ap_start_handler(void *arg, esp_event_base_t event_base,
-                                        int32_t event_id, void *event_data)
-{
+static void wifi_event_ap_start_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
 	ESP_LOGI(TAG, "DEBUG wifi_event_ap_start_handler() STARTING.\n");
-	//
-    esp_netif_t* netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
-
-    if (netif) {
-		ESP_LOGI(TAG, "DEBUG wifi_event_ap_start_handler() netif Looks OK!\n");
-        if (esp_bridge_softap_dhcps) {
-			ESP_LOGI(TAG, "DEBUG wifi_event_ap_start_handler() STARTING dhcps!\n");
-            esp_netif_dhcps_stop(netif);
-            esp_netif_dns_info_t dns;
-            dns.ip.u_addr.ip4.addr = ESP_IP4TOADDR(114, 114, 114, 114);
-            dns.ip.type = IPADDR_TYPE_V4;
-            dhcps_offer_t dhcps_dns_value = OFFER_DNS;
-            ESP_ERROR_CHECK(esp_netif_dhcps_option(netif, ESP_NETIF_OP_SET, ESP_NETIF_DOMAIN_NAME_SERVER, &dhcps_dns_value, sizeof(dhcps_dns_value)));
-            ESP_ERROR_CHECK(esp_netif_set_dns_info(netif, ESP_NETIF_DNS_MAIN, &dns));
-            ESP_ERROR_CHECK(esp_netif_dhcps_start(netif));
-        }
-
-        esp_netif_ip_info_t netif_ip;
-        esp_netif_get_ip_info(netif, &netif_ip);
-        ip_napt_enable(netif_ip.ip.addr, 1);
-    }
+	
+	if (event_id == WIFI_EVENT_AP_STACONNECTED) {
+        wifi_event_ap_staconnected_t* event = (wifi_event_ap_staconnected_t*) event_data;
+        ESP_LOGI(TAG, "station "MACSTR" join, AID=%d", MAC2STR(event->mac), event->aid);
+		
+		//
+	    esp_netif_t* netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+	
+	    if (netif) {
+			ESP_LOGI(TAG, "DEBUG wifi_event_ap_start_handler() netif Looks OK!\n");
+	        if (esp_bridge_softap_dhcps) {
+				ESP_LOGI(TAG, "DEBUG wifi_event_ap_start_handler() STARTING dhcps!\n");
+	            esp_netif_dhcps_stop(netif);
+	            esp_netif_dns_info_t dns;
+	            dns.ip.u_addr.ip4.addr = ESP_IP4TOADDR(114, 114, 114, 114);
+	            dns.ip.type = IPADDR_TYPE_V4;
+	            dhcps_offer_t dhcps_dns_value = OFFER_DNS;
+	            ESP_ERROR_CHECK(esp_netif_dhcps_option(netif, ESP_NETIF_OP_SET, ESP_NETIF_DOMAIN_NAME_SERVER, &dhcps_dns_value, sizeof(dhcps_dns_value)));
+	            ESP_ERROR_CHECK(esp_netif_set_dns_info(netif, ESP_NETIF_DNS_MAIN, &dns));
+	            ESP_ERROR_CHECK(esp_netif_dhcps_start(netif));
+	        }
+	
+	        esp_netif_ip_info_t netif_ip;
+	        esp_netif_get_ip_info(netif, &netif_ip);
+	        ip_napt_enable(netif_ip.ip.addr, 1);
+	    }
+	}
+	else {
+		ESP_LOGI(TAG,"wifi_event_ap_start_handler() Unknown event_id: %i",event_id);
+	}
 }
 
 /*static void wifi_event_ap_staconnected_handler(void *arg, esp_event_base_t event_base,
@@ -319,7 +325,8 @@ esp_netif_t* esp_bridge_create_softap_netif(esp_netif_ip_info_t* ip_info, uint8_
     esp_bridge_softap_dhcps = enable_dhcps;
 
     /* Register our event handler for Wi-Fi, IP and Provisioning related events */
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, WIFI_EVENT_AP_START, &wifi_event_ap_start_handler, NULL, NULL));
+    //ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, WIFI_EVENT_AP_START, &wifi_event_ap_start_handler, NULL, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_ap_start_handler, NULL, NULL));
 //<<<<<<< HEAD
     //ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, WIFI_EVENT_AP_STACONNECTED, &wifi_event_ap_staconnected_handler, NULL, NULL));
     //ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, WIFI_EVENT_AP_STADISCONNECTED, &wifi_event_ap_stadisconnected_handler, NULL, NULL));

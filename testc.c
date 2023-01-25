@@ -287,10 +287,17 @@ void myUrlEncode(char *in, char *out, int newSize) {
 	strcpy(out,ret);
 }
 
+void rtrim(char inout[], int len) {
+	char tmp[strlen(inout)];
+	memset(tmp,'\0',strlen(inout));
+	memcpy(tmp,inout,strlen(inout)-len);
+	strcpy(inout,tmp);
+}
+
 void main() {
-	for(int i=0; i<30; i++) {
-		printf("DEBUG hex at: %i - %x\n",i,i);
-	}
+	//for(int i=0; i<30; i++) {
+	//	printf("DEBUG hex at: %i - %x\n",i,i);
+	//}
 	/*//
 	addStruct("test 1", "test 1 description...");
 	addStruct("test 2", "test 2 description...");
@@ -323,7 +330,9 @@ void main() {
 	int newSize = myUrlEncodeSize(tmp2);
 	char tmp3[newSize];
 	myUrlEncode(tmp2,tmp3,newSize);
-	printf("tmp3: %s\n", tmp3);
+	printf("tmp3 d1: %s\n", tmp3);
+	rtrim(tmp3,3);
+	printf("tmp3 d2: %s\n", tmp3);
 	/*// example retrive of length of string
 	printf("tmp2 size: %d, sizeof: %d\n", ( sizeof(tmp2)/sizeof(tmp2[0])), sizeof(tmp2));
 	

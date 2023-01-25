@@ -26,6 +26,14 @@ int getSize(char *buf) {
 }
 
 //
+void rtrim(char inout[], int len) {
+	char tmp[strlen(inout)];
+	memset(tmp,'\0',strlen(inout));
+	memcpy(tmp,inout,strlen(inout)-len);
+	strcpy(inout,tmp);
+}
+
+//
 int chrat(char *str, char key) {
 	char *pch = strchr(str,key);
 	return (int)(pch-str);

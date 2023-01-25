@@ -23,6 +23,7 @@
 //--
 static const char *TAG = "T3CH_HTTPD";
 static nvs_handle_t nvsh;
+httpd_handle_t server = NULL;
 //
 static struct tm timeinfo;
 //
@@ -830,8 +831,120 @@ esp_err_t httpd_error(httpd_req_t *req, httpd_err_code_t err)
     return ESP_FAIL;
 }
 
-bool StartWeb(void) {
-	httpd_handle_t server = NULL;
+#ifdef ENABLE_WSS
+//--
+//
+static esp_err_t wss_handler(httpd_req_t *req)
+{
+    if (req->method == HTTP_GET) {
+        ESP_LOGI(TAG, "Handshake done, the new connection was opened");
+        return ESP_OK;
+    }
+    httpd_ws_frame_t ws_pkt;
+    uint8_t *buf = NULL;
+    memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
+    ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+    /* Set max_len = 0 to get the frame len */
+    esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "httpd_ws_recv_frame failed to get frame len with %d", ret);
+        return ret;
+    }
+    ESP_LOGI(TAG, "frame len is %d", ws_pkt.len);
+    if (ws_pkt.len) {
+        /* ws_pkt.len + 1 is for NULL termination as we are expecting a string */
+        buf = calloc(1, ws_pkt.len + 1);
+        if (buf == NULL) {
+            ESP_LOGE(TAG, "Failed to calloc memory for buf");
+            return ESP_ERR_NO_MEM;
+        }
+        ws_pkt.payload = buf;
+        /* Set max_len = ws_pkt.len to get the frame payload */
+        ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "httpd_ws_recv_frame failed with %d", ret);
+            free(buf);
+            return ret;
+        }
+        ESP_LOGI(TAG, "Got packet with message: %s", ws_pkt.payload);
+    }
+    ESP_LOGI(TAG, "Packet type: %d", ws_pkt.type);
+    /*if (ws_pkt.type == HTTPD_WS_TYPE_TEXT &&
+        strcmp((char*)ws_pkt.payload,"Trigger async") == 0) {
+        free(buf);
+        return trigger_async_send(req->handle, req);
+    }*/
+
+    ret = httpd_ws_send_frame(req, &ws_pkt);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "httpd_ws_send_frame failed with %d", ret);
+    }
+    free(buf);
+    return ret;
+}
+//
+static const httpd_uri_t wss_get = {
+        .uri        = "/wss",
+        .method     = HTTP_GET,
+        .handler    = wss_handler,
+        //.user_ctx   = NULL,
+        .is_websocket = true
+};
+#endif
+
+#ifdef ENABLE_HTTPS
+//
+bool StartHTTPS(void) {
+	ESP_LOGI(TAG, "StartHTTPS() STARTING.");
+	//
+	httpd_ssl_config_t conf     = HTTPD_SSL_CONFIG_DEFAULT();
+	conf.httpd.uri_match_fn     = httpd_uri_match_wildcard;
+	conf.httpd.max_uri_handlers = 9;
+	//
+    conf.servercert = servercert_start;
+    conf.servercert_len = servercert_end - servercert_start;
+    //
+    conf.prvtkey_pem = prvtkey_pem_start;
+    conf.prvtkey_len = prvtkey_pem_end - prvtkey_pem_start;
+
+//#if CONFIG_EXAMPLE_ENABLE_HTTPS_USER_CALLBACK
+//    conf.user_cb = https_server_user_callback;
+//#endif
+
+    esp_err_t ret = httpd_ssl_start(&server, &conf);
+    if (ESP_OK != ret) {
+        ESP_LOGI(TAG, "Error starting server!");
+        return false;
+    }
+    
+    //
+    httpd_register_uri_handler(server, &home_get);
+	httpd_register_uri_handler(server, &ota_update_post);
+//#ifdef ENABLE_WSS
+	//
+	httpd_register_uri_handler(server, &wss_get);
+//#else
+	//
+	httpd_register_uri_handler(server, &reset_get);
+	httpd_register_uri_handler(server, &free_get);
+	httpd_register_uri_handler(server, &time_get);
+	httpd_register_uri_handler(server, &timer_get);
+	httpd_register_uri_handler(server, &wifi_get);
+	httpd_register_uri_handler(server, &log_get);
+	//httpd_register_uri_handler(server, &dht_get);
+//#endif
+	//
+	httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, httpd_error);
+    return true;
+}
+#endif
+
+#if !defined(ENABLE_HTTPS)
+//
+bool StartHTTP(void) {
+	ESP_LOGI(TAG, "StartHTTP() STARTING.");
+	//
+	//httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     //config.lru_purge_enable = true;
     config.uri_match_fn = httpd_uri_match_wildcard;
@@ -902,3 +1015,4 @@ bool StartWeb(void) {
 	nvs_commit( nvsh );
 	nvs_close( nvsh );
 }
+#endif

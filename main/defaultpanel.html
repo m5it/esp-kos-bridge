@@ -1,0 +1,1114 @@
+<!--
+/**    Started by Espressif Systems - modified by by t3ch aka B.K.
+ * -------------------------------------------------------------------
+ *               ESP-KOS-BRIDGE => WiFi Extender / Timer
+ *               https://github.com/m5it/esp-kos-bridge
+ * -------------------------------------------------------------------
+ *            If you like project consider donating. 
+ *                   Donate - Welcome - Thanks!
+ *    https://www.paypal.com/donate/?hosted_button_id=QGRYL4SL5N4FE
+ * Donate - Donar - Spenden - Daruj - пожертвовать - दान करना - 捐 - 寄付
+ */
+-->
+<html>
+<head>
+<title>(DEFAULT) Welcome To ESP-KOS-BRIDGE</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta charset="UTF-8">
+<!-- Page Style -->
+<style>
+/**/
+* {
+	line-break: anywhere;
+}
+label {
+	font-weight:bolder;
+	padding:3px 5px;
+}
+label:after {
+	clear:both;
+	display:block;
+}
+button {
+	padding:2px;
+}
+.header {
+	border: solid 1px black;
+    padding: 7px;
+    margin: 13px;
+    border-radius: 13px;
+    box-shadow: 0px 0px 2px 1px lightgrey;
+}
+.fieldrow {
+	padding:3px;
+}
+.fieldrow:not(.titles) > div {
+	cursor:pointer;
+}
+.fieldrow > div {
+	padding:2px;
+}
+.fieldrow.titles {
+	font-weight:bolder;
+}
+.fieldrow.titles > div {}
+.field {
+	float:left;
+	box-sizing:border-box;
+}
+.w33 {
+	width:33%;
+}
+.w25 {
+	width:25%;
+}
+.dfield {
+	display:inline-block;
+}
+.spec6 {}
+.spec6 .dfield {
+	max-width:18%;
+	text-align:center;
+}
+.spec6 .dfield label {
+	overflow: hidden;
+    display: block;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.trifield {}
+.trifield > div { display:inline-block; }
+
+#tm {}
+#tm > div {}
+#tm > div:after {clear: both;content: ".";display: block;font-size: 0;height: 0;line-height: 0;visibility: hidden;} {}
+#tm > div > label {}
+#tm > div > input {
+	float:left;
+	margin-left:20px;
+}
+
+.timerDisplay {
+	margin:2px;
+}
+.timerDisplay .title {}
+.timerDisplay .title > div {
+	font-weight:bolder;
+}
+.timerDisplay > div > div {
+	display:inline-block;
+	width:16%;
+	white-space:nowrap;
+}
+
+/**/
+#displayUpdate {}
+#displayUpdateProgress {}
+#displayUpdateProgress > div {
+	position:relative;
+	width:200px;
+	height:20px;
+	border-radius:13px;
+}
+#displayUpdateProgress.active > div {
+	background:lightgray;
+}
+#displayUpdateProgress .progress {
+	position:absolute;
+	left:0px;
+	top:50%;
+	transform:translate(0px,-50%);
+	height:7px;
+	background:red;
+	z-index:1;
+}
+#displayUpdateProgress:not(.active) .progressInfo { display:none; }
+#displayUpdateProgress .progressInfo {
+	color:black;
+	background:white;
+	border-radius:33px;
+	box-shadow:0px 0px 2px 1px gray;
+	position:absolute;
+	left:50%;
+	top:50%;
+	transform:translate(-50%,-50%);
+	z-index:2;
+	padding:4px;
+	font-size:0.8em;
+}
+/**/
+#displayLog {}
+#displayLog > label {}
+#displayLog.updating > label {
+	color:red;
+}
+#displayLog.updating > label:after {
+	content:" updating, please wait...";
+}
+#displayLog.done_old > label:after {
+	content:" done or log not enabled.";
+}
+#displayLog > div {
+	overflow:auto;
+	min-height:200px;
+	max-height:65vh;
+}
+
+/**/
+.clearfix:after {clear: both;content: ".";display: block;font-size: 0;height: 0;line-height: 0;visibility: hidden;}
+.clearfix { display: inline-block; }
+* html .clearfix { height: 1%; }
+.clearfix { display: block; }
+/**/
+@media only screen and (max-width: 600px) and (min-width: 320px)  {
+	body {margin:0px;padding:0px;}
+	.field {
+		float:none !important;
+		width:auto;
+	}
+	.w33 {
+		width:auto;
+	}
+	.trifield {
+		display:block !important;
+		float:none !important;
+	}
+}
+</style>
+<!-- Tabs Style -->
+<style>
+/*-- TAB MENuS CSS START --*/
+.fields .display:not(.active) {
+    display:none;
+}
+.fields .tabs {
+    color:white;
+    font-weight: bolder;
+    font-family: system-ui;
+}
+.fields .tabs > div {
+	display:inline-block;
+	padding:3px 13px;
+}
+.fields .tabs .name {
+    cursor:pointer;
+    background:#8fbc8f;
+}
+.fields .tabs .name:not(.active) {
+    color:lightblue;
+}
+.fields .tabs .name:not(.active):hover {color:white;}
+.fields .tabs .name.active {
+    box-shadow:0px 0px 2px 1px green;
+}
+
+.fields.vertical > .tabs {
+    float:left;
+}
+.fields.vertical > .tabs > div {
+    display:block;
+    width:100px;
+    text-align:center;
+    
+}
+.fields.vertical > .display {
+    margin-left:120px;
+}
+.fields.vertical > .display > div {
+    margin:0px 27px;
+}
+
+.fields:not(.vertical) > .display > div {
+    margin:13px 0px;
+}
+/*-- TAB MENuS CSS END --*/
+</style>
+
+<script>
+//-- random function things
+//
+var loading_d=null, loading_d1=null;
+function loadingStart() {
+	loading_d = document.createElement("div");
+	loading_d.setAttribute("style","position:fixed;top:0px;left:0px;right:0px;bottom:0px;background:black;opacity:0.6;z-index:1999;");
+	loading_d1 = document.createElement("div");
+	loading_d1.setAttribute("style","position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:white;font-weight:bolder;font-size:1.4em;z-index:2000;");
+	loading_d1.innerText = "LOADING...";
+	qS("body").appendChild(loading_d);
+	qS("body").appendChild(loading_d1);
+}
+function loadingStop() {
+	loading_d.remove();
+	loading_d1.remove();
+	loading_d=null, loading_d1=null;
+}
+function generate_select_hour(opt) {
+	var opt_name = (typeof(opt)=='object' && typeof(opt.name)!='undefined'?opt.name:"startHour");
+	var opt_appendElement = (typeof(opt)=='object' && typeof(opt.appendElement)!='undefined'?opt.appendElement:null);
+	if(opt_appendElement==null) return false;
+	var ret="<select name='"+opt_name+"'>";
+	for(var i=0; i<=23; i++) {
+		ret += "<option value=\""+i+"\">"+i+"</option>";
+	}
+	ret += "</select>";
+	opt_appendElement.innerHTML = ret;
+}
+function generate_select_min(opt) {
+	var opt_name = (typeof(opt)=='object' && typeof(opt.name)!='undefined'?opt.name:"startMin");
+	var opt_appendElement = (typeof(opt)=='object' && typeof(opt.appendElement)!='undefined'?opt.appendElement:null);
+	if(opt_appendElement==null) return false;
+	var ret="<select name='"+opt_name+"'>";
+	for(var i=0; i<=55; i+=5) {
+		ret += "<option value=\""+i+"\">"+i+"</option>";
+	}
+	ret += "</select>";
+	opt_appendElement.innerHTML = ret;
+}
+function qS(s) {return document.querySelector(s);}
+function Stringify( cssSelector, opt ) {
+	var ret={};
+	//var a = document.querySelectorAll("#tm [name]");
+	var a = document.querySelectorAll( cssSelector );
+	for(var i=0; i<a.length; i++) {
+	    var elm = a[i];
+	    ret[ elm.name ] = elm.value;
+	}
+	return JSON.stringify( [ret] );
+}
+function Fetch( opt ) {
+	var href="";
+	if( typeof(opt)!='undefined' && typeof(opt['href'])!='undefined' ) {
+		href = opt.href;
+	}
+	else return;
+	var opt_method  = (typeof(opt)=='object' && typeof(opt.method)!='undefined'?opt.method:"GET");
+	var opt_body    = (typeof(opt)=='object' && typeof(opt.body)!='undefined'?opt.body:null);
+	//headers:{"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"},
+	var opt_headers = (typeof(opt)=='object' && typeof(opt.headers)!='undefined'?opt.headers:null);
+	var opt_signal  = (typeof(opt)=='object' && typeof(opt.signal)!='undefined'?opt.signal:null);
+	//
+	var fetchOpts = {  
+	    method :opt_method,
+	    cache:'no-store',
+	    //headers:new Headers({'content-type': 'application/json'}),
+	    //body:{},
+    };
+    //
+    if( opt_body!=null ) fetchOpts["body"] = opt_body;
+    if( opt_headers!=null ) fetchOpts["headers"] = opt_headers;
+    if( opt_signal!=null ) fetchOpts["signal"] = opt_signal; // controller.signal
+	//
+	return fetch(href, fetchOpts).then(function (data) {
+		return data.json();
+	}).then(function(json) {
+		console.info("response",json);
+		//
+		if( typeof(opt)!='undefined' && typeof(opt["onDone"])=='function' ) {
+			opt.onDone( json );
+		}
+		else {
+			console.info("Fetch() opt.onDone() not defined!",json);
+		}
+	}).catch(function(E) {
+		console.warn("Fetch() ERROR: ",E);
+		//
+		if( typeof(opt)!='undefined' && typeof(opt["onFail"])=='function' ) {
+			opt.onFail( E );
+		}
+	});
+}
+function urlencode(text) {
+    var tmp = encodeURIComponent( text );
+    tmp = tmp.replace(new RegExp('[*]', 'g'), '%2A');
+    return tmp;
+}
+function urldecode(text) {
+    var tmp=text;
+    tmp = decodeURIComponent(tmp);
+    tmp = tmp.replace(new RegExp('[+]', 'g'), ' ');
+    return tmp;
+}
+function findParent(element,opt) {
+	var opt_classname = (typeof(opt)=='object' && typeof(opt.classname)!='undefined'?opt.classname:null);
+	var opt_maxtries  = (typeof(opt)=='object' && typeof(opt.maxtries)!='undefined'?opt.maxtries:10);
+	var cnt=0;
+	while(cnt<opt_maxtries) {
+		if( element.getAttribute("class").match( opt_classname ) ) {
+			console.info("findParent() got element!",element);
+			return element;
+		}
+		element = element.parentNode;
+		cnt++;
+	}
+	return null;
+}
+function random(min,max) {
+    return Math.round((Math.random(min,max)*max)+min);
+}
+
+//--
+//
+var wss = null;
+
+//-- loop things
+//
+function infoLoop() {
+	//
+	Fetch({href:document.location.origin+"/time/",onDone:function(json) {
+		qS("#displayTime>div").innerText = json.data;
+	},});
+	//
+	Fetch({href:document.location.origin+"/free",onDone:function(json) {
+		//qS("#displayFree>div").innerText = json.data+" | "+json.start_time+" | "+json.restart_time+" | "+json.restart_count;
+		qS("#displayFree>div").innerText = json.data;
+	},});
+	// Repeat loop in 5s
+	setTimeout(function() { infoLoop(); },5000);
+}
+//-- timer things
+//
+function timerGet( opt ) {
+	Fetch({href:document.location.origin+"/timer/",onDone:function(json) {
+		console.info("timer",json);
+		var html="<div class='timerDisplay'>";
+		html += "<div class=\"title\">"+
+				"<div>GPIO</div>"+
+				"<div>StartHour</div>"+
+				"<div>StartMin</div>"+
+				"<div>EndHour</div>"+
+				"<div>EndMin</div>"+
+				"<div>Running</div>"+
+			"</div>";
+		for(var i=0; i<json.length; i++) {
+			html += "<div><div>"+json[i].gpio+"</div>";
+			html += "<div>"+json[i].startHour+"</div>";
+			html += "<div>"+json[i].startMin+"</div>";
+			html += "<div>"+json[i].endHour+"</div>";
+			html += "<div>"+json[i].endMin+"</div>";
+			html += "<div>"+(json[i].running?"YES":"NO")+"</div>";
+			html += "<div><button class='timerDelete' attr='"+i+"'>x</button></div></div>";
+		}
+		html += "</div>";
+		qS("#displayTimer").innerHTML = html;
+		//
+		timerDelete();
+		//
+		if( typeof(opt)=='object' && typeof(opt.loop)!='undefined' && opt.loop ) {
+			setTimeout(function() { timerGet(opt); }, 10000);
+		}
+	},});
+}
+//
+function timerStat() {
+	Fetch({href:document.location.origin+"/timer/?stat=1",onDone:function(json) {
+		console.info("timer stat",json);
+		qS("#timerInfo").innerText = (json.running?"Running!":"Not running!");
+	},});
+}
+//
+function timerDelete() {
+	if( qS(".timerDelete")!=null ) {
+		var a = document.querySelectorAll(".timerDelete:not(.initialized)");
+		for(var i=0; i<a.length; i++) {
+			a[i].classList.add("initialized");
+			a[i].addEventListener("click",function(e) {
+				e.preventDefault();
+				var tmp = this.getAttribute("attr");
+				console.info("timerDel id",tmp);
+				loadingStart();
+				Fetch({href:document.location.origin+"/timer/?del="+tmp,
+					onDone:function(json){
+						console.info("timerAdd response",json);
+						// response like ?stat=1
+						// {success,size,pos,running}
+						if( json.success ) {
+							timerGet();
+						}
+						else {
+							alert("Something failed... :x"+JSON.stringify(json));
+						}
+						loadingStop();
+					},
+				});
+				return false;
+			});
+		}
+	}
+}
+//-- onload / ready things
+//
+window.onload = function() {
+	ready();
+}
+//-- filereader & ota things
+//
+var rd=null;
+//
+if (window.File && window.FileReader && window.FileList && window.Blob) {
+	rd = new FileReader();
+} 
+else {
+	console.warn("Outdated browser!");
+}
+//
+var parts        = [];
+var parts_pos    = 0;
+var part_size    = 512;
+var parts_size   = 0;
+var content_type = "";
+var parts_fail   = 0;
+//
+function sendFile() {
+	var part = parts.shift();
+	//
+	var href = document.location.origin+"/update/?upload=1&at="+parts_pos+"&of="+(parts_size-1);
+	console.info("sendFile() href: ",href);
+	//
+	Fetch({
+		method:"POST",
+		//headers:new Headers({'content-type': 'application/json'}),
+		href:href,
+		body:part,
+		onDone:function(json) {
+			// 
+			var proc = parseInt( ( parts_pos*100 ) / ( parts_size-1 ) );
+			qS("#displayUpdateProgress .progress").setAttribute("style","width:"+proc+"%;");
+			qS("#displayUpdateProgress .progressInfo").innerText = proc+"%"+(parts_fail>0?". Failures: "+parts_fail:"");
+			
+			//
+			if( parts_pos >= (parts_size-1) ) {
+				//console.info("Last chunk! at: "+parts_pos+", of: "+(parts_size-1));
+				//qS("#displayUpdateProgress").classList.remove("active");
+				//qS("#displayUpdateProgress .progress").removeAttribute("style");
+				qS("#displayUpdateProgress .progressInfo").innerText = "Please wait...";
+				setTimeout(function() {document.location.href=document.location.href;},5000);
+			}
+			else {
+				//console.info("Work chunk at: "+parts_pos+", of: "+(parts_size-1));
+				//
+				parts_pos++;
+				sendFile();
+			}
+		},
+		onFail:function(E) {
+			parts_fail++;
+			if( parts_fail<100 ) {
+				//console.warn("update?upload Failed, repeating...",parts_fail);
+				setTimeout(function() {
+					sendFile();
+				},1000);
+			}
+		},
+	});
+}
+//
+function loadFile(fp) {
+	console.info("loadFile() started...",fp);
+	var file = fp.files[0];
+	qS("#displayUpdateProgress").classList.add("active");
+	qS("#displayUpdateProgress .progressInfo").innerText = "Please wait...";
+	//-- OPTION 1.) with usage of input type=file & dirrect send.
+	//----------------------
+	/*
+	content_type = file.type;
+	sendFile(fp.files[0]);
+	*/
+	
+	//-- OPTION 2.) with usage of input type=file and chunks
+	//
+	/*part_size = parseInt(qS("input[name='chunksize']").value), */parts_size=0, parts_pos =0, parts = [];
+	part_size = file.size/10;
+	var start=0;
+	var end=file.size;
+	while( start<end ) {
+		var tmp = start+part_size;
+		parts.push(file.slice(start,tmp));
+		start = tmp;
+	}
+	//console.info("parts.length",parts.length);
+	parts_size = parts.length;
+	//
+	sendFile();
+}
+//-- ready things
+//
+function ready() {
+	//--
+	// wss
+	setTimeout(function() {
+		console.info("wss start...");
+		wss = new WebSocket( "wss://"+document.location.host+"/wss" );
+		//
+		wss.onopen = function(event) {
+			console.info("wss.onopen",event);
+			wss.send("TEST FROM BROWSER TO ESP WSS !!! :)");
+		}
+		//
+		wss.onmessage = function (event) {
+			console.info("wss.onmessage",event);
+	        var data = event.data;
+		}
+	},5000);
+	//-- Set some inputs
+	//
+	qS("input[name='tm_year']").value  = (new Date()).getFullYear();
+	qS("input[name='tm_mon']").value   = (new Date()).getMonth();
+	qS("input[name='tm_mday']").value  = (new Date()).getDate();
+	//-- Generate select blocks for timer
+	//
+	generate_select_hour({name:"startHour",appendElement:qS("#startHour"),});
+	generate_select_hour({name:"endHour",appendElement:qS("#endHour"),});
+	generate_select_min({name:"startMin",appendElement:qS("#startMin"),});
+	generate_select_min({name:"endMin",appendElement:qS("#endMin"),});
+	
+	//--
+	// initialize tab menus
+	//
+	document.querySelectorAll(".fields > .tabs .name").forEach(function(elmx) {
+	    elmx.addEventListener("click",function(e) {
+		    var attrActive = this.getAttribute("attr-active");
+		    var elm = findParent(e.target,{classname:'fields',});
+		    var tmpid = elm.getAttribute("id");
+		    if(typeof(tmpid)=='undefined' || tmpid==null) {
+				tmpid = "tmpid"+(new Date().getTime())+random(100,99999);
+			    elm.setAttribute("id",tmpid);
+			}
+		    document.querySelectorAll("#"+tmpid+" > .tabs .name").forEach(function(el) { el.classList.remove("active"); });
+		    this.classList.add("active");
+		    document.querySelectorAll("#"+tmpid+" > .display").forEach(function(el) { el.classList.remove("active"); });
+		    document.querySelectorAll("#"+tmpid+" > .display."+attrActive).forEach(function(el) { el.classList.add("active"); });
+		    // Trigger attrActive event
+		    console.warn("adm/index -> Trigger","tabs_"+attrActive);
+		    //
+		    document.dispatchEvent(new CustomEvent("tab_opening",{"detail":attrActive}));
+        });
+	});
+	
+	//-- Start infinite loop to retrive Free and Time of server
+	//
+	infoLoop();
+	//logUpdate();
+	
+	// fire once, retrive wifi info
+	Fetch({href:document.location.origin+"/wifi/",onDone:function(json) {
+		console.info("wifi",json);
+		qS("#displayAPSSID > input").value = json.ap_ssid;
+		qS("#displayAPPWD>input").value    = json.ap_pwd;
+		qS("#displaySTASSID>input").value  = json.sta_ssid;
+		qS("#displaySTAPWD>input").value   = json.sta_pwd;
+		qS("#displayVersion>div").innerText= json.version+" "+json.version_string;
+	},});
+	
+	// fire once, retrive timer info
+	timerGet({loop:true});
+	timerStat();
+	
+	// Update server time
+	qS("#tm_submit").addEventListener("click",function(e) {
+		e.preventDefault();
+		loadingStart();
+		console.info("#tm_submit clicked.");
+		var q = document.location.origin+"/time/?settm=1"+
+		    "&tm_hour="+qS("#tm input[name='tm_hour']").value+
+		    "&tm_min="+qS("#tm input[name='tm_min']").value+
+		    "&tm_sec="+qS("#tm input[name='tm_sec']").value+
+		    //
+		    "&tm_year="+qS("#tm input[name='tm_year']").value+
+		    "&tm_mday="+qS("#tm input[name='tm_mday']").value+
+		    "&tm_mon="+qS("#tm input[name='tm_mon']").value;
+		//
+		Fetch({href:q,onDone:function(json){
+			console.info("timetm response",json);
+			loadingStop();
+		},});
+		
+		return false;
+	});
+	
+	// Update ap
+	qS("#updateAP").addEventListener("click",function(e) {
+		e.preventDefault();
+		console.info("#updateAP clicked.");
+		if( !confirm("Are you sure?") ) return;
+		loadingStart();
+		Fetch({href:document.location.origin+"/wifi/?setap=1"+
+			"&ssid="+qS("input[name='displayAPSSID']").value+
+			"&pwd="+qS("input[name='displayAPPWD']").value,
+			onDone:function(json) {
+			//
+			console.info("updateAP response",json);
+			if( json.success ) {
+				alert("AP have been updated succesfully.");
+			}
+			else {
+				alert("Update of AP Failed!");
+			}
+			loadingStop();
+		},});
+		return false;
+	});
+	
+	// Update sta
+	qS("#updateSTA").addEventListener("click",function(e) {
+		e.preventDefault();
+		console.info("#updateSTA clicked.");
+		if( !confirm("Are you sure?") ) return;
+		loadingStart();
+		Fetch({href:document.location.origin+"/wifi/?setsta=1"+
+			"&ssid="+qS("input[name='displaySTASSID']").value+
+			"&pwd="+qS("input[name='displaySTAPWD']").value,
+			onDone:function(json) {
+			//
+			console.info("updateSTA response",json);
+			if( json.success ) {
+				alert("STA have been updated succesfully.");
+			}
+			else {
+				alert("Update of STA Failed!");
+			}
+			loadingStop();
+		},});
+		return false;
+	});
+	
+	// Timer Add
+	qS("#timerAdd").addEventListener("click",function(e) {
+		e.preventDefault();
+		console.info("timerAdd clicked.");
+		loadingStart();
+		Fetch({href:document.location.origin+"/timer/?add=1"+
+			"&startHour="+qS("select[name='startHour']").value+
+			"&startMin="+qS("select[name='startMin']").value+
+			"&endHour="+qS("select[name='endHour']").value+
+			"&endMin="+qS("select[name='endMin']").value+
+			"&gpio="+qS("input[name='gpio']").value,
+			onDone:function(json){
+				console.info("timerAdd response",json);
+				// response like ?stat=1
+				// {success,size,pos,running}
+				if( json.success ) {
+					timerGet();
+				}
+				else {
+					if( json.size==json.pos ) {
+						alert("No more space for timer.");
+					}
+					else {
+						alert("Something failed... :x"+JSON.stringify(json));
+					}
+				}
+				loadingStop();
+			},
+		});
+		return false;
+	});
+	
+	//
+	qS("#timerStop").addEventListener("click",function(e) {
+		e.preventDefault();
+		console.info("timerStop clicked.");
+		loadingStart();
+		Fetch({href:document.location.origin+"/timer/?stop=1",onDone:function(json){
+			console.info("timerStop json",json);
+			timerStat();
+			loadingStop();
+		},});
+		return false;
+	});
+	
+	//
+	qS("#timerStart").addEventListener("click",function(e) {
+		e.preventDefault();
+		console.info("timerStart clicked.");
+		loadingStart();
+		Fetch({href:document.location.origin+"/timer/?start=1",onDone:function(json){
+			console.info("timerStart json",json);
+			loadingStop();
+			timerStat();
+		},});
+		return false;
+	});
+	
+	//--
+	//
+	qS("#scanSTA").addEventListener("click",function(e) {
+		e.preventDefault();
+		console.info("scan start clicked.");
+		loadingStart();
+		Fetch({href:document.location.origin+"/wifi/?scan_start=1",onDone:function(json){
+			console.info("scan start json",json);
+			//
+			Fetch({href:document.location.origin+"/wifi/?scan_get=1",onDone:function(json){
+				console.info("scan get json",json);
+				loadingStop();
+				if( json.success ) {
+					var html = "<div>";
+					html += "<div class='fieldrow titles'><div class='field w25'>SSID</div>";
+					html += "<div class='field w25'>RSSI</div>";
+					html += "<div class='field w25'>CHAN</div>";
+					html += "<div class='field w25'>MODE</div><div class='clearfix'></div></div>";
+					for(var i=0; i<json.data.length; i++) {
+						html += "<div class='fieldrow fieldsel' attr=\""+json.data[i].ssid+"\"><div class='field w25'>"+json.data[i].ssid+"</div>";
+						html += "<div class='field w25'>"+json.data[i].rssi+"</div>";
+						html += "<div class='field w25'>"+json.data[i].chan+"</div>";
+						html += "<div class='field w25'>"+json.data[i].mode+"</div><div class='clearfix'></div></div>";
+					}
+					html += "</div>";
+					qS("#displaySCAN > div").innerHTML = html;
+					document.querySelectorAll("#displaySCAN .fieldsel").forEach(function(elm) {
+						elm.addEventListener("click",function(e1) {
+							var attr = this.getAttribute("attr");
+							console.info("elm attr",attr);
+							//
+							qS("input[name='displaySTASSID']").value = attr;
+							qS("input[name='displaySTAPWD']").value  = "";
+						});
+					});
+				}
+			},});
+		},});
+		return false;
+	});
+
+	//--
+	//
+	qS("#otaUpdateDownload").addEventListener("click",function(e) {
+		var url = qS("input[name='otaUpdateDownload']").value;
+		
+		console.info("#otaUpdateDownload url",url);
+		
+		if( !url.match(/^http\:\/\/.*bin$/i) ) {
+			alert("Url should start with http://... and end with .bin!");
+			return false;
+		}
+		Fetch({method:"POST", href:document.location.origin+"/update/?download="+urlencode(url),onDone:function(json) {
+			console.info("/update/?download="+urlencode(url)+" response",json);
+		},});
+	});
+}
+
+//-- tab, document ready things
+//
+var tab_log_opts = {
+	"visible":false,
+	"running_new":false,
+	"running_old":false,
+	"done_old":false, // when scrolling down we load old posts. if we retrive succes:false then its done for old posts.
+	"position":0,
+	"last_id":0,
+	"controller_old":new AbortController(),
+	"controller_new":new AbortController(),
+	"timeout_new":null,
+};
+//
+document.addEventListener("tab_opening",function(e) {
+	console.info("tab_opening STARTIng. e: ",e);
+	var detail = e.detail;
+	console.info("tab_opening",detail);
+	//
+	if( detail=="tab_log" ) {
+		tab_log_opts.visible = true;
+		tab_log_opts.timeout_new = setTimeout(function() {logUpdate();},7000);
+		//
+		qS("#displayLog>div").addEventListener("scroll",function(e1) {
+			
+			console.info("debug offsetTop: ",qS("#displayLog>div").offsetTop);
+			console.info("debug offsetHeight: ",qS("#displayLog>div").offsetHeight);
+			console.info("debug scrollHeight: ",qS("#displayLog>div").scrollHeight);
+			console.info("debug displayLogOffset top: ",qS(".displayLogOffset").offsetTop);
+			
+			if( qS("#displayLog>div").scrollHeight <= qS("#displayLog>div").offsetHeight ) {
+				console.warn("logLoad() load more... from",tab_log_opts.position);
+				logLoad();
+			}
+			else if( (qS("#displayLog>div").offsetHeight + qS("#displayLog>div").scrollTop) >= qS("#displayLog>div").scrollHeight-33 ) {
+				console.info("#displayLog scroll at end (d1)... loadng more...");
+				logLoad();
+			}
+			else {
+				console.warn("Something went wrong...");
+			}
+		});
+		logLoad();
+	}
+	else {
+		tab_log_opts.visible = false;
+		clearTimeout(tab_log_opts.timeout_new);
+	}
+});
+//
+function logUpdate() {
+	//
+	if( tab_log_opts.running_new || tab_log_opts.visible==false ) {
+		return false;
+	}
+	tab_log_opts.running_new = true;
+	//
+	Fetch({
+		href:document.location.origin+"/log/?update="+tab_log_opts.last_id,
+		signal:tab_log_opts.controller_old.signal,
+		onDone:function(json) {
+			console.info("logUpdate() onDone()",json);
+			//
+			for(var i=(json.length-1); i>=0; i--) {
+				if( json[i].id>tab_log_opts.last_id ) tab_log_opts.last_id = json[i].id; // save last log id
+				qS("#displayLog>div").insertAdjacentHTML('afterbegin', "<div>"+urldecode(json[i].text)+"</div>" );
+			}
+			//
+			tab_log_opts.running_new = false;
+			setTimeout(function() { logUpdate(); },7000);
+		},
+		onFail:function(E) {
+			console.info("logUpdate() onFail()",E);
+		}
+	});
+}
+//
+function logLoad() {
+	//
+	if( tab_log_opts.running_old || tab_log_opts.done_old ) {
+		console.warn("logLoad() skipping",tab_log_opts);
+		if( tab_log_opts.done_old ) qS("#displayLog").classList.remove("updating");
+		return false;
+	}
+	tab_log_opts.running_old = true;
+	qS("#displayLog").classList.add("updating");
+	//
+	Fetch({
+		href:document.location.origin+"/log/?fromPos="+tab_log_opts.position,
+		signal:tab_log_opts.controller_old.signal,
+		onDone:function(json) {
+			console.info("logLoad() onDone()",json);
+			if( json.success==false ) {
+				console.info("logLoad() onDone() looks we have all old posts.");
+				tab_log_opts.done_old = true;
+				qS("#displayLog").classList.remove("updating");
+				qS("#displayLog").classList.add("done_old");
+				return;
+			}
+			//
+			tab_log_opts.position += json.length;
+			console.info("logLoad() tab_log_opts",tab_log_opts);
+			for(var i=0; i<json.length; i++) {
+				if( json[i].id>tab_log_opts.last_id ) tab_log_opts.last_id = json[i].id; // save last log id
+				qS("#displayLog>div").insertAdjacentHTML('beforeend', "<div>"+urldecode(json[i].text)+"</div>" );
+			}
+			//
+			tab_log_opts.running_old = false;
+			qS("#displayLog").classList.remove("updating");
+			//
+			console.info("debug offsetTop: ",qS("#displayLog>div").offsetTop);
+			console.info("debug offsetHeight: ",qS("#displayLog>div").offsetHeight);
+			console.info("debug scrollHeight: ",qS("#displayLog>div").scrollHeight);
+			console.info("debug displayLogOffset top: ",qS(".displayLogOffset").offsetTop);
+			
+			if( qS("#displayLog>div").scrollHeight <= qS("#displayLog>div").offsetHeight ) {
+				console.warn("logLoad() load more... from",tab_log_opts.position);
+				logLoad();
+			}
+			else if( (qS("#displayLog>div").offsetHeight + qS("#displayLog>div").scrollTop) >= qS("#displayLog>div").scrollHeight-33 ) {
+				console.info("#displayLog scroll at end (d2)... loadng more...");
+				logLoad();
+			}
+			else {
+				qS(".displayLogOffset").innerHTML = "Done! Or try to scroll.";
+			}
+		},
+		onFail:function(E) {
+			console.info("logLoad() onFail()",E);
+		}
+	});
+}
+</script>
+</head>
+<body>
+
+<div class="header">
+	<div id="displayTime" class="trifield" style="float:left;" align="center"><label>Server Time</label><div></div></div>
+	<div class="trifield" style="float:right;" align="center">
+		<div id="displayFree">
+			<label>Server Free</label>
+			<div></div>
+		</div>
+		<div id="displayVersion">
+			<label>Version</label>
+			<div></div>
+		</div>
+	</div>
+	<div class="trifield" style="width:70%;max-width:320px;margin:0px auto;text-align:center;">
+		<div style="font-weight:bolder;font-size:1.3em;">
+			ESP - KOS - BRIDGE
+		</div>
+		<div style="font-size:0.9em;">
+			aka WiFi Extender & Day Extender / Timer
+		</div>
+	</div>
+	<div class="clearfix"></div>
+</div>
+
+
+<div class="fields hor">
+		<div class="tabs">
+            <div class="name active" attr-active="tab_wifiinfo" style="margin:2px;">Wifi</div>
+			<div class="name" attr-active="tab_timeinfo" style="margin:2px;">Time</div>
+			<div class="name" attr-active="tab_timerinfo" style="margin:2px;">Timer</div>
+			<div class="name" attr-active="tab_log" style="margin:2px;">Log</div>
+			<div class="name" attr-active="tab_otaupdate" style="margin:2px;">Update</div>
+		</div>
+
+<div class="display tab_wifiinfo active">
+<div>
+	<label>WiFi Informations</label>
+	<div>
+		<div>
+			<div>
+				<label>AP SSID</label>
+				<div id="displayAPSSID"><input name="displayAPSSID" value=""></div>
+			</div>
+			<div>
+				<label>AP PWD</label>
+				<div id="displayAPPWD"><input name="displayAPPWD" value=""></div>
+			</div>
+			<div style="margin:13px;">
+				<button id="updateAP">Update AP</button>
+			</div>
+		</div>
+		
+		<div>
+			
+			<div class="field" style="width:50%;">
+				<div>
+					<label>STA SSID</label>
+					<div id="displaySTASSID"><input name="displaySTASSID" value=""></div>
+				</div>
+				<div>
+					<label>STA PWD</label>
+					<div id="displaySTAPWD"><input name="displaySTAPWD" value=""></div>
+				</div>
+				<div style="margin:13px;">
+					<small>If STA ssid & pwd are empty then network extender is disabled and only AP runs as control panel.</small><br>
+					<button id="updateSTA">Update STA & Restart</button>
+				</div>
+			</div>
+			<div class="field" style="width:50%;">
+				<div>
+					<label>SCAN 4 WIFI</label> <button id="scanSTA">scan</button>
+					<div id="displaySCAN"><div></div></div>
+				</div>
+			</div>
+			<div class="clearfix"></div>
+		</div>
+	</div>
+</div>
+</div>
+
+<div class="display tab_timeinfo">
+<div>
+	<label>Set Server/Timer Time ( struct tm )</label>
+	<div><form id="tm">
+		<!-- struct tm -->
+		<div><label>TM HOUR</label><input type="text" name="tm_hour" value=""></div>
+		<div><label>TM MIN</label><input type="text" name="tm_min" value=""></div>
+		<div><label>TM SEC</label><input type="text" name="tm_sec" value=""></div>
+		
+		<div><label>TM YEAR</label><input type="text" name="tm_year" value=""></div>
+		<div><label>TM MDAY</label><input type="text" name="tm_mday" value=""></div>
+		<div><label>TM WDAY</label><input type="text" name="tm_wday" value="" disabled=disabled></div>
+		<div><label>TM YDAY</label><input type="text" name="tm_yday" value="" disabled=disabled></div>
+		<div><label>TM MON</label><input type="text" name="tm_mon" value=""></div>
+		<div><label>TM ISDST</label><input type="text" name="tm_isdst" value="" disabled=disabled></div>
+		<br>
+		<div align="center"><button name="submit" id="tm_submit">Set</button></div>
+	</form></div>
+</div>
+</div>
+
+<div class="display tab_timerinfo">
+<div>
+	<label>Timer Settings</label>
+    <div class="spec6">
+        <div class="dfield">
+			<label>GPIO</label>
+			<div><input type="text" name="gpio" value="" size=2></div>
+		</div>
+		<div class="dfield">
+			<label>Start hour</label>
+	        <div id="startHour"></div>
+        </div>
+        <div class="dfield">
+			<label>Start min</label>
+	        <div id="startMin"></div>
+        </div>
+        <div class="dfield">
+			<label>End hour</label>
+	        <div id="endHour"></div>
+        </div>
+        <div class="dfield">
+			<label>End min</label>
+	        <div id="endMin"></div>
+        </div>
+        <div class="dfield">
+	        <button id="timerAdd">Add</button>
+        </div>
+        <div class="clearfix"></div>
+    </div>
+    
+    <label>Timer display</label> 
+    <button id="timerStart">Start</button> | <button id="timerStop">Stop</button> 
+    <div id="timerInfo" style="display:inline-block;"></div>
+    <div id="displayTimer">
+	    <div></div>
+    </div>
+</div>
+</div>
+
+<div class="display tab_log">
+	<div>
+		<label>Log</label>
+		<div>
+			<div id="displayLog">
+				<label></label>
+				<div></div>
+				<p class="clearfix displayLogOffset"></p>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="display tab_otaupdate">
+	<div class="field w33">
+		<label>OTA Updates</label>
+		<div>
+			<div id="displayUpdateProgress">
+				<div>
+					<div class="progress"></div>
+					<div class="progressInfo"></div>
+				</div>
+			</div>
+			<div id="displayUpdate">
+				<label>Update by selecting image.</label>
+				<div>
+					<form action="/update/" method="POST" enctype="multipart/form-data">
+						<!--<input type="checkbox" name="filetest" value="1">
+						<input type="text" name="chunksize" value="512" size=4>-->
+						<input type="file" name="file" onchange="loadFile(this);">
+					</form>
+				</div>
+			</div>
+			
+			<div>
+				<label>Update by downloading from http://..</label>
+				<div>
+					<input type="text" name="otaUpdateDownload" value="">
+					<button id="otaUpdateDownload">Update</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+</div> <!-- .fields -->
+
+</body>
+</html>

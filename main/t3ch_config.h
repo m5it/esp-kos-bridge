@@ -8,8 +8,7 @@
  *    https://www.paypal.com/donate/?hosted_button_id=QGRYL4SL5N4FE
  * Donate - Donar - Spenden - Daruj - пожертвовать - दान करना - 捐 - 寄付
  */
-
-//--
+#include <stdio.h>
 
 //
 #define AP_SSID "STARTING_SSID"
@@ -17,10 +16,13 @@
 
 // Uncomment #define ENABLE_LOG to enable WEB log.
 #define ENABLE_LOG
+// Uncomment #define ENABLE_HTTPS to run HTTPS instead of HTTP
+//#define ENABLE_HTTPS
+// Uncomment to enable. (require ENABLE_HTTPS)
+//#define ENABLE_WSS
 
 //
 #define VERSION_STRING "Rasca Pantalla"
-#define VERSION "0.4"
-// main/VERSION should be generated with every build. (increased)
-//--
-// extern const char VERSION[] asm("_binary_VERSION_start"); // main/VERSION
+// main/version.txt should be generated with every build. (increased)
+// usage ex.: ./build.sh 0.4
+extern const uint8_t VERSION[] asm("_binary_version_txt_start");
