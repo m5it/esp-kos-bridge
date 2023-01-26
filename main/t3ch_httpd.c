@@ -17,9 +17,8 @@
 #include "t3ch_time.h"
 //#include "t3ch_time.h"
 #include "dht.h"
-
-//
 //#include "cJSON.h"
+
 //--
 static const char *TAG = "T3CH_HTTPD";
 static nvs_handle_t nvsh;
@@ -519,11 +518,7 @@ static esp_err_t free_get_handler(httpd_req_t *req)
 {
 	char res[64];
 	//
-	//printf("free_get_handler() STARTING, user_ctx: %d, sess_ctx: %d\n",*(int *)req->user_ctx, req->sess_ctx);
-	//sprintf(res,"{\"success\":true,\"data\":\"%d\",\"start_time\":\"%s\",\"restart_time\":\"%s\",\"restart_count\":\"%s\"}", heap_caps_get_free_size(MALLOC_CAP_8BIT), tmp_start_time, tmp_restart_time, tmp_restart_count);
 	sprintf(res,"{\"success\":true,\"data\":\"%d\"}", heap_caps_get_free_size(MALLOC_CAP_8BIT));
-	//
-	//nvs_close( nvsh );
 	//
 	httpd_resp_send(req, res, strlen(res));
     return ESP_OK;
@@ -833,11 +828,27 @@ esp_err_t httpd_error(httpd_req_t *req, httpd_err_code_t err)
 
 #ifdef ENABLE_WSS
 //--
+
+//
+esp_err_t t3ch_ws_send(httpd_req_t *req, char *data) {
+	//
+	httpd_ws_frame_t ws_pkt;
+    memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
+    ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+    ws_pkt.len  = strlen(data);
+    ws_pkt.payload = data;
+	esp_err_t ret = httpd_ws_send_frame(req, &ws_pkt);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "t3ch_ws_send() failed with %d", ret);
+    }
+    return ret;
+}
+
 //
 static esp_err_t wss_handler(httpd_req_t *req)
 {
     if (req->method == HTTP_GET) {
-        ESP_LOGI(TAG, "Handshake done, the new connection was opened");
+        ESP_LOGI(TAG, "wss_handler() Handshake done, the new connection was opened");
         return ESP_OK;
     }
     httpd_ws_frame_t ws_pkt;
@@ -847,38 +858,61 @@ static esp_err_t wss_handler(httpd_req_t *req)
     /* Set max_len = 0 to get the frame len */
     esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "httpd_ws_recv_frame failed to get frame len with %d", ret);
+        ESP_LOGE(TAG, "wss_handler() httpd_ws_recv_frame failed to get frame len with %d", ret);
         return ret;
     }
-    ESP_LOGI(TAG, "frame len is %d", ws_pkt.len);
+    ESP_LOGI(TAG, "wss_handler() frame len is %d", ws_pkt.len);
     if (ws_pkt.len) {
         /* ws_pkt.len + 1 is for NULL termination as we are expecting a string */
         buf = calloc(1, ws_pkt.len + 1);
         if (buf == NULL) {
-            ESP_LOGE(TAG, "Failed to calloc memory for buf");
+            ESP_LOGE(TAG, "wss_handler() Failed to calloc memory for buf");
             return ESP_ERR_NO_MEM;
         }
         ws_pkt.payload = buf;
         /* Set max_len = ws_pkt.len to get the frame payload */
         ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
         if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "httpd_ws_recv_frame failed with %d", ret);
+            ESP_LOGE(TAG, "wss_handler() httpd_ws_recv_frame failed with %d", ret);
             free(buf);
             return ret;
         }
-        ESP_LOGI(TAG, "Got packet with message: %s", ws_pkt.payload);
+        ESP_LOGI(TAG, "wss_handler() Got packet with message: %s", ws_pkt.payload);
     }
-    ESP_LOGI(TAG, "Packet type: %d", ws_pkt.type);
+    ESP_LOGI(TAG, "wss_handler() Packet type: %d", ws_pkt.type);
     /*if (ws_pkt.type == HTTPD_WS_TYPE_TEXT &&
         strcmp((char*)ws_pkt.payload,"Trigger async") == 0) {
         free(buf);
         return trigger_async_send(req->handle, req);
     }*/
-
-    ret = httpd_ws_send_frame(req, &ws_pkt);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "httpd_ws_send_frame failed with %d", ret);
-    }
+	
+	//--
+	//
+	char *tmp_action = cjson_oget((char*)ws_pkt.payload,"action");
+	char *tmp_uid    = cjson_oget((char*)ws_pkt.payload,"uid");
+	char *tmp_rid    = cjson_oget((char*)ws_pkt.payload,"rid");
+	printf("wss_handler() debug cjson action: %s, uid: %s, rid: %s\n",tmp_action, tmp_uid, tmp_rid);
+	
+	//
+	if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmp_action,"getTime") == 0) {
+		ESP_LOGI(TAG, "wss_handler() getTime STARTED");
+		//
+		char strftime_buf[64];
+		char res[128];
+		//
+		t3ch_time_get(&strftime_buf);
+		sprintf(res,"{\"success\":true,\"action\":%s,\"uid\":%s,\"rid\":%s,\"data\":\"%s\"}",
+			tmp_action, tmp_uid, tmp_rid, strftime_buf);
+		//
+		ret = t3ch_ws_send(req,res);
+	}
+	else {
+		char res[128]={0};
+		sprintf(res,"{\"success\":false,\"action\":%s,\"uid\":%s,\"rid\":%s}",
+			tmp_action, tmp_uid, tmp_rid);
+	    ret = t3ch_ws_send(req,res);
+	}
+	
     free(buf);
     return ret;
 }
@@ -920,10 +954,10 @@ bool StartHTTPS(void) {
     //
     httpd_register_uri_handler(server, &home_get);
 	httpd_register_uri_handler(server, &ota_update_post);
-//#ifdef ENABLE_WSS
+#ifdef ENABLE_WSS
 	//
 	httpd_register_uri_handler(server, &wss_get);
-//#else
+#else
 	//
 	httpd_register_uri_handler(server, &reset_get);
 	httpd_register_uri_handler(server, &free_get);
@@ -932,7 +966,7 @@ bool StartHTTPS(void) {
 	httpd_register_uri_handler(server, &wifi_get);
 	httpd_register_uri_handler(server, &log_get);
 	//httpd_register_uri_handler(server, &dht_get);
-//#endif
+#endif
 	//
 	httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, httpd_error);
     return true;

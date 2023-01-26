@@ -18,7 +18,6 @@
 #endif
 #include "esp_tls.h"
 #include "esp_log.h"
-//#include "cJSON.h"
 
 //
 #ifdef ENABLE_HTTPS

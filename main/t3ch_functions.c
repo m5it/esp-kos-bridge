@@ -13,8 +13,18 @@
 #include <string.h>
 #include <regex.h>
 #include "b64/cdecode.h"
+#include "cJSON.h"
 #include <errno.h>
 #include <stdbool.h>
+
+//-- cJSON
+//
+char *cjson_oget(char *in, const char *key) {
+	cJSON *json = cJSON_Parse( in );
+	return cJSON_Print(cJSON_GetObjectItemCaseSensitive(json,key));
+}
+
+//-- Other
 //
 int getInt(char *str) {
 	return strtol(str, (char**)NULL, 10);

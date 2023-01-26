@@ -243,6 +243,15 @@ function loadingStop() {
 	loading_d1.remove();
 	loading_d=null, loading_d1=null;
 }
+//
+function isDefined(o,v) {
+    if(typeof(o)!='undefined' && o!=null) {
+	    if(typeof(o[v])!='undefined' && o[v]!=null) {
+		    return true;
+		}
+	}
+	return false;
+}
 function generate_select_hour(opt) {
 	var opt_name = (typeof(opt)=='object' && typeof(opt.name)!='undefined'?opt.name:"startHour");
 	var opt_appendElement = (typeof(opt)=='object' && typeof(opt.appendElement)!='undefined'?opt.appendElement:null);
@@ -347,9 +356,289 @@ function random(min,max) {
     return Math.round((Math.random(min,max)*max)+min);
 }
 
+
 //--
 //
-var wss = null;
+var WSC = function( opts/*={}*/ ) {
+	var _this = this;
+	//#
+	this.host   = (isDefined(opts,"host")?opts["host"]:window.location.host);
+	this.port   = (isDefined(opts,"port")?":"+opts.port:"");
+	this.path   = (isDefined(opts,"path")?opts["path"]:"/wss");
+	//this.connectto = "wss://"+this.host+":"+this.port+this.path;
+	this.connectto = "wss://"+this.host+this.port+this.path;
+	//
+	this.status          = 0; // 0=disconected, 1=connecting, 2=connected
+	this.maxConnectTries = 5;
+	this.chkConnectTries = 0;
+	//#
+	//this.socket = new WebSocket( this.connectto );
+	//this.socket = this.connect();
+	
+	//--
+	//
+	this.responses = [/*{
+	    "command"   :"sometext",
+	    "onResponse":"function",
+	}*/];
+	this.responses_index = []
+	
+	//--
+	//
+	this.init = function() {
+		//--
+	    this.socket.onclose = function(event) {
+			//console.info("wsc.init() onclose() started, event: ",event);
+			//
+			if( _this.status==0 && _this.chkConnectTries <= _this.maxConnectTries ) {
+				//console.info("wsc.onclose() connecting d1");
+				//
+				_this.status = 1;
+				//
+				setTimeout( function() {
+					//console.info("wsc.onclose() connecting d2");
+					//
+					_this.connect({});
+					_this.chkConnectTries++;
+				},1000);
+				return true;
+			}
+			else {
+				//console.warn("wsc.onclose() maxConnectTries reached! Stopping...");
+				return false;
+			}
+			
+			//
+			if( _this.status==2 ) {
+				//console.warn("wsc.onclose() setting status=0");
+				_this.status = 0;
+			}
+		}
+		
+	    //#
+	    this.socket.onmessage = function (event) {
+			console.info("wsc.init() onmessage started",event.data);
+	        //--
+	        //var data = event.data;
+	        //
+	        //data.json().then( _this.recvMessage );
+	        _this.recvMessage( event.data );
+	    };
+	    
+	    //#
+	    this.socket.onopen = function(event) {
+			//console.info("wsc.init() onopen started",event);
+	        //--
+	        //
+	        _this.status          = 2;
+	        _this.chkConnectTries = 0;
+	        //
+	        document.dispatchEvent( new CustomEvent("wss_started",{"detail":{"data":null,},}) );
+	    };
+	    
+	}
+	
+	//--
+	//
+	this.reconnect = function() {
+		//console.warn("wsc.reconnect() started");
+		//
+		if( _this.status!= 0 ) {
+			//console.warn("wsc.reconnect() skipped, status: ",_this.status);
+			return false;
+		}
+		//
+		_this.status = 1;
+		
+		//console.warn("wsc.reconnect() connecting... d1");
+		//
+		setTimeout( function() {
+			//console.warn("wsc.reconnect() connecting... d2");
+			_this.connect();
+		},1000);
+	}
+	
+    //--
+    //
+    this.connect = function() {
+		//console.warn("wsc.connect() started..., connectto: "+_this.connectto+", socket: ",_this.socket);
+		//
+		if( _this.status>0 ) {
+			//console.warn("wsc.connect() stopping, status: ",_this.status);
+			return false;
+		}
+		//
+		_this.status = 1;
+		//
+		try {
+			//
+			_this.socket          = new WebSocket( _this.connectto );
+			// check if connected
+			if( _this.socket.readyState==0 || _this.socket_readyState==1 ) {
+				//console.info("wsc.connect() Success, socket: ",_this.socket);
+				return _this.socket;
+			}
+			else {
+				//console.info("wsc.connect() Failed, socket: ",_this.socket);
+				_this.status = 0;
+				return null;
+			}
+		}
+		catch(E) {
+			//console.warn("wsc.connect() Error, socket: ",_this.socket);
+			//console.warn("wsc.connect() Error: ",E);
+			_this.status = 0;
+			return null;
+		}
+	}
+    
+    //--
+    //
+    this.recvMessage = function( json ) {
+		console.info("wsc.recvMessage json",json);
+		console.info("wsc.recvMessage responses",_this.responses);
+		/*var json = {};
+		//
+		try {
+	        json = JSON.parse(data);
+		}
+		catch(E) {
+			//console.warn("WSS.onmessage Failed parse json",E);
+			return;
+		}*/
+		
+		// Check if cmd PING then respond with PONG
+		if( isDefined(json,"cmd") && json.cmd=="PING" ) {
+			_this.sendMessage({"cmd":"PONG",});
+			return;
+		}
+		
+		//--
+        // loop trough responses
+        for(var i=0; i<_this.responses.length; i++) {
+			//
+			if( isDefined(_this.responses[i],"uid") && json.uid == _this.responses[i].uid ) {
+				console.warn("d0");
+				// Fire function. Useful for SINGLE type modules
+				if( _this.responses[i].fun!=null ) {
+					console.warn("d1");
+					if( _this.responses[i].fun(json, _this.responses[i].additionalDetails) ) {
+						_this.responses.splice(i,1);
+						_this.responses_index.splice(i,1);
+					}
+					continue;
+				}
+				// Fire event. Useful for KEEPALIVE type modules
+				else {
+					console.warn("d2");
+					// fire unique id event for response.
+			        document.dispatchEvent( new CustomEvent(json.uid, {
+						"detail":{
+							"data"             :json,
+							"additionalDetails":_this.responses[i].additionalDetails,
+						}
+					}) );
+				}
+				//--
+				// wssFilterResponses()
+				// if defined is used to reconfigure responses object for next job.
+				//
+				if( typeof(wssFilterResponses) == "function" ) {
+					console.warn("d3");
+					var tmpr = wssFilterResponses( _this, i, json );
+					if( tmpr!== false ) {
+						//console.warn("wssFilterResponses is modifiing responses at "+i);
+						_this.responses[i] = tmpr;
+					}
+					else if( tmpr ) {
+						_this.responses.splice(i,1);
+						_this.responses_index.splice(i,1);
+					}
+				}
+			}
+		}
+	}
+    
+    //--
+    //
+    this.initMessage = function( opt ) {
+		//
+		var uid = (isDefined(opt,"uid")?opt.uid:"wss_response");
+		var rid = (new Date()).getTime()+","+random(1000,5000);
+		var fun = (isDefined(opt,"function")?opt["function"]:null);
+		//
+		
+		//
+		// configure response
+		var tmp = _this.responses_index.indexOf( uid );
+		if( tmp<=-1 ) {
+			console.info("adding to responses...",_this.responses);
+			//
+			_this.responses_index.push( uid );
+			_this.responses.push( {
+				"fun"              :fun, // function or null. Useful for SINGLE type modules
+				"uid"              :uid, //                   (uid) is unique id for all similar requests
+				"rid"              :rid, // cancel by rid ?!? (rid) is unique id for every request and all his responses
+				// set additional details that should be returned with request.
+				"additionalDetails":(isDefined(opt,"additionalDetails")?opt.additionalDetails:null),
+			} );
+		}
+		// update additional details for response
+		else if(isDefined(opt,"additionalDetails")) {
+		//	//console.info("wss.initMessage() uid: "+uid+", updating additional details",opt.additionalDetails);
+			_this.responses[tmp].additionalDetails = opt.additionalDetails;
+		}
+		return {"uid":uid,"rid":rid,};
+	}
+    
+    //--
+    //
+    this.sendMessage = function(command,opt/*={
+		    "additionalDetails":{},                           // additionalDetails are passed with response
+		    "uid"              :"response_is_matched_by_uid", //
+	    }*/) {
+		//
+		var ids = this.initMessage({
+			"uid"               : (isDefined(opt,"uid")              ?opt.uid:(isDefined(command,"mod")?command.mod:"response")),
+			"additionalDetails" : (isDefined(opt,"additionalDetails")?opt.additionalDetails:null),
+			"function"          : (isDefined(opt,"function")         ?opt["function"]:null),
+		});
+		//
+		command["uid"] = ids.uid;
+		command["rid"] = ids.rid;
+		command        = JSON.stringify( command );
+		//
+		var len = 0;
+		//
+		try {
+			//len = _this.socket.send( str2ab(command) /* convert to ArrayBuffer */ )
+			len = _this.socket.send( command )
+		}
+		catch(E) {
+			//console.warn("wsc.sendMessage() Failed: ",E);
+			//_this.reconnect();
+			return false;
+		}
+		//
+		return {"uid":ids.uid, "rid":ids.rid, "len":len, };
+	}
+
+	
+	//--
+	// Initialize... connect()...
+	//
+	this.socket = this.connect();
+	//
+	if( this.socket==false || this.socket==null ) {
+		//console.warn("wsc: Something went wrong... :(");
+		return false;
+	}
+	//
+	this.init();
+}
+//--
+//
+var wsc = null;
 
 //-- loop things
 //
@@ -536,20 +825,7 @@ function loadFile(fp) {
 function ready() {
 	//--
 	// wss
-	setTimeout(function() {
-		console.info("wss start...");
-		wss = new WebSocket( "wss://"+document.location.host+"/wss" );
-		//
-		wss.onopen = function(event) {
-			console.info("wss.onopen",event);
-			wss.send("TEST FROM BROWSER TO ESP WSS !!! :)");
-		}
-		//
-		wss.onmessage = function (event) {
-			console.info("wss.onmessage",event);
-	        var data = event.data;
-		}
-	},5000);
+	wsc = new WSC({});
 	//-- Set some inputs
 	//
 	qS("input[name='tm_year']").value  = (new Date()).getFullYear();
@@ -587,22 +863,22 @@ function ready() {
 	
 	//-- Start infinite loop to retrive Free and Time of server
 	//
-	infoLoop();
+	//infoLoop();
 	//logUpdate();
 	
 	// fire once, retrive wifi info
-	Fetch({href:document.location.origin+"/wifi/",onDone:function(json) {
+	/*Fetch({href:document.location.origin+"/wifi/",onDone:function(json) {
 		console.info("wifi",json);
 		qS("#displayAPSSID > input").value = json.ap_ssid;
 		qS("#displayAPPWD>input").value    = json.ap_pwd;
 		qS("#displaySTASSID>input").value  = json.sta_ssid;
 		qS("#displaySTAPWD>input").value   = json.sta_pwd;
 		qS("#displayVersion>div").innerText= json.version+" "+json.version_string;
-	},});
+	},});*/
 	
 	// fire once, retrive timer info
-	timerGet({loop:true});
-	timerStat();
+	//timerGet({loop:true});
+	//timerStat();
 	
 	// Update server time
 	qS("#tm_submit").addEventListener("click",function(e) {
@@ -920,6 +1196,12 @@ function logLoad() {
 		}
 	});
 }
+
+//--
+//
+document.addEventListener("wss_started",function(e) {
+	console.info("wss_started STARTED!");
+});
 </script>
 </head>
 <body>

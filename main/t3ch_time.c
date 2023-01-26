@@ -46,23 +46,23 @@ void time_timer(void * pvp) {
 	while(true) {
 		for(int i=0; i<time_timer_pos(); i++) {
 			//
-			//printf("time_timer t3ch_gpio_state for 26: %i\n", t3ch_gpio_state(26));
+			//ESP_LOGI(TAG, "time_timer t3ch_gpio_state for 26: %i\n", t3ch_gpio_state(26));
 			//
 			if( !myt[i].running && t3ch_time_chk( myt[i].start_time, myt[i].end_time ) ) {
-				printf("Temporary timer at %i not running, STARTING now on gpio: %i!\n", i, myt[i].gpio);
+				ESP_LOGI(TAG, "Temporary timer at %i not running, STARTING now on gpio: %i!\n", i, myt[i].gpio);
 				myt[i].running = true;
 				gpio_set_level(myt[i].gpio,1);
 			}
 			else if( myt[i].running && !t3ch_time_chk( myt[i].start_time, myt[i].end_time ) ) {
-				printf("Temporary timer at %i running, Shutting down on gpio: %i.\n", i, myt[i].gpio);
+				ESP_LOGI(TAG, "Temporary timer at %i running, Shutting down on gpio: %i.\n", i, myt[i].gpio);
 				myt[i].running = false;
 				gpio_set_level(myt[i].gpio,0);
 			}
 			else if( myt[i].running ) {
-				printf("Temporary timer at %i running on gpio: %i...\n", i, myt[i].gpio);
+				ESP_LOGI(TAG, "Temporary timer at %i running on gpio: %i...\n", i, myt[i].gpio);
 			}
 			else {
-				printf("Temporary timer at %i not running for gpio: %i...\n", i, myt[i].gpio);
+				ESP_LOGI(TAG, "Temporary timer at %i not running for gpio: %i...\n", i, myt[i].gpio);
 			}
 		}
 		vTaskDelay(5000 / portTICK_PERIOD_MS);
@@ -78,7 +78,7 @@ int time_timer_pos(void) {
 }
 //
 int time_timer_gen(void) {
-	printf("time_timer_gen() STARTING, myt_pos: %i\n",myt_pos);
+	ESP_LOGI(TAG, "time_timer_gen() STARTING, myt_pos: %i\n",myt_pos);
 	int startsize = TIMER_DATA_SIZE;
 	int halfsize  = startsize/2;
 	timer_data[startsize];
@@ -102,12 +102,12 @@ int time_timer_gen(void) {
 }
 //
 void time_timer_get(char *out) {
-	printf("time_timer_get() STARTED\n");
+	ESP_LOGI(TAG, "time_timer_get() STARTED\n");
 	strcpy(out,timer_data);
 }
 //
 void time_timer_del(int pos) {
-	printf("time_timer_del() STARTING, pos: %i\n",pos);
+	ESP_LOGI(TAG, "time_timer_del() STARTING, pos: %i\n",pos);
 	//
 	if( myt[pos].running ) {
 		gpio_set_level(myt[pos].gpio,0);
@@ -195,7 +195,7 @@ bool time_timer_stop(void) {
 
 //
 void time_timer_save(void) {
-	printf("time_timer_save() STARTING\n");
+	ESP_LOGI(TAG, "time_timer_save() STARTING\n");
 	// Generate cJSON
 	cJSON *myt_ary;
     myt_ary  = cJSON_CreateArray();
@@ -212,22 +212,22 @@ void time_timer_save(void) {
 	    cJSON_AddItemToArray(myt_ary,myt_obj);
 	}
 	char *out = cJSON_Print( myt_ary );
-	printf("time_timer_save() strlen(out): %i\n", strlen(out));
-    printf("time_timer_save() cJSON out: %s\n",out);
+	ESP_LOGI(TAG, "time_timer_save() strlen(out): %i\n", strlen(out));
+    ESP_LOGI(TAG, "time_timer_save() cJSON out: %s\n",out);
     // Save to nvs
     nvs_handle_t nvsh;
 	esp_err_t err = nvs_open("timer_storage",NVS_READWRITE,&nvsh);
-	printf("time_timer_save() d1\n");
+	ESP_LOGI(TAG, "time_timer_save() d1\n");
 	//
 	nvs_erase_key(nvsh,"json");
-	printf("time_timer_save() d2\n");
+	ESP_LOGI(TAG, "time_timer_save() d2\n");
 	//
 	nvs_set_str(nvsh, "json", out);
-	printf("time_timer_save() d3\n");
+	ESP_LOGI(TAG, "time_timer_save() d3\n");
 	nvs_commit( nvsh );
-	printf("time_timer_save() d4\n");
+	ESP_LOGI(TAG, "time_timer_save() d4\n");
 	nvs_close( nvsh );
-	printf("time_timer_save() d5\n");
+	ESP_LOGI(TAG, "time_timer_save() d5\n");
 	free( myt_ary );
 }
 // retrive timer settings if exists. (timer_storage)
@@ -238,14 +238,14 @@ void time_timer_init(void) {
 	size_t rs;
 	esp_err_t err = nvs_open("timer_storage",NVS_READWRITE,&nvsh);
 	nvs_get_str(nvsh,"json",NULL,&rs);
-	printf("time_timer_init() got json size: %d\n",rs);
+	ESP_LOGI(TAG, "time_timer_init() got json size: %d\n",rs);
 	// int convertdata = static_cast<int>(data)
 	char tmpout[ (int)(rs)+1 ];
 	//err = t3ch_nvs_get_str(nvsh,"json",&tmpout);
 	err = nvs_get_str(nvsh,"json",tmpout,&rs);
 	nvs_close(nvsh);
 	if( strlen(tmpout)>0 ) {
-		printf("time_timer_init() tmpout: %s\n", tmpout);
+		ESP_LOGI(TAG, "time_timer_init() tmpout: %s\n", tmpout);
 		myt_ary = cJSON_Parse( tmpout );
 		int myt_size = cJSON_GetArraySize( myt_ary );
 		for(int i=0; i<myt_size; i++) {
@@ -262,7 +262,7 @@ void time_timer_init(void) {
 		free(myt_ary);
 	}
 	else {
-		printf("time_timer_init() tmpout empty!\n");
+		ESP_LOGI(TAG, "time_timer_init() tmpout empty!\n");
 	}
 }
 
@@ -336,9 +336,9 @@ bool t3ch_time_chk( struct tm starttime, struct tm endtime ) {
 	time(&now);
     localtime_r(&now, &timeinfo);
 	//
-	//printf("t3ch_time_chk() D1: %i:%i:%i\n",starttime.tm_hour, starttime.tm_min, starttime.tm_sec);
-	//printf("t3ch_time_chk() D2: %i:%i:%i\n",endtime.tm_hour, endtime.tm_min, endtime.tm_sec);
-	//printf("t3ch_time_chk() D3: %i:%i:%i\n",timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+	//ESP_LOGI(TAG, "t3ch_time_chk() D1: %i:%i:%i\n",starttime.tm_hour, starttime.tm_min, starttime.tm_sec);
+	//ESP_LOGI(TAG, "t3ch_time_chk() D2: %i:%i:%i\n",endtime.tm_hour, endtime.tm_min, endtime.tm_sec);
+	//ESP_LOGI(TAG, "t3ch_time_chk() D3: %i:%i:%i\n",timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
 	// fuck the sec. bug.
 	starttime.tm_sec = 0;
 	endtime.tm_sec   = 0;
@@ -346,7 +346,7 @@ bool t3ch_time_chk( struct tm starttime, struct tm endtime ) {
 	int startsec = ((starttime.tm_hour*60)*60) + (starttime.tm_min*60);// + starttime.tm_sec;
 	int endsec   = ((endtime.tm_hour*60)*60) + (endtime.tm_min*60);// + endtime.tm_sec;
 	int cursec   = ((timeinfo.tm_hour*60)*60) + (timeinfo.tm_min*60) + timeinfo.tm_sec;
-	printf("t3ch_time_chk() startsec: %i, endsec: %i, cursec: %i\n", startsec, endsec, cursec);
+	ESP_LOGI(TAG, "t3ch_time_chk() startsec: %i, endsec: %i, cursec: %i\n", startsec, endsec, cursec);
 	if( startsec>endsec && (cursec<endsec) ) return true;
 	if( startsec<=cursec && endsec>=cursec ) return true;
 	return false;
@@ -354,8 +354,8 @@ bool t3ch_time_chk( struct tm starttime, struct tm endtime ) {
 //
 void t3ch_time_get(char * buf) {
 	//ESP_LOGI(TAG, "t3ch_time_get() starting.");
-	//printf("t3ch_time.c -> t3ch_time_get() d1 timeinfo: %s\n", asctime(&timeinfo));
-	//printf("t3ch_time.c -> t3ch_time_get() d1 ti: %s\n", asctime(ti));
+	//ESP_LOGI(TAG, "t3ch_time.c -> t3ch_time_get() d1 timeinfo: %s\n", asctime(&timeinfo));
+	//ESP_LOGI(TAG, "t3ch_time.c -> t3ch_time_get() d1 ti: %s\n", asctime(ti));
 	time(&now);
     localtime_r(&now, &timeinfo);
 	strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
