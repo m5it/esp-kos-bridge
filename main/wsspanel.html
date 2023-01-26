@@ -494,7 +494,8 @@ var WSC = function( opts/*={}*/ ) {
     
     //--
     //
-    this.recvMessage = function( json ) {
+    this.recvMessage = function( data ) {
+		var json = JSON.parse(data);
 		console.info("wsc.recvMessage json",json);
 		console.info("wsc.recvMessage responses",_this.responses);
 		/*var json = {};
@@ -516,6 +517,8 @@ var WSC = function( opts/*={}*/ ) {
 		//--
         // loop trough responses
         for(var i=0; i<_this.responses.length; i++) {
+			console.warn("checking responses at "+i+", response: ",_this.responses[i]);
+			console.warn("checking responses at "+i+", json: ",json);
 			//
 			if( isDefined(_this.responses[i],"uid") && json.uid == _this.responses[i].uid ) {
 				console.warn("d0");
