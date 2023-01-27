@@ -940,13 +940,14 @@ static esp_err_t wss_handler(httpd_req_t *req)
 		//
 		char *fromPos = cJSON_Print( objUID );
 		// generate log and get size
-		int size      = t3ch_log_gen_old(fromPos);
+		int size      = t3ch_log_gen_old(getInt(fromPos));
 	
 		// No more results or just there is no results.
 		if( size<=0 ) {
-			ESP_LOGI(TAG, "wss_handler() log_view_old test get log size 0\n");
-			char res[64];
+			ESP_LOGI(TAG, "wss_handler() log_view_old test get log size: %i\n",size);
+			char res[128];
 			sprintf(res,"{\"success\":false,\"action\":\"%s\",\"uid\":\"%s\"}");
+			ESP_LOGI(TAG, "wss_handler() log_view_old res: %s\n",res);
 			ret = t3ch_ws_send(req,res);
 		}
 		else {
@@ -960,7 +961,7 @@ static esp_err_t wss_handler(httpd_req_t *req)
 			char res[128+size];
 			memset(res,'\0',(128+size));
 			//
-			sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"data\":\"%s\"}",
+			sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"data\":%s}",
 				action, uid, data);
 			ret = t3ch_ws_send(req,res);
 		}

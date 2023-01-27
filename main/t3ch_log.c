@@ -12,6 +12,7 @@
 	#define LOG_TEXT_SIZE 0
 	#define LOG_DATA_SIZE 0
 #endif
+static const char *TAG = "T3CH_LOG";
 //
 int LOG_POS = 0; // position of log array
 int LOG_CNT = 0; // increase for id
@@ -29,7 +30,7 @@ int t3ch_log_gen_new(int lastId) {
 	int startPos = LOG_POS-1;
 	//
     if( log[startPos].id<=lastId ) {
-		printf("t3ch_log_gen_new() looks there is no new data. lastId: %i vs LOG_POS: %i\n",lastId,LOG_POS);
+		ESP_LOGI(TAG,"t3ch_log_gen_old() t3ch_log_gen_new() looks there is no new data. lastId: %i vs LOG_POS: %i\n",lastId,LOG_POS);
 		return 0;
 	}
 	//
@@ -57,19 +58,19 @@ int t3ch_log_gen_new(int lastId) {
 		//
 		if( cnt==0 ) {
 			jsonlen += sprintf(LOG_DATA+jsonlen,"%s",tmpresult);
-			printf("t3ch_log_gen_new() d0 jsonlen: %i\n",jsonlen);
+			ESP_LOGI(TAG,"t3ch_log_gen_old() t3ch_log_gen_new() d0 jsonlen: %i\n",jsonlen);
 		}
 		else if( log[i].id<=lastId ) {
-			printf("t3ch_log_gen_new() d3, lastId jsonlen: %i\n",jsonlen);
+			ESP_LOGI(TAG,"t3ch_log_gen_old() t3ch_log_gen_new() d3, lastId jsonlen: %i\n",jsonlen);
 			break;
 		}
 		else if( (jsonlen+tmplen)>=LOG_DATA_SIZE ) {
-			printf("t3ch_log_gen_new() d1, break jsonlen: %i\n",jsonlen);
+			ESP_LOGI(TAG,"t3ch_log_gen_old() t3ch_log_gen_new() d1, break jsonlen: %i\n",jsonlen);
 			break;
 		}
 		else {
 			jsonlen += sprintf(LOG_DATA+jsonlen,",%s",tmpresult);
-			printf("t3ch_log_gen_new() d2, add jsonlen: %i\n",jsonlen);
+			ESP_LOGI(TAG,"t3ch_log_gen_old() t3ch_log_gen_new() d2, add jsonlen: %i\n",jsonlen);
 		}
 		cnt++;
 	}
@@ -78,6 +79,7 @@ int t3ch_log_gen_new(int lastId) {
 }
 //
 int t3ch_log_gen_old(int fromPos) {
+	ESP_LOGI(TAG,"t3ch_log_gen_old() STARTING, fromPos: %i\n",fromPos);
 	if(LOG_POS<=0) return 0;
 	int startPos = ((LOG_SIZE-(LOG_SIZE-LOG_POS))-fromPos)-1;
 	if( startPos<0 ) return 0;
@@ -105,15 +107,15 @@ int t3ch_log_gen_old(int fromPos) {
 		//
 		if( cnt==0 ) {
 			jsonlen += sprintf(LOG_DATA+jsonlen,"%s",tmpresult);
-			printf("t3ch_log_gen_old() d0 jsonlen: %i\n",jsonlen);
+			ESP_LOGI(TAG,"t3ch_log_gen_old() t3ch_log_gen_old() d0 jsonlen: %i\n",jsonlen);
 		}
 		else if( (jsonlen+tmplen)>=LOG_DATA_SIZE ) {
-			printf("t3ch_log_gen_old() d1, break jsonlen: %i\n",jsonlen);
+			ESP_LOGI(TAG,"t3ch_log_gen_old() t3ch_log_gen_old() d1, break jsonlen: %i\n",jsonlen);
 			break;
 		}
 		else {
 			jsonlen += sprintf(LOG_DATA+jsonlen,",%s",tmpresult);
-			printf("t3ch_log_gen_old() d2, add jsonlen: %i\n",jsonlen);
+			ESP_LOGI(TAG,"t3ch_log_gen_old() t3ch_log_gen_old() d2, add jsonlen: %i\n",jsonlen);
 		}
 		cnt++;
 	}
@@ -123,7 +125,7 @@ int t3ch_log_gen_old(int fromPos) {
 
 //
 void t3ch_log_get(char *out) {
-	printf("t3ch_log_get() STARTED. LOG_POS: %d, LOG_CNT: %d\n", LOG_POS, LOG_CNT);
+	ESP_LOGI(TAG,"t3ch_log_gen_old() t3ch_log_get() STARTED. LOG_POS: %d, LOG_CNT: %d\n", LOG_POS, LOG_CNT);
 	strcpy(out,LOG_DATA);
 }
 
@@ -137,7 +139,7 @@ void t3ch_log_del(int pos) {
 
 //
 int t3ch_log(const char *text, va_list args) {
-	//printf("t3ch_log() STARTING!!! LOG_POS: %i\n",LOG_POS);
+	//ESP_LOGI(TAG,"t3ch_log_gen_old() t3ch_log() STARTING!!! LOG_POS: %i\n",LOG_POS);
 	//
 	if( LOG_POS>=(LOG_SIZE-1) ) {
 		t3ch_log_del(0);
@@ -165,12 +167,12 @@ int t3ch_log(const char *text, va_list args) {
 	//
 	//strcpy(log[LOG_POS].tag,tag);
 	if( strlen(tmp)>(LOG_TEXT_SIZE-4) ) {
-		//printf("t3ch_log() text too long: %i, shortening...\n",strlen(tmp));
+		//ESP_LOGI(TAG,"t3ch_log_gen_old() t3ch_log() text too long: %i, shortening...\n",strlen(tmp));
 		memcpy(log[LOG_POS].text,tmp,(LOG_TEXT_SIZE-4));
 		strcpy(log[LOG_POS].text+(LOG_TEXT_SIZE-4),"...");
 	}
 	else {
-		//printf("t3ch_log() text ok: %i\n",strlen(tmp));
+		//ESP_LOGI(TAG,"t3ch_log_gen_old() t3ch_log() text ok: %i\n",strlen(tmp));
 		strcpy(log[LOG_POS].text,tmp);
 	}
 	log[LOG_POS].id = LOG_CNT;
