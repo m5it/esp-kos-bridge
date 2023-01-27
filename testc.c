@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <regex.h>
 #include <stdarg.h>
@@ -294,6 +295,13 @@ void rtrim(char inout[], int len) {
 	strcpy(inout,tmp);
 }
 
+void ltrim(char *inout, int len) {
+	char *a = (char*)malloc(strlen(inout));
+	memset(a,'\0',strlen(inout));
+	strcpy(a,inout);
+	strcpy(inout,(a+=len));
+}
+
 void main() {
 	//for(int i=0; i<30; i++) {
 	//	printf("DEBUG hex at: %i - %x\n",i,i);
@@ -324,15 +332,24 @@ void main() {
 	printf("Encoded: %s\n",out);
 	*/
 	//
-	char tmp2[] = "\x1b hello\r\n\r\nWorld\r\nAa Hmm test@\"'-. Done!+";
+	char tmp2[] = "hello\r\n\r\nWorld\r\nAa Hmm test@\"'-. Done!+";
 	printf("seaching World...in: %s\n",tmp2);
 	//
 	int newSize = myUrlEncodeSize(tmp2);
+	//
+	//char tmp5[newSize];
+	//myUrlEncode(tmp2,tmp5,newSize);
+	//printf("tmp3 d0: %s\n", tmp5);
+	//
 	char tmp3[newSize];
 	myUrlEncode(tmp2,tmp3,newSize);
 	printf("tmp3 d1: %s\n", tmp3);
 	rtrim(tmp3,3);
 	printf("tmp3 d2: %s\n", tmp3);
+	//char *tmpx = fuck(tmp3);
+	ltrim(tmp3,1);
+	printf("tmp4 d0: %s\n",tmp3);
+	
 	/*// example retrive of length of string
 	printf("tmp2 size: %d, sizeof: %d\n", ( sizeof(tmp2)/sizeof(tmp2[0])), sizeof(tmp2));
 	

@@ -17,7 +17,7 @@
 #include "t3ch_time.h"
 //#include "t3ch_time.h"
 #include "dht.h"
-//#include "cJSON.h"
+#include "cJSON.h"
 
 //--
 static const char *TAG = "T3CH_HTTPD";
@@ -154,6 +154,7 @@ static const httpd_uri_t home_get = {
     //.user_ctx  = &user_ctx,
 };
 
+#if !defined(ENABLE_WSS)
 //
 static esp_err_t dht_get_handler(httpd_req_t *req)
 {
@@ -530,6 +531,8 @@ static const httpd_uri_t free_get = {
     .handler   = free_get_handler,
     //.user_ctx  = &user_ctx,
 };
+#endif // #if !defined(ENABLE_WSS)
+
 
 //-- LOG
 //
@@ -597,6 +600,8 @@ static const httpd_uri_t log_get = {
     //.user_ctx  = &user_ctx,
 };
 
+//-- OTA UPDATES
+//
 static esp_ota_handle_t update_handle = 0;
 static const esp_partition_t *update_partition;
 static time_t update_ts;
@@ -808,6 +813,7 @@ static const httpd_uri_t ota_update_post = {
     //.user_ctx  = &user_ctx,
 };
 
+//-- ERROR HANDLER
 //
 esp_err_t httpd_error(httpd_req_t *req, httpd_err_code_t err)
 {
@@ -826,8 +832,9 @@ esp_err_t httpd_error(httpd_req_t *req, httpd_err_code_t err)
     return ESP_FAIL;
 }
 
+
+//-- WSS THINGS are Separated with macros
 #ifdef ENABLE_WSS
-//--
 
 //
 esp_err_t t3ch_ws_send(httpd_req_t *req, char *data) {
@@ -847,14 +854,17 @@ esp_err_t t3ch_ws_send(httpd_req_t *req, char *data) {
 //
 static esp_err_t wss_handler(httpd_req_t *req)
 {
+	//
     if (req->method == HTTP_GET) {
         ESP_LOGI(TAG, "wss_handler() Handshake done, the new connection was opened");
         return ESP_OK;
     }
+    //
     httpd_ws_frame_t ws_pkt;
     uint8_t *buf = NULL;
     memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
     ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+    // retrive data len
     /* Set max_len = 0 to get the frame len */
     esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
     if (ret != ESP_OK) {
@@ -862,6 +872,8 @@ static esp_err_t wss_handler(httpd_req_t *req)
         return ret;
     }
     ESP_LOGI(TAG, "wss_handler() frame len is %d", ws_pkt.len);
+    
+    // retrive data
     if (ws_pkt.len) {
         /* ws_pkt.len + 1 is for NULL termination as we are expecting a string */
         buf = calloc(1, ws_pkt.len + 1);
@@ -888,32 +900,101 @@ static esp_err_t wss_handler(httpd_req_t *req)
 	
 	//--
 	//
-	char *tmp_action = cjson_oget((char*)ws_pkt.payload,"action");
-	char *tmp_uid    = cjson_oget((char*)ws_pkt.payload,"uid");
-	char *tmp_rid    = cjson_oget((char*)ws_pkt.payload,"rid");
-	printf("wss_handler() debug cjson action: %s, uid: %s, rid: %s\n",tmp_action, tmp_uid, tmp_rid);
+	printf("wss_handler() parsing payload(%i): %s\n",strlen((char*)ws_pkt.payload),(char*)ws_pkt.payload);
+	//
+	cJSON *json      = cJSON_Parse( (char*)ws_pkt.payload );
+	cJSON *objAction = cJSON_GetObjectItemCaseSensitive(json,"action");
+	cJSON *objUID    = cJSON_GetObjectItemCaseSensitive(json,"uid");
+	char *action = cJSON_Print( objAction );
+	char *uid    = cJSON_Print( objUID );
+	//
+	ltrim(action,1);
+	rtrim(action,1);
+	//
+	ltrim(uid,1);
+	rtrim(uid,1);
 	
 	//
-	if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmp_action,"getTime") == 0) {
-		ESP_LOGI(TAG, "wss_handler() getTime STARTED");
+	if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(action,"infoLoop") == 0) {
+		ESP_LOGI(TAG, "wss_handler() infoLoop STARTED");
 		//
 		char strftime_buf[64];
 		char res[128];
 		//
 		t3ch_time_get(&strftime_buf);
-		sprintf(res,"{\"success\":true,\"action\":%s,\"uid\":%s,\"rid\":%s,\"data\":\"%s\"}",
-			tmp_action, tmp_uid, tmp_rid, strftime_buf);
-		//
+		sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"time\":\"%s\",\"free\":\"%d\"}",
+			action, uid, strftime_buf, heap_caps_get_free_size(MALLOC_CAP_8BIT));
 		ret = t3ch_ws_send(req,res);
 	}
+	//
+	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(action,"version") == 0) {
+		ESP_LOGI(TAG, "wss_handler() version STARTED");
+		char res[128];
+		sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"version\":\"%s\",\"version_string\":\"%s\"}",
+			action, uid, t3ch_version(), t3ch_version_string());
+		ret = t3ch_ws_send(req,res);
+	}
+	//
+	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(action,"log_view_old") == 0) {
+		ESP_LOGI(TAG, "wss_handler() log_view_old STARTED");
+	}
+	//
+	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(action,"log_view_new") == 0) {
+		ESP_LOGI(TAG, "wss_handler() log_view_new STARTED");
+	}
+	//
+	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(action,"wifi_view") == 0) {
+		ESP_LOGI(TAG, "wss_handler() wifi_view STARTED");
+		//
+		char res[256]={0};
+		char ap_ssid[32]={0};
+		char ap_pwd[64]={0};
+		char sta_ssid[32]={0};
+		char sta_pwd[64]={0};
+		//
+		wifi_ap_config_t cap;
+		wifi_sta_config_t csta;
+		//
+		esp_wifi_get_config(WIFI_IF_AP, (wifi_config_t*)&cap);
+		esp_wifi_get_config(WIFI_IF_STA, (wifi_config_t*)&csta);
+		//
+	    if (strlen((const char*)cap.ssid)) {
+	        strcpy(ap_ssid,(const char*) cap.ssid);
+	        strcpy(ap_pwd,(const char*) cap.password);
+	    }
+	    else {
+			ESP_LOGI(TAG, "wss_handler() wifi_view cap.ssid not set!?");
+		}
+		
+		//
+	    if (strlen((const char*)csta.ssid)) {
+	        strcpy(sta_ssid,(const char*) csta.ssid);
+	        strcpy(sta_pwd,(const char*) csta.password);
+	    }
+	    else {
+			ESP_LOGI(TAG, "wss_handler() wifi_view csta.ssid not set!");
+			strcpy(sta_ssid,"Not set");
+			strcpy(sta_pwd,"Not set");
+		}
+		
+		//
+		sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"ap_ssid\":\"%s\",\"ap_pwd\":\"%s\",\"sta_ssid\":\"%s\",\"sta_pwd\":\"%s\"}",
+		    action,uid, ap_ssid, ap_pwd, sta_ssid, sta_pwd);
+		ret = t3ch_ws_send(req,res);
+	}
+	//
 	else {
+		ESP_LOGI(TAG, "wss_handler() unknown action! Action: %s, UID: %s",action,uid);
 		char res[128]={0};
-		sprintf(res,"{\"success\":false,\"action\":%s,\"uid\":%s,\"rid\":%s}",
-			tmp_action, tmp_uid, tmp_rid);
+		sprintf(res,"{\"success\":false,\"action\":\"%s\",\"uid\":\"%s\"}",
+			action, uid);
 	    ret = t3ch_ws_send(req,res);
 	}
-	
+	//
+	free(action);
+	free(uid);
     free(buf);
+    cJSON_Delete(json);
     return ret;
 }
 //
@@ -933,7 +1014,11 @@ bool StartHTTPS(void) {
 	//
 	httpd_ssl_config_t conf     = HTTPD_SSL_CONFIG_DEFAULT();
 	conf.httpd.uri_match_fn     = httpd_uri_match_wildcard;
-	conf.httpd.max_uri_handlers = 9;
+#ifdef ENABLE_WSS
+	conf.httpd.max_uri_handlers = 3;
+#else
+	conf.httpd.max_uri_handlers = 8;
+#endif
 	//
     conf.servercert = servercert_start;
     conf.servercert_len = servercert_end - servercert_start;

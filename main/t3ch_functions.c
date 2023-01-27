@@ -19,10 +19,23 @@
 
 //-- cJSON
 //
-char *cjson_oget(char *in, const char *key) {
+/*char *cjson_oget(char *in, const char *key) {
 	cJSON *json = cJSON_Parse( in );
-	return cJSON_Print(cJSON_GetObjectItemCaseSensitive(json,key));
-}
+	printf("cjson_oget() d0\n");
+	cJSON *obj  = cJSON_GetObjectItemCaseSensitive(json,key);
+	printf("cjson_oget() d0.1\n");
+	int outlen = strlen(cJSON_Print(obj))+1;
+	printf("cjson_oget() d1 %i\n",outlen);
+	char *out = (char*)malloc(outlen);
+	memset(out,'\0', outlen);
+	strcpy(out,cJSON_Print(obj));
+	printf("cjson_oget() d2 %i - %s\n",outlen,out);
+	free(obj);
+	printf("cjson_oget() d3\n");
+	free(json);
+	printf("cjson_oget() d4\n");
+	return out;
+}*/
 
 //-- Other
 //
@@ -42,7 +55,17 @@ void rtrim(char inout[], int len) {
 	memcpy(tmp,inout,strlen(inout)-len);
 	strcpy(inout,tmp);
 }
-
+//
+//char *ltrim(char *inout, int len) {
+void ltrim(char *inout, int len) {
+	char *a = (char*)malloc(strlen(inout));
+	memset(a,'\0',strlen(inout));
+	strcpy(a,inout);
+	strcpy(inout,(a+=len));
+	//char ret[strlen(a)];
+	//strcpy(ret,a);
+	//return (a+=len);
+}
 //
 int chrat(char *str, char key) {
 	char *pch = strchr(str,key);

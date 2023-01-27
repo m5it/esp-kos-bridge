@@ -495,18 +495,15 @@ var WSC = function( opts/*={}*/ ) {
     //--
     //
     this.recvMessage = function( data ) {
-		var json = JSON.parse(data);
-		console.info("wsc.recvMessage json",json);
-		console.info("wsc.recvMessage responses",_this.responses);
-		/*var json = {};
+		var json = {};
 		//
 		try {
 	        json = JSON.parse(data);
 		}
 		catch(E) {
-			//console.warn("WSS.onmessage Failed parse json",E);
+			console.warn("WSS.onmessage Failed parse json",E);
 			return;
-		}*/
+		}
 		
 		// Check if cmd PING then respond with PONG
 		if( isDefined(json,"cmd") && json.cmd=="PING" ) {
@@ -647,16 +644,13 @@ var wsc = null;
 //
 function infoLoop() {
 	//
-	Fetch({href:document.location.origin+"/time/",onDone:function(json) {
-		qS("#displayTime>div").innerText = json.data;
+	wsc.sendMessage({"action":"infoLoop",},{"uid":"infoLoop","function":function(json) {
+	    console.info("infoLoop response",json);
+	    qS("#displayTime>div").innerText = json.time;
+	    qS("#displayFree>div").innerText = json.free;
 	},});
-	//
-	Fetch({href:document.location.origin+"/free",onDone:function(json) {
-		//qS("#displayFree>div").innerText = json.data+" | "+json.start_time+" | "+json.restart_time+" | "+json.restart_count;
-		qS("#displayFree>div").innerText = json.data;
-	},});
-	// Repeat loop in 5s
-	setTimeout(function() { infoLoop(); },5000);
+	// Repeat loop in X/s
+	setTimeout(function() { infoLoop(); },2500);
 }
 //-- timer things
 //
@@ -863,21 +857,6 @@ function ready() {
 		    document.dispatchEvent(new CustomEvent("tab_opening",{"detail":attrActive}));
         });
 	});
-	
-	//-- Start infinite loop to retrive Free and Time of server
-	//
-	//infoLoop();
-	//logUpdate();
-	
-	// fire once, retrive wifi info
-	/*Fetch({href:document.location.origin+"/wifi/",onDone:function(json) {
-		console.info("wifi",json);
-		qS("#displayAPSSID > input").value = json.ap_ssid;
-		qS("#displayAPPWD>input").value    = json.ap_pwd;
-		qS("#displaySTASSID>input").value  = json.sta_ssid;
-		qS("#displaySTAPWD>input").value   = json.sta_pwd;
-		qS("#displayVersion>div").innerText= json.version+" "+json.version_string;
-	},});*/
 	
 	// fire once, retrive timer info
 	//timerGet({loop:true});
@@ -1204,6 +1183,21 @@ function logLoad() {
 //
 document.addEventListener("wss_started",function(e) {
 	console.info("wss_started STARTED!");
+	//
+	infoLoop();
+	//
+	wsc.sendMessage({"action":"version",},{"uid":"version","function":function(json) {
+	    console.info("version response",json);
+	    qS("#displayVersion>div").innerText = json.version+" "+json.version_string;
+	},});
+	//
+	wsc.sendMessage({"action":"wifi_view",},{"uid":"wifi_view","function":function(json) {
+	    console.info("wifi_view response",json);
+	    qS("#displayAPSSID > input").value = json.ap_ssid;
+		qS("#displayAPPWD>input").value    = json.ap_pwd;
+		qS("#displaySTASSID>input").value  = json.sta_ssid;
+		qS("#displaySTAPWD>input").value   = json.sta_pwd;
+	},});
 });
 </script>
 </head>
