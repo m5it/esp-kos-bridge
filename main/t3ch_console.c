@@ -460,7 +460,7 @@ static int do_cmd_test(int argc, char **argv) {
 		int fromPos = (uint32_t)(test_args.testGetLog->ival[0]);
 		printf("test get log starting, fromPos: %i\n",fromPos);
 		
-		int size = t3ch_log_gen_old(fromPos);
+		/*int size = t3ch_log_gen_old(fromPos);
 		printf("test get log size: %i\n",size);
 		char out[size];
 		t3ch_log_get(out);
@@ -468,7 +468,8 @@ static int do_cmd_test(int argc, char **argv) {
 		cJSON *ary = cJSON_Parse( out );
 		size = cJSON_GetArraySize( ary );
 		printf("test get log json size: %i\n",size);
-		free(ary);
+		free(ary);*/
+		t3ch_log_test();
 	}
     //
     if (test_args.testOtaPartition->count > 0) {

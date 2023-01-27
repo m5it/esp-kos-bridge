@@ -79,10 +79,11 @@ int t3ch_log_gen_new(int lastId) {
 }
 //
 int t3ch_log_gen_old(int fromPos) {
-	printf("t3ch_log_gen_old() STARTING, fromPos: %i\n",fromPos);
+	//printf("t3ch_log_gen_old() STARTING, fromPos: %i\n",fromPos);
 	if(LOG_POS<=0) return 0;
 	int startPos = ((LOG_SIZE-(LOG_SIZE-LOG_POS))-fromPos)-1;
 	if( startPos<0 ) return 0;
+	//printf("t3ch_log_gen_old() STARTING, startPos: %i\n",startPos);
 	LOG_DATA[LOG_DATA_SIZE];
 	memset(LOG_DATA,'\0',LOG_DATA_SIZE);
 	int jsonlen=0, cnt=0;
@@ -107,19 +108,20 @@ int t3ch_log_gen_old(int fromPos) {
 		//
 		if( cnt==0 ) {
 			jsonlen += sprintf(LOG_DATA+jsonlen,"%s",tmpresult);
-			printf("t3ch_log_gen_old() t3ch_log_gen_old() d0 jsonlen: %i\n",jsonlen);
+			//printf("t3ch_log_gen_old() t3ch_log_gen_old() d0 jsonlen: %i\n",jsonlen);
 		}
 		else if( (jsonlen+tmplen)>=LOG_DATA_SIZE ) {
-			printf("t3ch_log_gen_old() t3ch_log_gen_old() d1, break jsonlen: %i\n",jsonlen);
+			//printf("t3ch_log_gen_old() t3ch_log_gen_old() d1, break jsonlen: %i\n",jsonlen);
 			break;
 		}
 		else {
 			jsonlen += sprintf(LOG_DATA+jsonlen,",%s",tmpresult);
-			printf("t3ch_log_gen_old() t3ch_log_gen_old() d2, add jsonlen: %i\n",jsonlen);
+			//printf("t3ch_log_gen_old() t3ch_log_gen_old() d2, add jsonlen: %i\n",jsonlen);
 		}
 		cnt++;
 	}
 	jsonlen += sprintf(LOG_DATA+jsonlen,"]");
+	//printf("t3ch_log_gen_old() DONE data(%i): %s\n",strlen(LOG_DATA),LOG_DATA);
 	return jsonlen;
 }
 
@@ -131,6 +133,7 @@ void t3ch_log_get(char *out) {
 
 //
 void t3ch_log_del(int pos) {
+	printf("t3ch_log_del() starting at pos %i\n",pos);
 	for(int i=0; i<(LOG_POS-1); i++) {
 		log[i] = (i>=pos?log[i+1]:log[i]);
 	}
@@ -183,3 +186,12 @@ int t3ch_log(const char *text, va_list args) {
 	return ret;
 }
 
+//
+void t3ch_log_test() {
+	printf("t3ch_log_test() STARTING!!!\n");
+	for(int i=0; i<LOG_POS; i++) {
+		printf("t3ch_log_test() at %i, test( %i ): %s\n",i,log[i].id,log[i].text);
+		hexDump(log[i].text,log[i].text,strlen(log[i].text),20);
+	}
+	printf("t3ch_log_test() DONE!!!\n");
+}

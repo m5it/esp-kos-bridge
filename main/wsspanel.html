@@ -514,14 +514,10 @@ var WSC = function( opts/*={}*/ ) {
 		//--
         // loop trough responses
         for(var i=0; i<_this.responses.length; i++) {
-			console.warn("checking responses at "+i+", response: ",_this.responses[i]);
-			console.warn("checking responses at "+i+", json: ",json);
 			//
 			if( isDefined(_this.responses[i],"uid") && json.uid == _this.responses[i].uid ) {
-				console.warn("d0");
 				// Fire function. Useful for SINGLE type modules
 				if( _this.responses[i].fun!=null ) {
-					console.warn("d1");
 					if( _this.responses[i].fun(json, _this.responses[i].additionalDetails) ) {
 						_this.responses.splice(i,1);
 						_this.responses_index.splice(i,1);
@@ -530,7 +526,6 @@ var WSC = function( opts/*={}*/ ) {
 				}
 				// Fire event. Useful for KEEPALIVE type modules
 				else {
-					console.warn("d2");
 					// fire unique id event for response.
 			        document.dispatchEvent( new CustomEvent(json.uid, {
 						"detail":{
@@ -544,7 +539,6 @@ var WSC = function( opts/*={}*/ ) {
 				// if defined is used to reconfigure responses object for next job.
 				//
 				if( typeof(wssFilterResponses) == "function" ) {
-					console.warn("d3");
 					var tmpr = wssFilterResponses( _this, i, json );
 					if( tmpr!== false ) {
 						//console.warn("wssFilterResponses is modifiing responses at "+i);
@@ -645,7 +639,7 @@ var wsc = null;
 function infoLoop() {
 	//
 	wsc.sendMessage({"action":"infoLoop",},{"uid":"infoLoop","function":function(json) {
-	    console.info("infoLoop response",json);
+	    //console.info("infoLoop response",json);
 	    qS("#displayTime>div").innerText = json.time;
 	    qS("#displayFree>div").innerText = json.free;
 	},});
@@ -1061,9 +1055,9 @@ var tab_log_opts = {
 };
 //
 document.addEventListener("tab_opening",function(e) {
-	console.info("tab_opening STARTIng. e: ",e);
+	//console.info("tab_opening STARTIng. e: ",e);
 	var detail = e.detail;
-	console.info("tab_opening",detail);
+	//console.info("tab_opening",detail);
 	//
 	if( detail=="tab_log" ) {
 		tab_log_opts.visible = true;
@@ -1126,14 +1120,17 @@ function logUpdate() {
 function logLoad() {
 	//
 	if( tab_log_opts.running_old || tab_log_opts.done_old ) {
-		console.warn("logLoad() skipping",tab_log_opts);
 		if( tab_log_opts.done_old ) qS("#displayLog").classList.remove("updating");
 		return false;
 	}
-	tab_log_opts.running_old = true;
-	qS("#displayLog").classList.add("updating");
+	
 	//
-	wsc.sendMessage({"action":"log_view_old","fromPos":tab_log_opts.position},{"uid":"log_view_old","function":function(json) {
+	tab_log_opts.running_old = true;
+	tab_log_opts.running_old_try=0;
+	qS("#displayLog").classList.add("updating");
+	
+	//
+	wsc.sendMessage({"action":"log_view_old","fromPos":tab_log_opts.position},{"uid":"log_view_old"+((new Date().getTime())+random(9999,9999999)),"function":function(json) {
 	    console.info("log_view_old response",json);
 	    //
 		if( json.success==false ) {
@@ -1146,97 +1143,53 @@ function logLoad() {
 		var data = json.data;
 		//
 		tab_log_opts.position += data.length;
-		console.info("logLoad() tab_log_opts",tab_log_opts);
+		
+		//
 		for(var i=0; i<data.length; i++) {
 			if( data[i].id>tab_log_opts.last_id ) tab_log_opts.last_id = data[i].id; // save last log id
 			qS("#displayLog>div").insertAdjacentHTML('beforeend', "<div>"+urldecode(data[i].text)+"</div>" );
 		}
+		
 		//
 		tab_log_opts.running_old = false;
-		qS("#displayLog").classList.remove("updating");
 		//
-		console.info("debug offsetTop: ",qS("#displayLog>div").offsetTop);
-		console.info("debug offsetHeight: ",qS("#displayLog>div").offsetHeight);
-		console.info("debug scrollHeight: ",qS("#displayLog>div").scrollHeight);
-		console.info("debug displayLogOffset top: ",qS(".displayLogOffset").offsetTop);
-		
 		if( qS("#displayLog>div").scrollHeight <= qS("#displayLog>div").offsetHeight ) {
-			console.warn("logLoad() load more... from",tab_log_opts.position);
+			//
+			qS("#displayLog").classList.remove("updating");
 			logLoad();
 		}
 		else if( (qS("#displayLog>div").offsetHeight + qS("#displayLog>div").scrollTop) >= qS("#displayLog>div").scrollHeight-33 ) {
-			console.info("#displayLog scroll at end (d2)... loadng more...");
+			//
+			qS("#displayLog").classList.remove("updating");
 			logLoad();
 		}
 		else {
 			qS(".displayLogOffset").innerHTML = "Done! Or try to scroll.";
 		}
+		
+		return true;
 	},});
-	
-	/*Fetch({
-		href:document.location.origin+"/log/?fromPos="+tab_log_opts.position,
-		signal:tab_log_opts.controller_old.signal,
-		onDone:function(json) {
-			console.info("logLoad() onDone()",json);
-			if( json.success==false ) {
-				console.info("logLoad() onDone() looks we have all old posts.");
-				tab_log_opts.done_old = true;
-				qS("#displayLog").classList.remove("updating");
-				qS("#displayLog").classList.add("done_old");
-				return;
-			}
-			//
-			tab_log_opts.position += json.length;
-			console.info("logLoad() tab_log_opts",tab_log_opts);
-			for(var i=0; i<json.length; i++) {
-				if( json[i].id>tab_log_opts.last_id ) tab_log_opts.last_id = json[i].id; // save last log id
-				qS("#displayLog>div").insertAdjacentHTML('beforeend', "<div>"+urldecode(json[i].text)+"</div>" );
-			}
-			//
-			tab_log_opts.running_old = false;
-			qS("#displayLog").classList.remove("updating");
-			//
-			console.info("debug offsetTop: ",qS("#displayLog>div").offsetTop);
-			console.info("debug offsetHeight: ",qS("#displayLog>div").offsetHeight);
-			console.info("debug scrollHeight: ",qS("#displayLog>div").scrollHeight);
-			console.info("debug displayLogOffset top: ",qS(".displayLogOffset").offsetTop);
-			
-			if( qS("#displayLog>div").scrollHeight <= qS("#displayLog>div").offsetHeight ) {
-				console.warn("logLoad() load more... from",tab_log_opts.position);
-				logLoad();
-			}
-			else if( (qS("#displayLog>div").offsetHeight + qS("#displayLog>div").scrollTop) >= qS("#displayLog>div").scrollHeight-33 ) {
-				console.info("#displayLog scroll at end (d2)... loadng more...");
-				logLoad();
-			}
-			else {
-				qS(".displayLogOffset").innerHTML = "Done! Or try to scroll.";
-			}
-		},
-		onFail:function(E) {
-			console.info("logLoad() onFail()",E);
-		}
-	});*/
 }
 
 //--
 //
 document.addEventListener("wss_started",function(e) {
-	console.info("wss_started STARTED!");
 	//
 	infoLoop();
 	//
 	wsc.sendMessage({"action":"version",},{"uid":"version","function":function(json) {
-	    console.info("version response",json);
+	    //console.info("version response",json);
 	    qS("#displayVersion>div").innerText = json.version+" "+json.version_string;
+	    return true;
 	},});
 	//
 	wsc.sendMessage({"action":"wifi_view",},{"uid":"wifi_view","function":function(json) {
-	    console.info("wifi_view response",json);
+	    //console.info("wifi_view response",json);
 	    qS("#displayAPSSID > input").value = json.ap_ssid;
 		qS("#displayAPPWD>input").value    = json.ap_pwd;
 		qS("#displaySTASSID>input").value  = json.sta_ssid;
 		qS("#displaySTAPWD>input").value   = json.sta_pwd;
+		return true;
 	},});
 });
 </script>
