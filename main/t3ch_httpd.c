@@ -871,7 +871,7 @@ static esp_err_t wss_handler(httpd_req_t *req)
         ESP_LOGE(TAG, "wss_handler() httpd_ws_recv_frame failed to get frame len with %d", ret);
         return ret;
     }
-    ESP_LOGI(TAG, "wss_handler() frame len is %d", ws_pkt.len);
+    printf("wss_handler() frame len is %d", ws_pkt.len);
     
     // retrive data
     if (ws_pkt.len) {
@@ -889,9 +889,9 @@ static esp_err_t wss_handler(httpd_req_t *req)
             free(buf);
             return ret;
         }
-        ESP_LOGI(TAG, "wss_handler() Got packet with message: %s", ws_pkt.payload);
+        printf("wss_handler() Got packet with message: %s", ws_pkt.payload);
     }
-    ESP_LOGI(TAG, "wss_handler() Packet type: %d", ws_pkt.type);
+    printf("wss_handler() Packet type: %d", ws_pkt.type);
     /*if (ws_pkt.type == HTTPD_WS_TYPE_TEXT &&
         strcmp((char*)ws_pkt.payload,"Trigger async") == 0) {
         free(buf);
@@ -916,7 +916,7 @@ static esp_err_t wss_handler(httpd_req_t *req)
 	
 	//
 	if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(action,"infoLoop") == 0) {
-		ESP_LOGI(TAG, "wss_handler() infoLoop STARTED");
+		//ESP_LOGI(TAG, "wss_handler() infoLoop STARTED");
 		//
 		char strftime_buf[64];
 		char res[128];
@@ -928,7 +928,7 @@ static esp_err_t wss_handler(httpd_req_t *req)
 	}
 	//
 	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(action,"version") == 0) {
-		ESP_LOGI(TAG, "wss_handler() version STARTED");
+		//ESP_LOGI(TAG, "wss_handler() version STARTED");
 		char res[128];
 		sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"version\":\"%s\",\"version_string\":\"%s\"}",
 			action, uid, t3ch_version(), t3ch_version_string());
@@ -936,7 +936,7 @@ static esp_err_t wss_handler(httpd_req_t *req)
 	}
 	//
 	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(action,"log_view_old") == 0) {
-		ESP_LOGI(TAG, "wss_handler() log_view_old STARTED");
+		//ESP_LOGI(TAG, "wss_handler() log_view_old STARTED");
 		//
 		char *fromPos = cJSON_Print( objUID );
 		// generate log and get size
@@ -944,20 +944,20 @@ static esp_err_t wss_handler(httpd_req_t *req)
 	
 		// No more results or just there is no results.
 		if( size<=0 ) {
-			ESP_LOGI(TAG, "wss_handler() log_view_old test get log size: %i\n",size);
+		//	ESP_LOGI(TAG, "wss_handler() log_view_old test get log size: %i\n",size);
 			char res[128];
 			sprintf(res,"{\"success\":false,\"action\":\"%s\",\"uid\":\"%s\"}");
-			ESP_LOGI(TAG, "wss_handler() log_view_old res: %s\n",res);
+		//	ESP_LOGI(TAG, "wss_handler() log_view_old res: %s\n",res);
 			ret = t3ch_ws_send(req,res);
 		}
 		else {
 			// Looks we got results
-			ESP_LOGI(TAG, "wss_handler() log_view_old test get log size: %i\n",size);
+		//	ESP_LOGI(TAG, "wss_handler() log_view_old test get log size: %i\n",size);
 			char data[size];
 			memset(data,'\0',size);
 			// get log
 			t3ch_log_get(data);
-			ESP_LOGI(TAG, "wss_handler() log_view_old test get log: %s\n",data);
+		//	ESP_LOGI(TAG, "wss_handler() log_view_old test get log: %s\n",data);
 			char res[128+size];
 			memset(res,'\0',(128+size));
 			//
