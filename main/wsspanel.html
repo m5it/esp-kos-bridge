@@ -1067,7 +1067,7 @@ document.addEventListener("tab_opening",function(e) {
 	//
 	if( detail=="tab_log" ) {
 		tab_log_opts.visible = true;
-		tab_log_opts.timeout_new = setTimeout(function() {logUpdate();},7000);
+		//tab_log_opts.timeout_new = setTimeout(function() {logUpdate();},7000);
 		//
 		qS("#displayLog>div").addEventListener("scroll",function(e1) {
 			
@@ -1103,7 +1103,7 @@ function logUpdate() {
 	}
 	tab_log_opts.running_new = true;
 	//
-	Fetch({
+	/*Fetch({
 		href:document.location.origin+"/log/?update="+tab_log_opts.last_id,
 		signal:tab_log_opts.controller_old.signal,
 		onDone:function(json) {
@@ -1120,7 +1120,7 @@ function logUpdate() {
 		onFail:function(E) {
 			console.info("logUpdate() onFail()",E);
 		}
-	});
+	});*/
 }
 //
 function logLoad() {
@@ -1133,7 +1133,47 @@ function logLoad() {
 	tab_log_opts.running_old = true;
 	qS("#displayLog").classList.add("updating");
 	//
-	Fetch({
+	wsc.sendMessage({"action":"log_view_old","fromPos":tab_log_opts.position},{"uid":"log_view_old","function":function(json) {
+	    console.info("log_view_old response",json);
+	    //
+		if( json.success==false ) {
+			console.info("logLoad() onDone() looks we have all old posts.");
+			tab_log_opts.done_old = true;
+			qS("#displayLog").classList.remove("updating");
+			qS("#displayLog").classList.add("done_old");
+			return;
+		}
+		var data = json.data;
+		//
+		tab_log_opts.position += data.length;
+		console.info("logLoad() tab_log_opts",tab_log_opts);
+		for(var i=0; i<data.length; i++) {
+			if( data[i].id>tab_log_opts.last_id ) tab_log_opts.last_id = data[i].id; // save last log id
+			qS("#displayLog>div").insertAdjacentHTML('beforeend', "<div>"+urldecode(data[i].text)+"</div>" );
+		}
+		//
+		tab_log_opts.running_old = false;
+		qS("#displayLog").classList.remove("updating");
+		//
+		console.info("debug offsetTop: ",qS("#displayLog>div").offsetTop);
+		console.info("debug offsetHeight: ",qS("#displayLog>div").offsetHeight);
+		console.info("debug scrollHeight: ",qS("#displayLog>div").scrollHeight);
+		console.info("debug displayLogOffset top: ",qS(".displayLogOffset").offsetTop);
+		
+		if( qS("#displayLog>div").scrollHeight <= qS("#displayLog>div").offsetHeight ) {
+			console.warn("logLoad() load more... from",tab_log_opts.position);
+			logLoad();
+		}
+		else if( (qS("#displayLog>div").offsetHeight + qS("#displayLog>div").scrollTop) >= qS("#displayLog>div").scrollHeight-33 ) {
+			console.info("#displayLog scroll at end (d2)... loadng more...");
+			logLoad();
+		}
+		else {
+			qS(".displayLogOffset").innerHTML = "Done! Or try to scroll.";
+		}
+	},});
+	
+	/*Fetch({
 		href:document.location.origin+"/log/?fromPos="+tab_log_opts.position,
 		signal:tab_log_opts.controller_old.signal,
 		onDone:function(json) {
@@ -1176,7 +1216,7 @@ function logLoad() {
 		onFail:function(E) {
 			console.info("logLoad() onFail()",E);
 		}
-	});
+	});*/
 }
 
 //--
