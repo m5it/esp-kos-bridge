@@ -15,7 +15,7 @@
 #define AP_PWD "STARTING_PWD"
 
 // Uncomment #define ENABLE_LOG to enable WEB log.
-//#define ENABLE_LOG
+#define ENABLE_LOG
 // Uncomment #define ENABLE_HTTPS to run HTTPS instead of HTTP
 #define ENABLE_HTTPS
 // Uncomment to enable. (require ENABLE_HTTPS)

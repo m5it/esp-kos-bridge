@@ -531,8 +531,6 @@ static const httpd_uri_t free_get = {
     .handler   = free_get_handler,
     //.user_ctx  = &user_ctx,
 };
-#endif // #if !defined(ENABLE_WSS)
-
 
 //-- LOG
 //
@@ -600,6 +598,7 @@ static const httpd_uri_t log_get = {
     .handler   = log_get_handler,
     //.user_ctx  = &user_ctx,
 };
+#endif // #if !defined(ENABLE_WSS)
 
 //-- OTA UPDATES
 //
