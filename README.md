@@ -64,6 +64,10 @@ Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
     * wifi scan
     * ota updates
 
+# More and interesting
+- https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/external-ram.html
+
+
 <hr>
 
 # Here is original esp-iot-bridge README.md and location https://github.com/espressif/esp-iot-bridge
