@@ -908,34 +908,37 @@ static esp_err_t wss_handler(httpd_req_t *req)
 	char *action     = cJSON_Print( objAction );
 	char *uid        = cJSON_Print( objUID );
 	//
-	ltrim(action,1);
+	char *tmpaction  = ltrim(action,1); // funny but works and memory is freeed
 	rtrim(action,1);
 	//
-	ltrim(uid,1);
+	char *tmpuid = ltrim(uid,1);
 	rtrim(uid,1);
 	
+	printf("wss_handler() out of trimps...\n");
+	printf("wss_handler() debug tmpuid: %s, tmpaction: %s\n",tmpuid, tmpaction);
+	//printf("wss_handler() debug uid: %s, action: %s\n",uid, action);
 	//
-	if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(action,"infoLoop") == 0) {
-		ESP_LOGI(TAG, "wss_handler() infoLoop STARTED");
+	if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"infoLoop") == 0) {
+		//ESP_LOGI(TAG, "wss_handler() infoLoop STARTED");
 		//
-		char strftime_buf[64];
-		char res[128];
+		char strftime_buf[64]={0};
+		char res[128]={0};
 		//
 		t3ch_time_get(&strftime_buf);
 		sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"time\":\"%s\",\"free\":\"%d\"}",
-			action, uid, strftime_buf, heap_caps_get_free_size(MALLOC_CAP_8BIT));
+			tmpaction, tmpuid, strftime_buf, heap_caps_get_free_size(MALLOC_CAP_8BIT));
 		ret = t3ch_ws_send(req,res);
 	}
 	//
-	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(action,"version") == 0) {
-		ESP_LOGI(TAG, "wss_handler() version STARTED");
-		char res[128];
+	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"version") == 0) {
+		//ESP_LOGI(TAG, "wss_handler() version STARTED");
+		char res[128]={0};
 		sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"version\":\"%s\",\"version_string\":\"%s\"}",
-			action, uid, t3ch_version(), t3ch_version_string());
+			tmpaction, tmpuid, t3ch_version(), t3ch_version_string());
 		ret = t3ch_ws_send(req,res);
 	}
 	//
-	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(action,"log_view_old") == 0) {
+	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"log_view_old") == 0) {
 		//ESP_LOGI(TAG, "wss_handler() log_view_old STARTED");
 		//
 		cJSON *objFromPos = cJSON_GetObjectItemCaseSensitive(json,"fromPos");
@@ -945,8 +948,8 @@ static esp_err_t wss_handler(httpd_req_t *req)
 	
 		// No more results or just there is no results.
 		if( size<=0 ) {
-			char res[128];
-			sprintf(res,"{\"success\":false,\"action\":\"%s\",\"uid\":\"%s\"}");
+			char res[128]={0};
+			sprintf(res,"{\"success\":false,\"action\":\"%s\",\"uid\":\"%s\"}",tmpaction,tmpuid);
 			ret = t3ch_ws_send(req,res);
 		}
 		else {
@@ -958,18 +961,43 @@ static esp_err_t wss_handler(httpd_req_t *req)
 			char res[128+size];
 			memset(res,'\0',(128+size));
 			//
-			sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"data\":%s}",
-				action, uid, data);
+			sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"data\":%s}", tmpaction, tmpuid, data);
 			ret = t3ch_ws_send(req,res);
 		}
 		free(fromPos);
 	}
 	//
-	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(action,"log_view_new") == 0) {
+	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"log_view_new") == 0) {
 		//ESP_LOGI(TAG, "wss_handler() log_view_new STARTED");
+		//
+		cJSON *objFromPos = cJSON_GetObjectItemCaseSensitive(json,"fromPos");
+		char *fromPos     = cJSON_Print( objFromPos );
+		//
+		int size = t3ch_log_gen_new(getInt(fromPos));
+		if( size>0 ) {
+			//
+			char data[size];
+			memset(data,'\0',size);
+			t3ch_log_get(data);
+			//
+			char res[size+128];
+			memset(res,'\0',size+128);
+			//
+			sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"data\":%s}",
+				tmpaction, tmpuid, data);
+			ret = t3ch_ws_send(req,res);
+		}
+		else {
+			char res[128];
+			//
+			sprintf(res,"{\"success\":false,\"action\":\"%s\",\"uid\":\"%s\"}",
+				tmpaction, tmpuid);
+			ret = t3ch_ws_send(req,res);
+		}
+		free(fromPos);
 	}
 	//
-	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(action,"wifi_view") == 0) {
+	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"wifi_view") == 0) {
 		//ESP_LOGI(TAG, "wss_handler() wifi_view STARTED");
 		//
 		char res[256]={0};
@@ -1005,15 +1033,15 @@ static esp_err_t wss_handler(httpd_req_t *req)
 		
 		//
 		sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"ap_ssid\":\"%s\",\"ap_pwd\":\"%s\",\"sta_ssid\":\"%s\",\"sta_pwd\":\"%s\"}",
-		    action,uid, ap_ssid, ap_pwd, sta_ssid, sta_pwd);
+		    tmpaction, tmpuid, ap_ssid, ap_pwd, sta_ssid, sta_pwd);
 		ret = t3ch_ws_send(req,res);
 	}
 	//
 	else {
-		ESP_LOGI(TAG, "wss_handler() unknown action! Action: %s, UID: %s",action,uid);
+		ESP_LOGI(TAG, "wss_handler() unknown action! Action: %s, UID: %s",tmpaction,tmpuid);
 		char res[128]={0};
-		sprintf(res,"{\"success\":false,\"action\":\"%s\",\"uid\":\"%s\"}",
-			action, uid);
+		sprintf(res,"{\"success\":false,\"action\":\"%s\",\"uid\":\"%s\"}", tmpaction, tmpuid);
+		//sprintf(res,"{\"success\":false,\"action\":%s,\"uid\":%s}", action, uid);
 	    ret = t3ch_ws_send(req,res);
 	}
 	//
