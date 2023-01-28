@@ -1061,15 +1061,9 @@ document.addEventListener("tab_opening",function(e) {
 	//
 	if( detail=="tab_log" ) {
 		tab_log_opts.visible = true;
-		//tab_log_opts.timeout_new = setTimeout(function() {logUpdate();},7000);
+		tab_log_opts.timeout_new = setTimeout(function() {logUpdate();},100);
 		//
 		qS("#displayLog>div").addEventListener("scroll",function(e1) {
-			
-			console.info("debug offsetTop: ",qS("#displayLog>div").offsetTop);
-			console.info("debug offsetHeight: ",qS("#displayLog>div").offsetHeight);
-			console.info("debug scrollHeight: ",qS("#displayLog>div").scrollHeight);
-			console.info("debug displayLogOffset top: ",qS(".displayLogOffset").offsetTop);
-			
 			if( qS("#displayLog>div").scrollHeight <= qS("#displayLog>div").offsetHeight ) {
 				console.warn("logLoad() load more... from",tab_log_opts.position);
 				logLoad();
@@ -1097,24 +1091,25 @@ function logUpdate() {
 	}
 	tab_log_opts.running_new = true;
 	//
-	/*Fetch({
-		href:document.location.origin+"/log/?update="+tab_log_opts.last_id,
-		signal:tab_log_opts.controller_old.signal,
-		onDone:function(json) {
-			console.info("logUpdate() onDone()",json);
-			//
-			for(var i=(json.length-1); i>=0; i--) {
-				if( json[i].id>tab_log_opts.last_id ) tab_log_opts.last_id = json[i].id; // save last log id
-				qS("#displayLog>div").insertAdjacentHTML('afterbegin', "<div>"+urldecode(json[i].text)+"</div>" );
-			}
-			//
+	wsc.sendMessage({"action":"log_view_new","fromPos":tab_log_opts.last_id},{"uid":"log_view_new"+((new Date().getTime())+random(9999,9999999)),"function":function(json) {
+	    console.info("log_view_new response",json);
+	    //
+		if( json.success==false ) {
 			tab_log_opts.running_new = false;
-			setTimeout(function() { logUpdate(); },7000);
-		},
-		onFail:function(E) {
-			console.info("logUpdate() onFail()",E);
+			setTimeout(function() { logUpdate(); },3500);
+			return true;
 		}
-	});*/
+		//
+		var data=json.data;
+		for(var i=(data.length-1); i>=0; i--) {
+			if( data[i].id>tab_log_opts.last_id ) tab_log_opts.last_id = data[i].id; // save last log id
+			qS("#displayLog>div").insertAdjacentHTML('afterbegin', "<div>"+urldecode(data[i].text)+"</div>" );
+		}
+		//
+		tab_log_opts.running_new = false;
+		setTimeout(function() { logUpdate(); },3500);
+		return true;
+	}});
 }
 //
 function logLoad() {
@@ -1136,9 +1131,10 @@ function logLoad() {
 		if( json.success==false ) {
 			console.info("logLoad() onDone() looks we have all old posts.");
 			tab_log_opts.done_old = true;
+			tab_log_opts.running_old = false;
 			qS("#displayLog").classList.remove("updating");
 			qS("#displayLog").classList.add("done_old");
-			return;
+			return true;
 		}
 		var data = json.data;
 		//
@@ -1152,15 +1148,14 @@ function logLoad() {
 		
 		//
 		tab_log_opts.running_old = false;
+		qS("#displayLog").classList.remove("updating");
 		//
 		if( qS("#displayLog>div").scrollHeight <= qS("#displayLog>div").offsetHeight ) {
 			//
-			qS("#displayLog").classList.remove("updating");
 			logLoad();
 		}
 		else if( (qS("#displayLog>div").offsetHeight + qS("#displayLog>div").scrollTop) >= qS("#displayLog>div").scrollHeight-33 ) {
 			//
-			qS("#displayLog").classList.remove("updating");
 			logLoad();
 		}
 		else {

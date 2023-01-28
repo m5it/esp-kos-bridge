@@ -458,7 +458,7 @@ static int do_cmd_test(int argc, char **argv) {
     //
     if (test_args.testGetLog->count > 0) {
 		int fromPos = (uint32_t)(test_args.testGetLog->ival[0]);
-		printf("test get log starting, fromPos: %i\n",fromPos);
+		ESP_LOGI(TAG,"test get log starting, fromPos: %i\n",fromPos);
 		
 		/*int size = t3ch_log_gen_old(fromPos);
 		printf("test get log size: %i\n",size);
@@ -473,7 +473,7 @@ static int do_cmd_test(int argc, char **argv) {
 	}
     //
     if (test_args.testOtaPartition->count > 0) {
-		printf("test ota partition starting.\n");
+		ESP_LOGI(TAG,"test ota partition starting.\n");
 		const esp_partition_t *partition = esp_web_get_ota_update_partition();
 		printf("test ota partition size: %d\n",partition->size);
 	}
@@ -494,31 +494,31 @@ static int do_cmd_test(int argc, char **argv) {
     //
     if (test_args.testB64Decode->count > 0) {
 		char *tmp = test_args.testB64Decode->sval[0];
-		printf("B64Decode STARTED, trying to decode(%d): %s\n",strlen(tmp),tmp);
+		ESP_LOGI(TAG,"B64Decode STARTED, trying to decode(%d): %s\n",strlen(tmp),tmp);
 		tmp = b64decode( tmp );
-		printf("B64Decode DECODED(%d): %s\n",strlen(tmp),tmp);
+		ESP_LOGI(TAG,"B64Decode DECODED(%d): %s\n",strlen(tmp),tmp);
 		free(tmp);
 	}
 	//
     if (test_args.testScan->count > 0) {
-		printf("test scan starting.\n");
+		ESP_LOGI(TAG,"test scan starting.\n");
 		StartScan();
 	}
     //--
     if (test_args.testLedc->count > 0) {
-		printf("test ledc starting.");
+		ESP_LOGI(TAG,"test ledc starting.");
 	    example_ledc_init();
 	    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
 	    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
 	}
 	if (test_args.pauseLedc->count > 0) {
-		printf("pause ledc starting.");
+		ESP_LOGI(TAG,"pause ledc starting.");
 	    //ESP_ERROR_CHECK(ledc_timer_pause(LEDC_MODE, LEDC_TIMER));
 	    ESP_ERROR_CHECK(ledc_stop(LEDC_MODE, LEDC_CHANNEL, 0));
 	    //ESP_ERROR_CHECK(gpio_reset_pin( LEDC_OUTPUT_IO ));
 	}
     if (test_args.testTime->count > 0) {
-		printf("test time starting...");
+		ESP_LOGI(TAG,"test time starting...");
 		/*time_t now;
 		struct tm timeinfo;
 		char strftime_buf[64];

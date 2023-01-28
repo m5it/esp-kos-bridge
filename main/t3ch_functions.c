@@ -55,16 +55,16 @@ void rtrim(char inout[], int len) {
 	memcpy(tmp,inout,strlen(inout)-len);
 	strcpy(inout,tmp);
 }
-//
-//char *ltrim(char *inout, int len) {
-void ltrim(char *inout, int len) {
-	char *a = (char*)malloc(strlen(inout));
-	memset(a,'\0',strlen(inout));
-	strcpy(a,inout);
-	strcpy(inout,(a+=len));
-	//char ret[strlen(a)];
-	//strcpy(ret,a);
-	//return (a+=len);
+// 4 ltrim() thanks to https://stackoverflow.com/questions/656542/trim-a-string-in-c
+char *ltrim(char *inout, int len) {
+	//printf("ltrim() start: %s\n",inout);
+    int cnt=0;
+    while(cnt<len) {
+		inout++;
+		cnt++;
+	}
+	//printf("ltrim() done: %s\n",inout);
+	return inout;
 }
 //
 int chrat(char *str, char key) {

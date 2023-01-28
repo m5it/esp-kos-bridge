@@ -29,10 +29,10 @@ int t3ch_log_gen_new(int lastId) {
 	//
 	int startPos = LOG_POS-1;
 	//
-    if( log[startPos].id<=lastId ) {
-		printf("t3ch_log_gen_old() t3ch_log_gen_new() looks there is no new data. lastId: %i vs LOG_POS: %i\n",lastId,LOG_POS);
-		return 0;
-	}
+    //if( log[startPos].id<=lastId ) {
+	//	printf("t3ch_log_gen_old() t3ch_log_gen_new() looks there is no new data. lastId: %i vs: %i, using startPos: %i\n",lastId, log[startPos].id, startPos);
+	//	return 0;
+	//}
 	//
 	LOG_DATA[LOG_DATA_SIZE];
 	memset(LOG_DATA,'\0',LOG_DATA_SIZE);
@@ -40,6 +40,8 @@ int t3ch_log_gen_new(int lastId) {
 	// generate json array of objects
 	jsonlen = sprintf(LOG_DATA+jsonlen,"[");
 	for(int i=startPos; i>=0; i--) {
+		//
+		if(log[i].id<=lastId) break;
 		// encode text
 		int tmpsize = myUrlEncodeSize(log[i].text);
 		char tmp[tmpsize+1];
@@ -133,7 +135,7 @@ void t3ch_log_get(char *out) {
 
 //
 void t3ch_log_del(int pos) {
-	printf("t3ch_log_del() starting at pos %i\n",pos);
+	//printf("t3ch_log_del() starting at pos %i\n",pos);
 	for(int i=0; i<(LOG_POS-1); i++) {
 		log[i] = (i>=pos?log[i+1]:log[i]);
 	}
