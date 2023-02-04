@@ -32,7 +32,6 @@ static struct stats {
     char *restart_time;
 } s;
 
-
 //-- FUnctioNS
 //-------------
 // check if any request attribute exists
@@ -60,9 +59,85 @@ size_t t3ch_httpd_get_param(httpd_req_t *req, const char *key, char *paramout) {
 	return 0;
 }
 
+//--
+//
+void json_infoLoop(char *action, char *uid, char *out) {
+	//
+	char strftime_buf[64]={0};
+	char res[128]={0};
+	//
+	t3ch_time_get(&strftime_buf);
+	sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"time\":\"%s\",\"free\":\"%d\"}",
+		action, uid, strftime_buf, heap_caps_get_free_size(MALLOC_CAP_8BIT));
+	strcpy(out,res);
+	//return res;
+}
+//
+void json_version(char *action, char *uid, char *out) {
+	char res[128]={0};
+	sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"version\":\"%s\",\"version_string\":\"%s\"}",
+		action, uid, t3ch_version(), t3ch_version_string());
+	strcpy(out,res);
+}
+//
+void json_wifiview(char *action, char *uid, char *out) {
+	//
+	char res[256]={0};
+	char ap_ssid[32]={0};
+	char ap_pwd[64]={0};
+	char sta_ssid[32]={0};
+	char sta_pwd[64]={0};
+	//
+	wifi_ap_config_t cap;
+	wifi_sta_config_t csta;
+	//
+	esp_wifi_get_config(WIFI_IF_AP, (wifi_config_t*)&cap);
+	esp_wifi_get_config(WIFI_IF_STA, (wifi_config_t*)&csta);
+	//
+    if (strlen((const char*)cap.ssid)) {
+        strcpy(ap_ssid,(const char*) cap.ssid);
+        strcpy(ap_pwd,(const char*) cap.password);
+    }
+    else {
+		ESP_LOGI(TAG, "wss_handler() wifi_view cap.ssid not set!?");
+	}
+	
+	//
+    if (strlen((const char*)csta.ssid)) {
+        strcpy(sta_ssid,(const char*) csta.ssid);
+        strcpy(sta_pwd,(const char*) csta.password);
+    }
+    else {
+		ESP_LOGI(TAG, "wss_handler() wifi_view csta.ssid not set!");
+		strcpy(sta_ssid,"Not set");
+		strcpy(sta_pwd,"Not set");
+	}
+	
+	//
+	sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"ap_ssid\":\"%s\",\"ap_pwd\":\"%s\",\"sta_ssid\":\"%s\",\"sta_pwd\":\"%s\"}",
+	    action, uid, ap_ssid, ap_pwd, sta_ssid, sta_pwd);
+	strcpy(out,res);
+}
+
 
 //-- REQUESTS - RESPONSES
 //
+static esp_err_t reset_get_handler(httpd_req_t *req)
+{
+	//-- undefined reference to `esp_mesh_lite_erase_rtc_store'
+	//esp_mesh_lite_erase_rtc_store();
+    //nvs_flash_erase();
+    esp_restart();
+    return ESP_OK;
+}
+//
+static const httpd_uri_t reset_get = {
+    .uri       = "/reset",
+    .method    = HTTP_GET,
+    .handler   = reset_get_handler,
+    //.user_ctx  = &user_ctx,
+};
+
 //-- HOME
 //
 //static int user_ctx = 0;
@@ -156,7 +231,7 @@ static const httpd_uri_t home_get = {
 
 #if !defined(ENABLE_WSS)
 //
-static esp_err_t dht_get_handler(httpd_req_t *req)
+/*static esp_err_t dht_get_handler(httpd_req_t *req)
 {
 	float temp, humi;
 	dht_read_float_data(DHT_TYPE_DHT11,4,&humi,&temp);
@@ -171,24 +246,7 @@ static const httpd_uri_t dht_get = {
     .method    = HTTP_GET,
     .handler   = dht_get_handler,
     //.user_ctx  = &user_ctx,
-};
-
-//
-static esp_err_t reset_get_handler(httpd_req_t *req)
-{
-	//-- undefined reference to `esp_mesh_lite_erase_rtc_store'
-	//esp_mesh_lite_erase_rtc_store();
-    //nvs_flash_erase();
-    esp_restart();
-    return ESP_OK;
-}
-//
-static const httpd_uri_t reset_get = {
-    .uri       = "/reset",
-    .method    = HTTP_GET,
-    .handler   = reset_get_handler,
-    //.user_ctx  = &user_ctx,
-};
+};*/
 
 //-- TIMER
 //
@@ -412,13 +470,6 @@ static esp_err_t wifi_get_handler(httpd_req_t *req)
 			strcpy(sta_pwd,"Not set");
 		}
 		
-		//
-		/*char tmpversion[4] = {0};
-		sprintf(tmpversion,"%d",t3ch_version());
-		char encversion[16] = {0};
-		esp_web_url_encode(tmpversion,tmpversion,encversion,strlen(tmpversion));
-		printf("wifi_get_handler() DEBUG tmpversion: %s, encversion: %s\n",tmpversion, encversion);
-		*/
 		sprintf(res,"{\"success\":true,\"ap_ssid\":\"%s\",\"ap_pwd\":\"%s\",\"sta_ssid\":\"%s\",\"sta_pwd\":\"%s\",\"version\":\"%s\",\"version_string\":\"%s\"}",
 		    ap_ssid, ap_pwd, sta_ssid, sta_pwd, t3ch_version(), t3ch_version_string());
 	}
@@ -832,19 +883,204 @@ esp_err_t httpd_error(httpd_req_t *req, httpd_err_code_t err)
     return ESP_FAIL;
 }
 
-
 //-- WSS THINGS are Separated with macros
 #ifdef ENABLE_WSS
 
 //
-esp_err_t t3ch_ws_send(httpd_req_t *req, char *data) {
+#define ATRA_MAX 10
+int atra_pos=0;
+//const int atra_max=10;
+struct async_task_resp_arg {
+	//
+	int id;
+	httpd_handle_t hd;
+    int fd;
+    TaskHandle_t handle; //
+    bool loop;           // loop command in this moment dont have significance but can be useful for x plan
+    //
+    char uid[64];
+    char action[64];
+};// atasks[atra_max];
+struct async_task_resp_arg atasks[ATRA_MAX];
+//
+int atra_add(httpd_handle_t hd, int fd, char uid[64], char action[64], bool loop) {
+	if(atra_pos>=ATRA_MAX) return -1;
+	int task_id = atra_pos;
+	atasks[atra_pos].id = task_id;
+	atasks[atra_pos].hd = hd;
+	atasks[atra_pos].fd = fd;
+	atasks[atra_pos].loop = loop;
+	strcpy(atasks[atra_pos].uid,uid);
+	strcpy(atasks[atra_pos].action,action);
+	atra_pos++;
+	return task_id;
+}
+//
+void atra_del(int id) {
+	printf("atra_del() STARTED, atra_pos: %i\n",atra_pos);
+	for(int i=0; i<(atra_pos-1); i++) {
+		atasks[i] = (atasks[i].id==id?atasks[i+1]:atasks[i]);
+	}
+	atra_pos--;
+	printf("atra_del() DONE, atra_pos: %i\n",atra_pos);
+}
+//
+int atra_geti(int id) {
+	for(int i=0; i<atra_pos; i++) {
+		if(atasks[i].id==id) {
+			printf("atra_geti() got id at %i\n",i);
+			return i;
+		}
+	}
+	return -1;
+}
+
+//-- ws async tasks
+//
+void ws_task_infoLoop(void *arg) {
+	//
+	int task_id = (int*)arg;
+	printf("ws_task_infoLoop() STARTING with task_id: %i\n",task_id);
+	//
+	int tmpid = atra_geti(task_id);
+	//
+	struct async_task_resp_arg tmptask = atasks[tmpid];
+	printf("ws_task_infoLoop() D2 fd: %i, uid: %s, action: %s\n",tmptask.fd, tmptask.uid, tmptask.action);
+	//
+	while(true) {
+		char res[128]={0};
+		json_infoLoop(tmptask.action, tmptask.uid, res);
+	    esp_err_t ret = t3ch_ws_async_send(tmptask.hd, tmptask.fd, res);
+	    if( ret!=ESP_OK ) {
+			printf("ws_task_infoLoop() send failed.");
+			break;
+		}
+	    vTaskDelay(1000 / portTICK_PERIOD_MS);
+	}
+	atra_del(task_id);
+	printf("ws_task_infoLoop() DONE\n");
+	vTaskDelete(NULL);
+}
+//
+void ws_task_version(void *arg) {
+	//
+	int task_id = (int*)arg;
+	printf("ws_task_version() STARTING with task_id: %i\n",task_id);
+	int tmpid = atra_geti(task_id);
+	struct async_task_resp_arg tmptask = atasks[tmpid];
+	printf("ws_task_version() D2 fd: %i, uid: %s, action: %s\n",tmptask.fd, tmptask.uid, tmptask.action);
+	//
+	char res[128]={0};
+	json_version(tmptask.action, tmptask.uid, res);
+    esp_err_t ret = t3ch_ws_async_send(tmptask.hd, tmptask.fd, res);
+    if( ret!=ESP_OK ) {
+		printf("ws_task_version() send failed.");
+	}
+	//
+	atra_del(task_id);
+	printf("ws_task_version() DONE\n");
+	vTaskDelete(NULL);
+}
+//
+void ws_task_wifiview(void *arg) {
+	//
+	int task_id = (int*)arg;
+	printf("ws_task_wifiview() STARTING with task_id: %i\n",task_id);
+	int tmpid = atra_geti(task_id);
+	struct async_task_resp_arg tmptask = atasks[tmpid];
+	printf("ws_task_wifiview() D2 fd: %i, uid: %s, action: %s\n",tmptask.fd, tmptask.uid, tmptask.action);
+	//
+	char res[256]={0};
+	json_wifiview(tmptask.action, tmptask.uid, res);
+    esp_err_t ret = t3ch_ws_async_send(tmptask.hd, tmptask.fd, res);
+    if( ret!=ESP_OK ) {
+		printf("ws_task_wifiview() send failed.");
+	}
+	//
+	atra_del(task_id);
+	printf("ws_task_wifiview() DONE\n");
+	vTaskDelete(NULL);
+}
+//
+struct async_resp_arg {
+    httpd_handle_t hd;
+    int fd;
+    bool loop;
+    char uid[64];
+    char action[64];
+};
+
+//
+static void async_task(void *arg) {
+	//
+    struct async_resp_arg *resp_arg = arg;
+    printf("ws_async_send() STARTING action: %s, uid: %s\n",resp_arg->action,resp_arg->uid);
+	int task_id = atra_add( resp_arg->hd, resp_arg->fd, resp_arg->uid, resp_arg->action, resp_arg->loop );
+	printf("ws_async_send() new task_id: %i\n", task_id);
+	
+	//
+	if( strcmp(resp_arg->action,"infoLoop")==0 ) {
+		//TaskHandle_t handle;
+		xTaskCreate(ws_task_infoLoop, "ws_task_infoLoop", 4048, (void*)task_id, 1, NULL);
+		//atasks[atra_geti(task_id)].handle = handle;
+	}
+	//
+	else if( strcmp(resp_arg->action,"version")==0 ) {
+		xTaskCreate(ws_task_version, "ws_task_version", 4048, (void*)task_id, 1, NULL);
+	}
+	//
+	else if( strcmp(resp_arg->action,"wifi_view")==0 ) {
+		xTaskCreate(ws_task_wifiview, "ws_task_wifiview", 4048, (void*)task_id, 1, NULL);
+	}
+
+    printf("ws_async_send() DONE action: %s, uid: %s\n",resp_arg->action,resp_arg->uid);
+    
+    //
+    free(resp_arg);
+}
+
+//
+static esp_err_t trigger_async_task(httpd_req_t *req, char *action, char *uid, bool loop) {
+	ESP_LOGI(TAG,"trigger_async_send() starting action: %s, uid: %s\n",action, uid);
+	//
+    struct async_resp_arg *resp_arg = malloc(sizeof(struct async_resp_arg));
+    resp_arg->hd   = req->handle;
+    resp_arg->fd   = httpd_req_to_sockfd(req);
+    resp_arg->loop = loop;
+    strcpy(resp_arg->action,action);
+    strcpy(resp_arg->uid,uid);
+    //
+    return httpd_queue_work(
+	    req->handle, 
+	    async_task,
+	    resp_arg
+	);
+}
+//
+esp_err_t t3ch_ws_async_send(httpd_handle_t hd, int fd, char *data) {
+	printf("t3ch_ws_async_send() STARTING.\n");
 	//
 	httpd_ws_frame_t ws_pkt;
     memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
     ws_pkt.type = HTTPD_WS_TYPE_TEXT;
     ws_pkt.len  = strlen(data);
     ws_pkt.payload = data;
-	esp_err_t ret = httpd_ws_send_frame(req, &ws_pkt);
+    esp_err_t ret = httpd_ws_send_frame_async(hd, fd, &ws_pkt);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "t3ch_ws_async_send() failed with %d", ret);
+    }
+    return ret;
+}
+//
+esp_err_t t3ch_ws_send(httpd_req_t *req, char *data) {
+	printf("t3ch_ws_send() STARTING.\n");
+	//
+	httpd_ws_frame_t ws_pkt;
+    memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
+    ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+    ws_pkt.len  = strlen(data);
+    ws_pkt.payload = data;
+    esp_err_t ret = httpd_ws_send_frame(req, &ws_pkt);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "t3ch_ws_send() failed with %d", ret);
     }
@@ -855,6 +1091,8 @@ esp_err_t t3ch_ws_send(httpd_req_t *req, char *data) {
 static esp_err_t wss_handler(httpd_req_t *req)
 {
 	//
+    esp_err_t ret;
+    //
     if (req->method == HTTP_GET) {
         ESP_LOGE(TAG, "wss_handler() Handshake done, the new connection was opened");
         return ESP_OK;
@@ -866,7 +1104,7 @@ static esp_err_t wss_handler(httpd_req_t *req)
     ws_pkt.type = HTTPD_WS_TYPE_TEXT;
     // retrive data len
     /* Set max_len = 0 to get the frame len */
-    esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
+    ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "wss_handler() httpd_ws_recv_frame failed to get frame len with %d", ret);
         return ret;
@@ -905,8 +1143,11 @@ static esp_err_t wss_handler(httpd_req_t *req)
 	cJSON *json      = cJSON_Parse( (char*)ws_pkt.payload );
 	cJSON *objAction = cJSON_GetObjectItemCaseSensitive(json,"action");
 	cJSON *objUID    = cJSON_GetObjectItemCaseSensitive(json,"uid");
+	cJSON *objASYNC  = cJSON_GetObjectItemCaseSensitive(json,"async");
+	cJSON *objLoop   = cJSON_GetObjectItemCaseSensitive(json,"loop");
 	char *action     = cJSON_Print( objAction );
 	char *uid        = cJSON_Print( objUID );
+
 	//
 	char *tmpaction  = ltrim(action,1); // funny but works and memory is freeed
 	rtrim(action,1);
@@ -914,28 +1155,33 @@ static esp_err_t wss_handler(httpd_req_t *req)
 	char *tmpuid = ltrim(uid,1);
 	rtrim(uid,1);
 	
-	printf("wss_handler() out of trimps...\n");
+	
 	printf("wss_handler() debug tmpuid: %s, tmpaction: %s\n",tmpuid, tmpaction);
-	//printf("wss_handler() debug uid: %s, action: %s\n",uid, action);
 	//
-	if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"infoLoop") == 0) {
-		//ESP_LOGI(TAG, "wss_handler() infoLoop STARTED");
-		//
-		char strftime_buf[64]={0};
-		char res[128]={0};
-		//
-		t3ch_time_get(&strftime_buf);
-		sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"time\":\"%s\",\"free\":\"%d\"}",
-			tmpaction, tmpuid, strftime_buf, heap_caps_get_free_size(MALLOC_CAP_8BIT));
-		ret = t3ch_ws_send(req,res);
+	if      (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"infoLoop") == 0) {
+		if( objASYNC ) {
+			ESP_LOGI(TAG, "wss_handler() infoLoop STARTED");
+			ret = trigger_async_task(req, tmpaction, tmpuid,(objLoop?true:false));
+		}
+		else {
+			printf("wss_handler() infoLoop STARTED");
+			char res[128]={0};
+			json_infoLoop(tmpaction,tmpuid,res);
+			ret = t3ch_ws_send(req,res);
+		}
 	}
 	//
 	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"version") == 0) {
-		//ESP_LOGI(TAG, "wss_handler() version STARTED");
-		char res[128]={0};
-		sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"version\":\"%s\",\"version_string\":\"%s\"}",
-			tmpaction, tmpuid, t3ch_version(), t3ch_version_string());
-		ret = t3ch_ws_send(req,res);
+		if( objASYNC ) {
+			ESP_LOGI(TAG, "wss_handler() version STARTED");
+			ret = trigger_async_task(req, tmpaction, tmpuid,(objLoop?true:false));
+		}
+		else {
+			printf("wss_handler() version STARTED");
+			char res[128]={0};
+			json_version(tmpaction,tmpuid,res);
+			ret = t3ch_ws_send(req,res);
+		}
 	}
 	//
 	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"log_view_old") == 0) {
@@ -999,9 +1245,8 @@ static esp_err_t wss_handler(httpd_req_t *req)
 	//
 	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"wifi_view") == 0) {
 		//ESP_LOGI(TAG, "wss_handler() wifi_view STARTED");
-		//
-		char res[256]={0};
-		char ap_ssid[32]={0};
+		
+		/*char ap_ssid[32]={0};
 		char ap_pwd[64]={0};
 		char sta_ssid[32]={0};
 		char sta_pwd[64]={0};
@@ -1033,15 +1278,22 @@ static esp_err_t wss_handler(httpd_req_t *req)
 		
 		//
 		sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"ap_ssid\":\"%s\",\"ap_pwd\":\"%s\",\"sta_ssid\":\"%s\",\"sta_pwd\":\"%s\"}",
-		    tmpaction, tmpuid, ap_ssid, ap_pwd, sta_ssid, sta_pwd);
-		ret = t3ch_ws_send(req,res);
+		    tmpaction, tmpuid, ap_ssid, ap_pwd, sta_ssid, sta_pwd);*/
+		if( objASYNC ) {
+			ESP_LOGI(TAG, "wss_handler() wifi_view STARTED");
+			ret = trigger_async_task(req, tmpaction, tmpuid,(objLoop?true:false));
+		}
+		else {
+			char res[256]={0};
+			json_wifiview(tmpaction,tmpuid,res);
+			ret = t3ch_ws_send(req,res);
+		}
 	}
 	//
 	else {
 		ESP_LOGI(TAG, "wss_handler() unknown action! Action: %s, UID: %s",tmpaction,tmpuid);
 		char res[128]={0};
 		sprintf(res,"{\"success\":false,\"action\":\"%s\",\"uid\":\"%s\"}", tmpaction, tmpuid);
-		//sprintf(res,"{\"success\":false,\"action\":%s,\"uid\":%s}", action, uid);
 	    ret = t3ch_ws_send(req,res);
 	}
 	//
@@ -1069,7 +1321,7 @@ bool StartHTTPS(void) {
 	httpd_ssl_config_t conf     = HTTPD_SSL_CONFIG_DEFAULT();
 	conf.httpd.uri_match_fn     = httpd_uri_match_wildcard;
 #ifdef ENABLE_WSS
-	conf.httpd.max_uri_handlers = 3;
+	conf.httpd.max_uri_handlers = 4;
 #else
 	conf.httpd.max_uri_handlers = 8;
 #endif
@@ -1093,12 +1345,12 @@ bool StartHTTPS(void) {
     //
     httpd_register_uri_handler(server, &home_get);
 	httpd_register_uri_handler(server, &ota_update_post);
+	httpd_register_uri_handler(server, &reset_get);
 #ifdef ENABLE_WSS
 	//
 	httpd_register_uri_handler(server, &wss_get);
 #else
 	//
-	httpd_register_uri_handler(server, &reset_get);
 	httpd_register_uri_handler(server, &free_get);
 	httpd_register_uri_handler(server, &time_get);
 	httpd_register_uri_handler(server, &timer_get);

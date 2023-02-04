@@ -639,7 +639,6 @@ var wsc = null;
 function infoLoop() {
 	//
 	wsc.sendMessage({"action":"infoLoop",},{"uid":"infoLoop","function":function(json) {
-	    //console.info("infoLoop response",json);
 	    qS("#displayTime>div").innerText = json.time;
 	    qS("#displayFree>div").innerText = json.free;
 	},});
@@ -1170,15 +1169,25 @@ function logLoad() {
 //
 document.addEventListener("wss_started",function(e) {
 	//
-	infoLoop();
+	//infoLoop();
 	//
-	wsc.sendMessage({"action":"version",},{"uid":"version","function":function(json) {
+	console.warn("starting async_infoLoop... ole.!");
+	wsc.sendMessage({"action":"infoLoop","async":"1"},{"uid":"infoLoop","function":function(json) {
+		console.warn("done async_infoLoop... data",json);
+	    qS("#displayTime>div").innerText = json.time;
+	    qS("#displayFree>div").innerText = json.free;
+	    //return true;
+	},});
+	
+	//
+	wsc.sendMessage({"action":"version","async":"1"},{"uid":"version","function":function(json) {
 	    //console.info("version response",json);
 	    qS("#displayVersion>div").innerText = json.version+" "+json.version_string;
 	    return true;
 	},});
+	
 	//
-	wsc.sendMessage({"action":"wifi_view",},{"uid":"wifi_view","function":function(json) {
+	wsc.sendMessage({"action":"wifi_view","async":"1"},{"uid":"wifi_view","function":function(json) {
 	    //console.info("wifi_view response",json);
 	    qS("#displayAPSSID > input").value = json.ap_ssid;
 		qS("#displayAPPWD>input").value    = json.ap_pwd;
