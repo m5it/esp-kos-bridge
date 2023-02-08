@@ -362,6 +362,12 @@ void t3ch_time_get(char * buf) {
 	strcpy(buf,strftime_buf);
 }
 //
-time_t t3ch_time_ts() {
-	return time(&now);
+void t3ch_time_update() {
+	time(&now);
+    localtime_r(&now, &timeinfo);
+}
+//
+int t3ch_time_ts() {
+	return time(NULL);
+	//return clock();
 }

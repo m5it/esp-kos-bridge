@@ -371,6 +371,8 @@ var WSC = function( opts/*={}*/ ) {
 	this.status          = 0; // 0=disconected, 1=connecting, 2=connected
 	this.maxConnectTries = 5;
 	this.chkConnectTries = 0;
+	//
+	this.hash            = null;
 	//#
 	//this.socket = new WebSocket( this.connectto );
 	//this.socket = this.connect();
@@ -506,8 +508,12 @@ var WSC = function( opts/*={}*/ ) {
 		}
 		
 		// Check if cmd PING then respond with PONG
-		if( isDefined(json,"cmd") && json.cmd=="PING" ) {
-			_this.sendMessage({"cmd":"PONG",});
+		if( isDefined(json,"action") && json.action=="ping" ) {
+			console.warn("wsc.recvMessage() ping STARTED!");
+			_this.sendMessage({"action":"pong","hash":_this.hash,"async":"1"},{"uid":"PONG","function":function(json) 
+				{
+					console.info("PONG response",json);
+				},});
 			return;
 		}
 		
@@ -1060,9 +1066,9 @@ document.addEventListener("tab_opening",function(e) {
 	//
 	if( detail=="tab_log" ) {
 		tab_log_opts.visible = true;
-		tab_log_opts.timeout_new = setTimeout(function() {logUpdate();},100);
+		//tab_log_opts.timeout_new = setTimeout(function() {logUpdate();},100);
 		//
-		qS("#displayLog>div").addEventListener("scroll",function(e1) {
+		/*qS("#displayLog>div").addEventListener("scroll",function(e1) {
 			if( qS("#displayLog>div").scrollHeight <= qS("#displayLog>div").offsetHeight ) {
 				console.warn("logLoad() load more... from",tab_log_opts.position);
 				logLoad();
@@ -1075,11 +1081,11 @@ document.addEventListener("tab_opening",function(e) {
 				console.warn("Something went wrong...");
 			}
 		});
-		logLoad();
+		logLoad();*/
 	}
 	else {
 		tab_log_opts.visible = false;
-		clearTimeout(tab_log_opts.timeout_new);
+		//clearTimeout(tab_log_opts.timeout_new);
 	}
 });
 //
@@ -1124,32 +1130,50 @@ function logLoad() {
 	qS("#displayLog").classList.add("updating");
 	
 	//
-	wsc.sendMessage({"action":"log_view_old","fromPos":tab_log_opts.position},{"uid":"log_view_old"+((new Date().getTime())+random(9999,9999999)),"function":function(json) {
-	    console.info("log_view_old response",json);
+	/*wsc.sendMessage({"action":"log_view_old","fromPos":tab_log_opts.position,"async":"1"},{"uid":"log_view_old"+((new Date().getTime())+random(9999,9999999)),"function":function(json) {
 	    //
 		if( json.success==false ) {
-			console.info("logLoad() onDone() looks we have all old posts.");
+			console.warn("logLoad() onDone() looks we have all old posts.");
 			tab_log_opts.done_old = true;
 			tab_log_opts.running_old = false;
 			qS("#displayLog").classList.remove("updating");
 			qS("#displayLog").classList.add("done_old");
 			return true;
+		}*/
+	wsc.sendMessage({"action":"log_view","async":"1"},{"uid":"log_view", "function":function(json) {
+	    console.info("log_view response",json);
+	    //
+		if( json.success==false ) {
+			console.warn("logLoad() onDone() looks we have all old posts.");
+			tab_log_opts.done_old = true;
+			//tab_log_opts.running_old = false;
+			qS("#displayLog").classList.remove("updating");
+			qS("#displayLog").classList.add("done_old");
 		}
-		var data = json.data;
-		//
-		tab_log_opts.position += data.length;
-		
-		//
-		for(var i=0; i<data.length; i++) {
-			if( data[i].id>tab_log_opts.last_id ) tab_log_opts.last_id = data[i].id; // save last log id
-			qS("#displayLog>div").insertAdjacentHTML('beforeend', "<div>"+urldecode(data[i].text)+"</div>" );
+		else {
+			var data = json.data;
+			tab_log_opts.position += data.length;
+			
+			//
+			if( tab_log_opts.done_old ) {
+				for(var i=(data.length-1); i>=0; i--) {
+					if( data[i].id>tab_log_opts.last_id ) tab_log_opts.last_id = data[i].id; // save last log id
+					qS("#displayLog>div").insertAdjacentHTML('afterbegin', "<div>"+urldecode(data[i].text)+"</div>" );
+				}
+			}
+			else {
+				//
+				for(var i=0; i<data.length; i++) {
+					if( data[i].id>tab_log_opts.last_id ) tab_log_opts.last_id = data[i].id; // save last log id
+					qS("#displayLog>div").insertAdjacentHTML('beforeend', "<div>"+urldecode(data[i].text)+"</div>" );
+				}
+			}
+			//
+			//tab_log_opts.running_old = false;
+			qS("#displayLog").classList.remove("updating");
 		}
-		
 		//
-		tab_log_opts.running_old = false;
-		qS("#displayLog").classList.remove("updating");
-		//
-		if( qS("#displayLog>div").scrollHeight <= qS("#displayLog>div").offsetHeight ) {
+		/*if( qS("#displayLog>div").scrollHeight <= qS("#displayLog>div").offsetHeight ) {
 			//
 			logLoad();
 		}
@@ -1159,9 +1183,9 @@ function logLoad() {
 		}
 		else {
 			qS(".displayLogOffset").innerHTML = "Done! Or try to scroll.";
-		}
+		}*/
 		
-		return true;
+		return false;
 	},});
 }
 
@@ -1171,8 +1195,22 @@ document.addEventListener("wss_started",function(e) {
 	//
 	//infoLoop();
 	//
-	console.warn("starting async_infoLoop... ole.!");
-	wsc.sendMessage({"action":"infoLoop","async":"1"},{"uid":"infoLoop","function":function(json) {
+	console.info("starting async_infoLoop... ole.!");
+	
+	wsc.sendMessage({"action":"login"},{"uid":"login","function":function(json) {
+		console.info("done login... data",json);
+		wsc.hash = json.data;
+		//
+	    document.dispatchEvent(new CustomEvent("wss_logged",{"detail":wsc.hash}));
+	    return true;
+	},});
+});
+
+//
+document.addEventListener("wss_logged",function(e) {
+	console.warn("wss_logged STARTED!",e);
+	/*
+    wsc.sendMessage({"action":"infoLoop","async":"1"},{"uid":"infoLoop","function":function(json) {
 		console.warn("done async_infoLoop... data",json);
 	    qS("#displayTime>div").innerText = json.time;
 	    qS("#displayFree>div").innerText = json.free;
@@ -1195,7 +1233,17 @@ document.addEventListener("wss_started",function(e) {
 		qS("#displaySTAPWD>input").value   = json.sta_pwd;
 		return true;
 	},});
+	
+	//
+	logLoad();
+	*/
 });
+//
+window.onbeforeunload = function(e) {
+	console.warn("User is trying to refresh page!");
+	console.warn("active lemenet: ",document.activeElement);
+	return false;
+}
 </script>
 </head>
 <body>

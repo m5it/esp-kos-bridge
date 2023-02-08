@@ -147,7 +147,6 @@ instructions, where n is the number of bytes in the input message. It
 should be doable in 4 + 61n instructions.
    If the inner loop is strung out (approx. 5*8 = 40 instructions),
 it would take about 6 + 46n instructions. */
-
 unsigned int crc32b(unsigned char *message) {
    int i, j;
    unsigned int byte, crc, mask;
