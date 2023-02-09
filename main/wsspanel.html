@@ -372,7 +372,7 @@ var WSC = function( opts/*={}*/ ) {
 	this.maxConnectTries = 5;
 	this.chkConnectTries = 0;
 	//
-	this.hash            = null;
+	this.hash            = "";
 	//#
 	//this.socket = new WebSocket( this.connectto );
 	//this.socket = this.connect();
@@ -1197,7 +1197,8 @@ document.addEventListener("wss_started",function(e) {
 	//
 	console.info("starting async_infoLoop... ole.!");
 	
-	wsc.sendMessage({"action":"login"},{"uid":"login","function":function(json) {
+	//wsc.sendMessage({"action":"login","hash":wsc.hash},{"uid":"login","function":function(json) {
+	wsc.sendMessage({"action":"login",},{"uid":"login","function":function(json) {
 		console.info("done login... data",json);
 		wsc.hash = json.data;
 		//
@@ -1208,9 +1209,9 @@ document.addEventListener("wss_started",function(e) {
 
 //
 document.addEventListener("wss_logged",function(e) {
-	console.warn("wss_logged STARTED!",e);
-	/*
-    wsc.sendMessage({"action":"infoLoop","async":"1"},{"uid":"infoLoop","function":function(json) {
+	console.warn("wss_logged STARTED!",e.detail);
+	
+    wsc.sendMessage({"action":"infoLoop","async":"1","hash":e.detail},{"uid":"infoLoop","function":function(json) {
 		console.warn("done async_infoLoop... data",json);
 	    qS("#displayTime>div").innerText = json.time;
 	    qS("#displayFree>div").innerText = json.free;
@@ -1218,14 +1219,14 @@ document.addEventListener("wss_logged",function(e) {
 	},});
 	
 	//
-	wsc.sendMessage({"action":"version","async":"1"},{"uid":"version","function":function(json) {
+	wsc.sendMessage({"action":"version","async":"1","hash":e.detail},{"uid":"version","function":function(json) {
 	    //console.info("version response",json);
 	    qS("#displayVersion>div").innerText = json.version+" "+json.version_string;
 	    return true;
 	},});
 	
 	//
-	wsc.sendMessage({"action":"wifi_view","async":"1"},{"uid":"wifi_view","function":function(json) {
+	/*wsc.sendMessage({"action":"wifi_view","async":"1"},{"uid":"wifi_view","function":function(json) {
 	    //console.info("wifi_view response",json);
 	    qS("#displayAPSSID > input").value = json.ap_ssid;
 		qS("#displayAPPWD>input").value    = json.ap_pwd;
@@ -1239,11 +1240,11 @@ document.addEventListener("wss_logged",function(e) {
 	*/
 });
 //
-window.onbeforeunload = function(e) {
+/*window.onbeforeunload = function(e) {
 	console.warn("User is trying to refresh page!");
 	console.warn("active lemenet: ",document.activeElement);
 	return false;
-}
+}*/
 </script>
 </head>
 <body>

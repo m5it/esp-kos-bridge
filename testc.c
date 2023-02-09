@@ -325,16 +325,25 @@ void rtrim(char inout[], int len) {
 	strcpy(inout,tmp);
 }
 
-void ltrim(char *inout, int len) {
-	char *a = (char*)malloc(strlen(inout));
-	memset(a,'\0',strlen(inout));
-	strcpy(a,inout);
-	strcpy(inout,(a+=len));
+void ltrim(char *in, int len, char *out) {
+	int newlen = (strlen(in)-(len-1));
+	memset(out,'\0',newlen);
+	memcpy(out, in+len, (strlen(in)-(len)) );
 }
 
 void main() {
-	//
-	printf("test clock: %i\n",time(NULL));
+	// fucking ltrim!!!
+	char xxx[] = "Holla!";
+	//char *xxx = (char*)malloc(128);
+	//memset(xxx,'\0',128);
+	//strcpy(xxx,"Holla!");
+	printf("xxx: %s\n",xxx);
+	char *out = (char*)malloc(128);
+	memset(out,'\0',128);
+	ltrim(xxx,3,out);
+	printf("ltrim out(%i): %s\n",strlen(out),out);
+	//printf("ltrim out(%i): %s\n",strlen(xxx),xxx);
+	free(out);
 	//
 	char hash[8]={0};
 	char *ihash = crc32b("holaa");
@@ -371,6 +380,7 @@ void main() {
 	printf("Encoded: %s\n",out);
 	*/
 	//
+	/*
 	char tmp2[] = "hello\r\n\r\nWorld\r\nAa Hmm test@\"'-. Done!+";
 	printf("seaching World...in: %s\n",tmp2);
 	//
@@ -389,7 +399,7 @@ void main() {
 	ltrim(tmp3,1);
 	printf("tmp4 d0: %s\n",tmp3);
 	
-	/*// example retrive of length of string
+	// example retrive of length of string
 	printf("tmp2 size: %d, sizeof: %d\n", ( sizeof(tmp2)/sizeof(tmp2[0])), sizeof(tmp2));
 	
 	char * pch = strstr(tmp2,"\r\n\r\n");
