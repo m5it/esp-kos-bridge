@@ -71,8 +71,8 @@ test on two browsers and cleaning of data! ole! :)
     * ota updates
 
 # More and interesting
-- https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/external-ram.html
-
+- ( ESP32 - Memory ), https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/external-ram.html
+- ( ESP32 - HELP ), https://www.esp32.com/viewforum.php?f=13
 
 <hr>
 
