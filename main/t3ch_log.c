@@ -14,8 +14,8 @@
 #endif
 static const char *TAG = "T3CH_LOG";
 //
-int LOG_POS = 0; // position of log array
-int LOG_CNT = 0; // increase for id
+int LOG_POS = 0;              // position of log array
+int LOG_CNT = 0;              // increase for id
 char LOG_DATA[LOG_DATA_SIZE]; // generated and auto incremented with t3ch_log_gen(..)
 //int LAST_ID = 0;
 //
@@ -27,10 +27,10 @@ struct Log {
 struct Log log[LOG_SIZE]={0};
 //
 int t3ch_log_gen_new(int lastId) {
-	printf("t3ch_log_gen_new() STARTING, lastId: %i, LOG_POS: %i\n",lastId,LOG_POS);
+	//printf("t3ch_log_gen_new() STARTING, lastId: %i, LOG_POS: %i\n",lastId,LOG_POS);
 	//
 	int startPos = LOG_POS-1;
-	printf("t3ch_log_gen_new() DEBUG startPos: %i, LOG_POS: %i\n", startPos, LOG_POS);
+	//printf("t3ch_log_gen_new() DEBUG startPos: %i, LOG_POS: %i\n", startPos, LOG_POS);
 	//
     //if( log[startPos].id<=lastId ) {
 	//	printf("t3ch_log_gen_old() t3ch_log_gen_new() looks there is no new data. lastId: %i vs: %i, using startPos: %i\n",lastId, log[startPos].id, startPos);
@@ -43,11 +43,12 @@ int t3ch_log_gen_new(int lastId) {
 	// generate json array of objects
 	jsonlen = sprintf(LOG_DATA+jsonlen,"[");
 	for(int i=startPos; i>=0; i--) {
-		printf("t3ch_log_gen_new() DEBUG i: %i, id: %i vs lastId: %i\n",i,log[i].id,lastId);
+		//printf("t3ch_log_gen_new() DEBUG i: %i, id: %i vs lastId: %i\n",i,log[i].id,lastId);
 		//
 		if(log[i].id<=lastId) {
-			printf("t3ch_log_gen_new() BREAK! id <= lastId!\n");
-			break;
+			//printf("t3ch_log_gen_new() CONTINuE! id <= lastId!\n");
+		//	break;
+			continue;
 		}
 		// encode text
 		int tmpsize = myUrlEncodeSize(log[i].text);
@@ -67,19 +68,19 @@ int t3ch_log_gen_new(int lastId) {
 		//
 		if( cnt==0 ) {
 			jsonlen += sprintf(LOG_DATA+jsonlen,"%s",tmpresult);
-			printf("t3ch_log_gen_old() t3ch_log_gen_new() d0 jsonlen: %i\n",jsonlen);
+			//printf("t3ch_log_gen_old() t3ch_log_gen_new() d0 jsonlen: %i\n",jsonlen);
 		}
-		else if( log[i].id<=lastId ) {
+		/*else if( log[i].id<=lastId ) {
 			printf("t3ch_log_gen_old() t3ch_log_gen_new() d3, lastId jsonlen: %i\n",jsonlen);
 			break;
-		}
+		}*/
 		else if( (jsonlen+tmplen)>=LOG_DATA_SIZE ) {
-			printf("t3ch_log_gen_old() t3ch_log_gen_new() d1, break jsonlen: %i\n",jsonlen);
+			//printf("t3ch_log_gen_old() t3ch_log_gen_new() d1, break jsonlen: %i\n",jsonlen);
 			break;
 		}
 		else {
 			jsonlen += sprintf(LOG_DATA+jsonlen,",%s",tmpresult);
-			printf("t3ch_log_gen_old() t3ch_log_gen_new() d2, add jsonlen: %i\n",jsonlen);
+			//printf("t3ch_log_gen_old() t3ch_log_gen_new() d2, add jsonlen: %i\n",jsonlen);
 		}
 		cnt++;
 	}

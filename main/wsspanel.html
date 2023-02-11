@@ -1101,6 +1101,8 @@ function logLoad() {
 			//
 			qS("#displayLog").classList.remove("updating");
 		}
+		//
+		wsc.sendMessage({"action":"success","hash":wsc.hash,"async":"1"});
 		
 		return false;
 	},});
@@ -1117,7 +1119,7 @@ document.addEventListener("wss_started",function(e) {
 		wsc.hash = json.data;
 		//
 	    document.dispatchEvent(new CustomEvent("wss_logged",{"detail":wsc.hash}));
-	    return true;
+	    return true; // return true to remove function from WSC! if false then it stay there for ASYNC or X
 	},});
 });
 
@@ -1131,10 +1133,11 @@ document.addEventListener("wss_logged",function(e) {
 	    qS("#displayTime>div").innerText = json.time;
 	    qS("#displayFree>div").innerText = json.free;
 	    //
-	    wsc.sendMessage({"action":"pong","hash":wsc.hash,"async":"1"},{"uid":"PONG_infoLoop","function":function(json) {
+	    /*wsc.sendMessage({"action":"pong","hash":wsc.hash,"async":"1"},{"uid":"PONG_infoLoop","function":function(json) {
 			console.info("PONG_infoLoop response",json);
 			return true;
-		},});
+		},});*/
+		wsc.sendMessage({"action":"success","hash":wsc.hash,"async":"1"});
 	    //return true;
 	},});
 	
@@ -1143,22 +1146,21 @@ document.addEventListener("wss_logged",function(e) {
 	    console.info("version response",json);
 	    qS("#displayVersion>div").innerText = json.version+" "+json.version_string;
 	    //
-	    wsc.sendMessage({"action":"pong","hash":wsc.hash,"async":"1"},{"uid":"PONG_version","function":function(json) {
-			console.info("PONG_version response",json);
-			return true;
-		},});
+	    wsc.sendMessage({"action":"success","hash":wsc.hash,"async":"1"});
 	    return true;
 	},});
 	
 	//
-	/*wsc.sendMessage({"action":"wifi_view","async":"1","hash":e.detail},{"uid":"wifi_view","function":function(json) {
+	wsc.sendMessage({"action":"wifi_view","async":"1","hash":e.detail},{"uid":"wifi_view","function":function(json) {
 	    //console.info("wifi_view response",json);
 	    qS("#displayAPSSID > input").value = json.ap_ssid;
 		qS("#displayAPPWD>input").value    = json.ap_pwd;
 		qS("#displaySTASSID>input").value  = json.sta_ssid;
 		qS("#displaySTAPWD>input").value   = json.sta_pwd;
+		//
+		wsc.sendMessage({"action":"success","hash":wsc.hash,"async":"1"});
 		return true;
-	},});*/
+	},});
 	
 	//
 	//logLoad();

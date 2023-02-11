@@ -1414,7 +1414,7 @@ void ws_task_log(void *arg) {
 		fromPos += lines;
 		printf("ws_task_log() d1 sending, lines: %i, fromPos: %i\n", lines, fromPos);
 		// get hd&fd
-		int wuai = wua_geti(tmptask.hash);
+		int wuai  = wua_geti(tmptask.hash);
 		int tmphd = awuausers[wuai].hd;
 		int tmpfd = awuausers[wuai].fd;
 		printf("ws_task_log() d2 fd: %i\n",tmpfd);
@@ -1781,17 +1781,26 @@ static esp_err_t wss_handler(httpd_req_t *req) {
 		}
 	}
 	//
-	else if (strlen(hash)==8 && ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"pong") == 0) {
-		//ESP_LOGI(TAG, "wss_handler() wifi_view STARTED");
+	else if (strlen(hash)==8 && ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"success") == 0) {
 		int userAt = wua_geti( hash );
 		if( userAt<0 ) {
 			ret = trigger_async_task(req->handle, httpd_req_to_sockfd(req), hash, "fail", tmpuid);
 		}
 		else if( objASYNC ) {
-			//ESP_LOGI(TAG, "wss_handler() pong STARTED, hash: %s",hash);
-			//int userAt = wua_geti( hash );
-			//printf("wss_handler() got userAt: %i\n",userAt);
-			//printf("wss_handler() got user hash: %s\n",awuausers[userAt].id);
+			awuausers[userAt].hd      = req->handle; // update handle!
+			awuausers[userAt].fd      = httpd_req_to_sockfd(req);
+			awuausers[userAt].last_ts = t3ch_time_ts();
+			printf("wss_handler() success at: %i, hd: %i, fd: %i new user ts: %i\n",userAt, awuausers[userAt].hd, awuausers[userAt].fd,  awuausers[userAt].last_ts);
+			ret = ESP_OK;
+		}
+	}
+	//
+	else if (strlen(hash)==8 && ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"pong") == 0) {
+		int userAt = wua_geti( hash );
+		if( userAt<0 ) {
+			ret = trigger_async_task(req->handle, httpd_req_to_sockfd(req), hash, "fail", tmpuid);
+		}
+		else if( objASYNC ) {
 			awuausers[userAt].hd      = req->handle; // update handle!
 			awuausers[userAt].fd      = httpd_req_to_sockfd(req);
 			awuausers[userAt].last_ts = t3ch_time_ts();
@@ -1807,7 +1816,6 @@ static esp_err_t wss_handler(httpd_req_t *req) {
 			ret = trigger_async_task(req->handle, httpd_req_to_sockfd(req), hash, "fail", tmpuid);
 		}
 		else if( objASYNC ) {
-			//ESP_LOGI(TAG, "wss_handler() infoLoop STARTED");
 			awuausers[userAt].hd      = req->handle; // update handle!
 			awuausers[userAt].fd      = httpd_req_to_sockfd(req);
 			awuausers[userAt].last_ts = t3ch_time_ts();
@@ -1848,7 +1856,6 @@ static esp_err_t wss_handler(httpd_req_t *req) {
 	//
 	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && 
 		(strcmp(tmpaction,"log_view_old") == 0 || strcmp(tmpaction,"log_view") == 0) ) {
-		//ESP_LOGI(TAG, "wss_handler() log_view_old STARTED");
 		//
 		cJSON *objFromPos = cJSON_GetObjectItemCaseSensitive(json,"fromPos");
 		char *fromPos     = cJSON_Print( objFromPos );
@@ -1858,7 +1865,6 @@ static esp_err_t wss_handler(httpd_req_t *req) {
 			ret = trigger_async_task(req->handle, httpd_req_to_sockfd(req), hash, "fail", tmpuid);
 		}
 		else if( objASYNC ) {
-			//ESP_LOGI(TAG, "wss_handler() version STARTED");
 			awuausers[userAt].hd      = req->handle; // update handle!
 			awuausers[userAt].fd      = httpd_req_to_sockfd(req);
 			awuausers[userAt].last_ts = t3ch_time_ts();
