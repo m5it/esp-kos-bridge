@@ -1130,6 +1130,11 @@ document.addEventListener("wss_logged",function(e) {
 		console.warn("done async_infoLoop... data",json);
 	    qS("#displayTime>div").innerText = json.time;
 	    qS("#displayFree>div").innerText = json.free;
+	    //
+	    wsc.sendMessage({"action":"pong","hash":wsc.hash,"async":"1"},{"uid":"PONG_infoLoop","function":function(json) {
+			console.info("PONG_infoLoop response",json);
+			return true;
+		},});
 	    //return true;
 	},});
 	
@@ -1137,18 +1142,23 @@ document.addEventListener("wss_logged",function(e) {
 	wsc.sendMessage({"action":"version","async":"1","hash":e.detail},{"uid":"version","function":function(json) {
 	    console.info("version response",json);
 	    qS("#displayVersion>div").innerText = json.version+" "+json.version_string;
+	    //
+	    wsc.sendMessage({"action":"pong","hash":wsc.hash,"async":"1"},{"uid":"PONG_version","function":function(json) {
+			console.info("PONG_version response",json);
+			return true;
+		},});
 	    return true;
 	},});
 	
 	//
-	wsc.sendMessage({"action":"wifi_view","async":"1","hash":e.detail},{"uid":"wifi_view","function":function(json) {
+	/*wsc.sendMessage({"action":"wifi_view","async":"1","hash":e.detail},{"uid":"wifi_view","function":function(json) {
 	    //console.info("wifi_view response",json);
 	    qS("#displayAPSSID > input").value = json.ap_ssid;
 		qS("#displayAPPWD>input").value    = json.ap_pwd;
 		qS("#displaySTASSID>input").value  = json.sta_ssid;
 		qS("#displaySTAPWD>input").value   = json.sta_pwd;
 		return true;
-	},});
+	},});*/
 	
 	//
 	//logLoad();

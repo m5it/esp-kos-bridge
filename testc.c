@@ -337,7 +337,10 @@ void main() {
 	//char *xxx = (char*)malloc(128);
 	//memset(xxx,'\0',128);
 	//strcpy(xxx,"Holla!");
-	printf("xxx: %s\n",xxx);
+	printf("xxx: %s, xxx1: %i\n",xxx,xxx);
+	printf("xxx: %s, xxx2: %i\n",xxx,xxx);
+	printf("xxx: %s, xxx3: %i\n",xxx,*xxx);
+	printf("xxx: %s, xxx4: %i\n",xxx,(int*)&xxx);
 	char *out = (char*)malloc(128);
 	memset(out,'\0',128);
 	ltrim(xxx,3,out);

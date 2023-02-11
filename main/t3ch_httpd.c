@@ -979,6 +979,9 @@ struct async_resp_arg {
     char action[64];
 };
 
+//
+httpd_handle_t testhd;
+int testfd;
 //--
 //
 #define WUA_MAX_LAG 10 // 10s
@@ -1296,7 +1299,7 @@ void ws_task_infoLoop(void *arg) {
 	//printf("ws_task_infoLoop() D2 fd: %i, uid: %s, action: %s\n",tmptask.fd, tmptask.uid, tmptask.action);
 	printf("ws_task_infoLoop() D2 hash: %s, uid: %s, action: %s\n",tmptask.hash, tmptask.uid, tmptask.action);
 	
-	
+	bool fail=false;
 	//
 	while(true) {
 		char res[128]={0};
@@ -1307,6 +1310,11 @@ void ws_task_infoLoop(void *arg) {
 		int wuai = wua_geti(tmptask.hash);
 		int tmphd = awuausers[wuai].hd;
 		int tmpfd = awuausers[wuai].fd;
+		if(fail) {
+			printf("ws_task_infoLoop() using FAIL sockets: %i and handle: %i!",testfd, testhd);
+			tmphd = testhd;
+			tmpfd = testfd;
+		}
 		printf("ws_task_infoLoop() running, tmphd: %i, tmpfd: %i\n",tmphd,tmpfd);
 		//
 		json_infoLoop(tmptask.action, tmptask.uid, res);
@@ -1318,7 +1326,10 @@ void ws_task_infoLoop(void *arg) {
 				printf("ws_task_infoLoop() send failed %i times. Breaking.\n",cnt_error);
 				break;
 			}
-			else cnt_error++;
+			else {
+				cnt_error++;
+				fail=true;
+			}
 		}
 		else cnt_error=0;
 	    vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -1564,12 +1575,17 @@ void ws_task_pong(void *arg) {
 	//printf("ws_task_pong() D2 fd: %i, uid: %s, action: %s\n",tmptask.fd, tmptask.uid, tmptask.action);
 	printf("ws_task_pong() D2 hash: %s, uid: %s, action: %s\n",tmptask.hash, tmptask.uid, tmptask.action);
 	
+	bool fail=false;
 	while(true) {
 		// get hd&fd
 		int wuai = wua_geti(tmptask.hash);
 		int tmphd = awuausers[wuai].hd;
 		int tmpfd = awuausers[wuai].fd;
-		
+		if(fail) {
+			printf("ws_task_pong() using FAIL sockets: %i and handle: %i!",testfd, testhd);
+			tmphd = testhd;
+			tmpfd = testfd;
+		}
 		//
 		char res[128]={0};
 		sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\"}", tmptask.action, tmptask.uid);
@@ -1579,6 +1595,7 @@ void ws_task_pong(void *arg) {
 			printf("ws_task_pong() send failed err: %x, cnt: %i/%i.\n",ret, cnt_error, max_error);
 			if( cnt_error< max_error ) {
 				cnt_error++;
+				fail=true;
 			}
 			else {
 				printf("ws_task_pong() send failed, breaking.\n");
@@ -1624,6 +1641,10 @@ static esp_err_t wss_handler(httpd_req_t *req) {
 	printf("wss_handler() STARTING, method: %i, hd: %i, fd: %i\n",req->method, req->handle, httpd_req_to_sockfd(req));
 	//
     esp_err_t ret;
+    //
+    ESP_LOGI(TAG, "wss_handler() setting testhd & testfd");
+    testhd = req->handle;
+    testfd = httpd_req_to_sockfd(req);
     //
     if (req->method == HTTP_GET) {
         ESP_LOGE(TAG, "wss_handler() Handshake done, the new connection was opened");
