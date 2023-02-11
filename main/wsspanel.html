@@ -1060,93 +1060,23 @@ var tab_log_opts = {
 };
 //
 document.addEventListener("tab_opening",function(e) {
-	//console.info("tab_opening STARTIng. e: ",e);
-	var detail = e.detail;
-	//console.info("tab_opening",detail);
-	//
-	if( detail=="tab_log" ) {
-		tab_log_opts.visible = true;
-		//tab_log_opts.timeout_new = setTimeout(function() {logUpdate();},100);
-		//
-		/*qS("#displayLog>div").addEventListener("scroll",function(e1) {
-			if( qS("#displayLog>div").scrollHeight <= qS("#displayLog>div").offsetHeight ) {
-				console.warn("logLoad() load more... from",tab_log_opts.position);
-				logLoad();
-			}
-			else if( (qS("#displayLog>div").offsetHeight + qS("#displayLog>div").scrollTop) >= qS("#displayLog>div").scrollHeight-33 ) {
-				console.info("#displayLog scroll at end (d1)... loadng more...");
-				logLoad();
-			}
-			else {
-				console.warn("Something went wrong...");
-			}
-		});
-		logLoad();*/
-	}
-	else {
-		tab_log_opts.visible = false;
-		//clearTimeout(tab_log_opts.timeout_new);
-	}
+	console.info("tab_opening STARTIng. e: ",e);
+	//var detail = e.detail;
 });
-//
-function logUpdate() {
-	//
-	if( tab_log_opts.running_new || tab_log_opts.visible==false ) {
-		return false;
-	}
-	tab_log_opts.running_new = true;
-	//
-	wsc.sendMessage({"action":"log_view_new","fromPos":tab_log_opts.last_id},{"uid":"log_view_new"+((new Date().getTime())+random(9999,9999999)),"function":function(json) {
-	    console.info("log_view_new response",json);
-	    //
-		if( json.success==false ) {
-			tab_log_opts.running_new = false;
-			setTimeout(function() { logUpdate(); },3500);
-			return true;
-		}
-		//
-		var data=json.data;
-		for(var i=(data.length-1); i>=0; i--) {
-			if( data[i].id>tab_log_opts.last_id ) tab_log_opts.last_id = data[i].id; // save last log id
-			qS("#displayLog>div").insertAdjacentHTML('afterbegin', "<div>"+urldecode(data[i].text)+"</div>" );
-		}
-		//
-		tab_log_opts.running_new = false;
-		setTimeout(function() { logUpdate(); },3500);
-		return true;
-	}});
-}
+
 //
 function logLoad() {
+	console.warn("logLoad() STARTING. using hash",wsc.hash);
 	//
-	if( tab_log_opts.running_old || tab_log_opts.done_old ) {
-		if( tab_log_opts.done_old ) qS("#displayLog").classList.remove("updating");
-		return false;
-	}
-	
-	//
-	tab_log_opts.running_old = true;
-	tab_log_opts.running_old_try=0;
 	qS("#displayLog").classList.add("updating");
 	
 	//
-	/*wsc.sendMessage({"action":"log_view_old","fromPos":tab_log_opts.position,"async":"1"},{"uid":"log_view_old"+((new Date().getTime())+random(9999,9999999)),"function":function(json) {
-	    //
-		if( json.success==false ) {
-			console.warn("logLoad() onDone() looks we have all old posts.");
-			tab_log_opts.done_old = true;
-			tab_log_opts.running_old = false;
-			qS("#displayLog").classList.remove("updating");
-			qS("#displayLog").classList.add("done_old");
-			return true;
-		}*/
 	wsc.sendMessage({"action":"log_view","async":"1","hash":wsc.hash},{"uid":"log_view", "function":function(json) {
 	    console.info("log_view response",json);
 	    //
 		if( json.success==false ) {
 			console.warn("logLoad() onDone() looks we have all old posts.");
 			tab_log_opts.done_old = true;
-			//tab_log_opts.running_old = false;
 			qS("#displayLog").classList.remove("updating");
 			qS("#displayLog").classList.add("done_old");
 		}
@@ -1169,21 +1099,8 @@ function logLoad() {
 				}
 			}
 			//
-			//tab_log_opts.running_old = false;
 			qS("#displayLog").classList.remove("updating");
 		}
-		//
-		/*if( qS("#displayLog>div").scrollHeight <= qS("#displayLog>div").offsetHeight ) {
-			//
-			logLoad();
-		}
-		else if( (qS("#displayLog>div").offsetHeight + qS("#displayLog>div").scrollTop) >= qS("#displayLog>div").scrollHeight-33 ) {
-			//
-			logLoad();
-		}
-		else {
-			qS(".displayLogOffset").innerHTML = "Done! Or try to scroll.";
-		}*/
 		
 		return false;
 	},});
@@ -1193,11 +1110,8 @@ function logLoad() {
 //
 document.addEventListener("wss_started",function(e) {
 	//
-	//infoLoop();
-	//
 	console.info("starting async_infoLoop... ole.!");
-	
-	//wsc.sendMessage({"action":"login","hash":wsc.hash},{"uid":"login","function":function(json) {
+	//
 	wsc.sendMessage({"action":"login",},{"uid":"login","function":function(json) {
 		console.info("done login... data",json);
 		wsc.hash = json.data;
@@ -1211,6 +1125,7 @@ document.addEventListener("wss_started",function(e) {
 document.addEventListener("wss_logged",function(e) {
 	console.warn("wss_logged STARTED!",e.detail);
 	
+	//
     wsc.sendMessage({"action":"infoLoop","async":"1","hash":e.detail},{"uid":"infoLoop","function":function(json) {
 		console.warn("done async_infoLoop... data",json);
 	    qS("#displayTime>div").innerText = json.time;
@@ -1226,7 +1141,7 @@ document.addEventListener("wss_logged",function(e) {
 	},});
 	
 	//
-	/*wsc.sendMessage({"action":"wifi_view","async":"1","hash":e.detail},{"uid":"wifi_view","function":function(json) {
+	wsc.sendMessage({"action":"wifi_view","async":"1","hash":e.detail},{"uid":"wifi_view","function":function(json) {
 	    //console.info("wifi_view response",json);
 	    qS("#displayAPSSID > input").value = json.ap_ssid;
 		qS("#displayAPPWD>input").value    = json.ap_pwd;
@@ -1236,7 +1151,7 @@ document.addEventListener("wss_logged",function(e) {
 	},});
 	
 	//
-	logLoad();*/
+	//logLoad();
 	
 });
 //
