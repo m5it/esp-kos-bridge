@@ -1009,7 +1009,7 @@ static void async_task(void *arg) {
 	//
 	if     ( strcmp(resp_arg->action,"infoLoop")==0 ) {
 		//TaskHandle_t handle;
-		xTaskCreate(ws_task_infoLoop, "ws_task_infoLoop", 4048, (void*)task_id, 1, NULL);
+		xTaskCreate(ws_task_infoLoop, "ws_task_infoLoop", 4048, (void*)task_id, 2, NULL);
 		//atasks[atra_geti(task_id)].handle = handle;
 	}
 	//
@@ -1072,7 +1072,7 @@ static esp_err_t trigger_async_task(httpd_handle_t hd, int fd, char *id, char *a
 }
 //
 esp_err_t t3ch_ws_async_send(httpd_handle_t hd, int fd, char *data) {
-	printf("t3ch_ws_async_send() STARTING, fd: %i\n",fd);
+	printf("t3ch_ws_async_send() STARTING, hd: %i, fd: %i\n",hd,fd);
 	//
 	httpd_ws_frame_t ws_pkt;
     memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
