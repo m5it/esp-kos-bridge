@@ -1140,7 +1140,7 @@ function logLoad() {
 			qS("#displayLog").classList.add("done_old");
 			return true;
 		}*/
-	wsc.sendMessage({"action":"log_view","async":"1"},{"uid":"log_view", "function":function(json) {
+	wsc.sendMessage({"action":"log_view","async":"1","hash":wsc.hash},{"uid":"log_view", "function":function(json) {
 	    console.info("log_view response",json);
 	    //
 		if( json.success==false ) {
@@ -1220,13 +1220,13 @@ document.addEventListener("wss_logged",function(e) {
 	
 	//
 	wsc.sendMessage({"action":"version","async":"1","hash":e.detail},{"uid":"version","function":function(json) {
-	    //console.info("version response",json);
+	    console.info("version response",json);
 	    qS("#displayVersion>div").innerText = json.version+" "+json.version_string;
 	    return true;
 	},});
 	
 	//
-	/*wsc.sendMessage({"action":"wifi_view","async":"1"},{"uid":"wifi_view","function":function(json) {
+	/*wsc.sendMessage({"action":"wifi_view","async":"1","hash":e.detail},{"uid":"wifi_view","function":function(json) {
 	    //console.info("wifi_view response",json);
 	    qS("#displayAPSSID > input").value = json.ap_ssid;
 		qS("#displayAPPWD>input").value    = json.ap_pwd;
@@ -1236,8 +1236,8 @@ document.addEventListener("wss_logged",function(e) {
 	},});
 	
 	//
-	logLoad();
-	*/
+	logLoad();*/
+	
 });
 //
 /*window.onbeforeunload = function(e) {
