@@ -6,6 +6,8 @@ Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
 
 
 # How to start<br>
+START.) Download RELEASE if you dont think to develop.
+
 1a.) Upload to your MCU.<br>
     (Choose correct PORT for your device! (-p) )<br>
     Ex.:<br>
