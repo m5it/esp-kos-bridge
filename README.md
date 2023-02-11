@@ -53,6 +53,9 @@ Differences with ESP-IOT-Bridge are our files in main/t3ch_*...
 ![alt text](https://github.com/m5it/esp-kos-bridge/blob/main/imgs/v0.3a.png) <br>
 ![alt text](https://github.com/m5it/esp-kos-bridge/blob/main/imgs/v0.2d.png) <br>
 
+test on two browsers and cleaning of data! ole! :)
+![alt text](https://github.com/m5it/esp-kos-bridge/blob/main/imgs/v0.4dev1.png) <br>
+
 # Releases
 - Comming: v0.4 aka Rasca Pantalla
     * wss
