@@ -1102,7 +1102,7 @@ function logLoad() {
 			qS("#displayLog").classList.remove("updating");
 		}
 		//
-		wsc.sendMessage({"action":"success","hash":wsc.hash,"async":"1"});
+		//wsc.sendMessage({"action":"success","hash":wsc.hash,"async":"1"});
 		
 		return false;
 	},});
@@ -1163,7 +1163,7 @@ document.addEventListener("wss_logged",function(e) {
 	},});
 	
 	//
-	//logLoad();
+	logLoad();
 	
 });
 //

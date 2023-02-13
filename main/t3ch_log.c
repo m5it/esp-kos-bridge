@@ -107,13 +107,13 @@ int t3ch_log_gen_old(int fromPos) {
 		myUrlEncode(log[i].text,tmp,tmpsize);
 		
 		// prepare id and its length
-		char tmpid[12];
-		memset(tmpid,'\0',12);
-		sprintf(tmpid,"%i",log[i].id);
+		//char tmpid[12];
+		//memset(tmpid,'\0',12);
+		//sprintf(tmpid,"%i",log[i].id);
 		
 		//
 		char tmpresult[LOG_DATA_SIZE];
-		int tmplen = sprintf(tmpresult,"{\"id\":%s,\"text\":\"%s\"}",tmpid, tmp);
+		int tmplen = sprintf(tmpresult,"{\"id\":%i,\"text\":\"%s\"}",log[i].id, tmp);
 		
 		//
 		if( cnt==0 ) {
