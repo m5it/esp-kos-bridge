@@ -1114,7 +1114,11 @@ document.addEventListener("wss_started",function(e) {
 	//
 	console.info("starting async_infoLoop... ole.!");
 	//
-	wsc.sendMessage({"action":"login",},{"uid":"login","function":function(json) {
+	var tmpobj = {"action":"login",};
+	//if( sessionStorage.getItem("hash")!=null ) tmpobj["hash"] = sessionStorage.getItem("hash");
+	//console.warn("wss_started, going to login, tmpobj",tmpobj);
+	//
+	wsc.sendMessage(tmpobj,{"uid":"login","function":function(json) {
 		console.info("done login... data",json);
 		wsc.hash = json.data;
 		//
@@ -1126,7 +1130,11 @@ document.addEventListener("wss_started",function(e) {
 //
 document.addEventListener("wss_logged",function(e) {
 	console.warn("wss_logged STARTED!",e.detail);
-	
+	//
+	/*if( sessionStorage.getItem("hash")==null ) {
+		console.info("saving wss hash for reload if happen.",e.detail);
+		sessionStorage.setItem("hash",e.detail);
+	}*/
 	//
     wsc.sendMessage({"action":"infoLoop","async":"1","hash":e.detail},{"uid":"infoLoop","function":function(json) {
 		console.warn("done async_infoLoop... data",json);
@@ -1167,11 +1175,10 @@ document.addEventListener("wss_logged",function(e) {
 	
 });
 //
-/*window.onbeforeunload = function(e) {
+window.onbeforeunload = function(e) {
 	console.warn("User is trying to refresh page!");
-	console.warn("active lemenet: ",document.activeElement);
-	return false;
-}*/
+	wsc.sendMessage({"action":"logout","async":"1","hash":wsc.hash});
+}
 </script>
 </head>
 <body>

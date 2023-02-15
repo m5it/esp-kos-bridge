@@ -28,7 +28,8 @@ struct Log {
 };
 //
 struct Log log[LOG_SIZE]={0};
-char *log_text_arg;
+//char *log_text_arg;
+char log_text_arg[LOG_TEXT_SIZE]={0};
 //
 int t3ch_log_gen_new(int lastId) {
 	//
@@ -157,34 +158,26 @@ void t3ch_log_task(void *pt) {
 	//
 	while( true ) {
 		//
-		char *text = (char*)malloc( LOG_TEXT_SIZE+1 );
-		
+		//char *text = (char*)malloc( LOG_TEXT_SIZE+1 );
+		char text[LOG_TEXT_SIZE];
 		//
 		if( xQueueReceive( log_qh, &( text ), ( TickType_t ) 500 ) ) {
-			//printf("t3ch_log_task() d1 in the loop LOG_POS: %i, LOG_CNT: %i, LOG_CNT_DEL: %i, text(%i): %s\n",LOG_POS, LOG_CNT, LOG_CNT_DEL, strlen(text), text);
-			
-			//printf("t3ch_log_task() d3\n");
 			//
 			if( log_cnt<LOG_POS ) {
 				printf("t3ch_log_task() d4 %i - %i\n",log_cnt,LOG_POS);
 			} else {
 				//
 				if( LOG_POS>=(LOG_SIZE-1) ) {
-					//printf("t3ch_log_task() d2 running t3ch_log_del()!\n");
 					t3ch_log_del(0);
 				}
 				//
 				strcpy(log[LOG_POS].text,text);
-				//printf("t3ch_log_task() d4\n");
 				log[LOG_POS].id = log_cnt;
-				//printf("t3ch_log_task() d5\n");
 				LOG_POS++;
 				log_cnt++;
 			}
 		}
-		free( text );
-		//printf("t3ch_log_task() d7\n");
-		//printf("t3ch_log_task() out the loop, d3, LOG_POS: %i, LOG_CNT: %i\n",LOG_POS, LOG_CNT);
+		//free( text );
 	}
 }
 
@@ -208,6 +201,7 @@ int t3ch_log(const char *text, va_list args) {
 	/*if( LOG_POS>=(LOG_SIZE-1) ) {
 		t3ch_log_del(0);
 	}*/
+
 	//
 	//va_list ap;
     //va_start(ap, text);
@@ -230,8 +224,8 @@ int t3ch_log(const char *text, va_list args) {
     //-- Lets try manage async way of logging with xTaskCreate, xQueueCreate etc...
     // using queue handle: log_qh
     // using pointer structure to pass data with queue to task: *log_arg
-    log_text_arg = (char*)malloc( LOG_TEXT_SIZE+1 );
-    memset(log_text_arg,'\0',LOG_TEXT_SIZE+1);
+    //log_text_arg = (char*)malloc( LOG_TEXT_SIZE+1 );
+    //memset(log_text_arg,'\0',LOG_TEXT_SIZE+1);
     
     
     //-- Without async this kind of logging works fine.
