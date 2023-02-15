@@ -140,6 +140,7 @@ void app_main(void)
     esp_log_level_set("*", ESP_LOG_INFO);
     //
 #ifdef ENABLE_LOG
+	t3ch_log_init();
     esp_log_set_vprintf( &t3ch_log ); // set our function for logging from t3ch_log.c
     ESP_LOGI(TAG,"Enabling t3ch_log()...!");
 #endif

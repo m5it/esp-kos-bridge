@@ -230,11 +230,11 @@ bool t3ch_wifi_update_sta(char *ssid, char *pwd) {
 
 //
 void t3ch_wifi_start_ap(void) {
+	ESP_LOGI(TAG,"t3ch_wifi_start_ap() STARTING");
 	//
 	nvs_handle_t nvsh1;
 	esp_err_t err;
 	//
-	bool success = false;
 	char SSID[32] = {0};
 	char PWD[64] = {0};
 	//
@@ -246,22 +246,14 @@ void t3ch_wifi_start_ap(void) {
 		char nvsout[64]={0};
 		//
 		err = t3ch_nvs_get_str(nvsh1, "ssid",&SSID);
-		printf("t3ch_wifi_start_ap() ssid: %s\n",SSID);
-		if( err==ESP_OK ) {
-			//strncpy(SSID, (uint8_t*)nvsout, strlen(nvsout)+1);
-			printf("t3ch_wifi_start_ap() ssid looks ok?!\n");
-			success = true;
-		}
+		ESP_LOGI(TAG,"t3ch_wifi_start_ap() err: %i, ssid: %s\n",err,SSID);
 		//
 		err = t3ch_nvs_get_str(nvsh1, "pwd",&PWD);
-		printf("t3ch_wifi_start_ap() pwd: %s\n",PWD);
-		if( err==ESP_OK ) {
-			//strncpy(PWD, (uint8_t*)nvsout, strlen(nvsout)+1);
-		}
+		ESP_LOGI(TAG,"t3ch_wifi_start_ap() pwd: %s\n",PWD);
 	}
-	else printf("t3ch_wifi_start_ap() open of storage nvs failed.\n");
+	else ESP_LOGI(TAG,"t3ch_wifi_start_ap() open of storage nvs failed.\n");
 	//
-    esp_bridge_wifi_set(WIFI_MODE_AP, (success?SSID:AP_SSID), (success?(strlen(PWD)>0?PWD:""):AP_PWD), NULL);
+    esp_bridge_wifi_set(WIFI_MODE_AP, (strlen(SSID)>0?SSID:AP_SSID), (strlen(SSID)>0?(strlen(PWD)>0?PWD:""):AP_PWD), NULL);
     //
     //
     nvs_close(nvsh1);

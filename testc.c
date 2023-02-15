@@ -332,6 +332,23 @@ void ltrim(char *in, int len, char *out) {
 }
 
 void main() {
+	struct pstru {
+		char buf[20];
+	};
+	printf("d1\n");
+	//struct pstru *apstru[10];
+	struct pstru *apstru = malloc(10);
+	int ne = sizeof(apstru) / sizeof(apstru[0]);
+	int ne1 = sizeof(apstru[0]->buf) / sizeof(apstru[0]->buf[0]);
+	printf("d2: %i, %i\n",ne,ne1);
+	char b[]="hola";
+	apstru[0] = malloc(20);
+	memcpy(apstru[0]->buf,b,4);
+	printf("d3: %s\n",apstru[0]->buf);
+	free(apstru[0]->buf);
+	printf("d4\n");
+	free(&apstru);
+	printf("d5\n");
 	// fucking ltrim!!!
 	char xxx[] = "Holla!";
 	//char *xxx = (char*)malloc(128);
