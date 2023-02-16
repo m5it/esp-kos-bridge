@@ -36,7 +36,7 @@ int t3ch_log_gen_new(int lastId) {
 	int startPos = LOG_POS-1;
 	//
     if( log[startPos].id<=lastId ) {
-		printf("t3ch_log_gen_old() t3ch_log_gen_new() looks there is no new data. lastId: %i vs: %i, using startPos: %i\n",lastId, log[startPos].id, startPos);
+		//printf("t3ch_log_gen_old() t3ch_log_gen_new() looks there is no new data. lastId: %i vs: %i, using startPos: %i\n",lastId, log[startPos].id, startPos);
 		return 0;
 	}
 	//
@@ -69,19 +69,19 @@ int t3ch_log_gen_new(int lastId) {
 		//
 		if( cnt==0 ) {
 			jsonlen += sprintf(LOG_DATA+jsonlen,"%s",tmpresult);
-			printf("t3ch_log_gen_old() t3ch_log_gen_new() d0 at: %i, id: %i, jsonlen: %i, lastId: %i\n",i,log[i].id,jsonlen,lastId);
+			printf("t3ch_log_gen_new() d0 at: %i, id: %i, jsonlen: %i, lastId: %i\n",i,log[i].id,jsonlen,lastId);
 		}
 		else if( log[i].id<=lastId ) {
-			printf("t3ch_log_gen_old() t3ch_log_gen_new() d3, lastId jsonlen: %i\n",jsonlen);
+			printf("t3ch_log_gen_new() d3, lastId jsonlen: %i\n",jsonlen);
 			break;
 		}
 		else if( (jsonlen+tmplen)>=LOG_DATA_SIZE ) {
-			printf("t3ch_log_gen_old() t3ch_log_gen_new() d1 at: %i, id: %i, break jsonlen: %i, lastId: %i\n",i,log[i].id,jsonlen,lastId);
+			printf("t3ch_log_gen_new() d1 at: %i, id: %i, break jsonlen: %i, lastId: %i\n",i,log[i].id,jsonlen,lastId);
 			break;
 		}
 		else {
 			jsonlen += sprintf(LOG_DATA+jsonlen,",%s",tmpresult);
-			printf("t3ch_log_gen_old() t3ch_log_gen_new() d2, add jsonlen: %i\n",jsonlen);
+			printf("t3ch_log_gen_new() d2, add jsonlen: %i\n",jsonlen);
 		}
 		cnt++;
 	}
