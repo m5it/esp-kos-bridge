@@ -30,6 +30,7 @@ struct Log {
 struct Log log[LOG_SIZE]={0};
 //char *log_text_arg;
 char log_text_arg[LOG_TEXT_SIZE]={0};
+SemaphoreHandle_t xSemaphore;
 //
 int t3ch_log_gen_new(int lastId) {
 	//
@@ -47,15 +48,15 @@ int t3ch_log_gen_new(int lastId) {
 	jsonlen = sprintf(LOG_DATA+jsonlen,"[");
 	for(int i=startPos; i>=0; i--) {
 		if((i-1)>=0 && log[i-1].id>lastId) {
-			printf("t3ch_log_gen_new() continue at: %i, id: %i, id-1: %i, lastId: %i\n",i,log[i].id,log[i-1].id,lastId);
+			//printf("t3ch_log_gen_new() continue at: %i, id: %i, id-1: %i, lastId: %i\n",i,log[i].id,log[i-1].id,lastId);
 			continue;
 		//	continue;
 		}
-		if(log[i].id<=lastId) {
+		/*else if(log[i].id<=lastId) {
 			printf("t3ch_log_gen_new() BREAK! id <= lastId: %i\n",lastId);
 			break;
 		//	continue;
-		}
+		}*/
 		// encode text
 		int tmpsize = myUrlEncodeSize(log[i].text);
 		char tmp[tmpsize+1];
@@ -69,19 +70,19 @@ int t3ch_log_gen_new(int lastId) {
 		//
 		if( cnt==0 ) {
 			jsonlen += sprintf(LOG_DATA+jsonlen,"%s",tmpresult);
-			printf("t3ch_log_gen_new() d0 at: %i, id: %i, jsonlen: %i, lastId: %i\n",i,log[i].id,jsonlen,lastId);
+			//printf("t3ch_log_gen_new() d0 at: %i, id: %i, jsonlen: %i, lastId: %i\n",i,log[i].id,jsonlen,lastId);
 		}
 		else if( log[i].id<=lastId ) {
-			printf("t3ch_log_gen_new() d3, lastId jsonlen: %i\n",jsonlen);
+			//printf("t3ch_log_gen_new() d3, lastId jsonlen: %i\n",jsonlen);
 			break;
 		}
 		else if( (jsonlen+tmplen)>=LOG_DATA_SIZE ) {
-			printf("t3ch_log_gen_new() d1 at: %i, id: %i, break jsonlen: %i, lastId: %i\n",i,log[i].id,jsonlen,lastId);
+			//printf("t3ch_log_gen_new() d1 at: %i, id: %i, break jsonlen: %i, lastId: %i\n",i,log[i].id,jsonlen,lastId);
 			break;
 		}
 		else {
 			jsonlen += sprintf(LOG_DATA+jsonlen,",%s",tmpresult);
-			printf("t3ch_log_gen_new() d2, add jsonlen: %i\n",jsonlen);
+			//printf("t3ch_log_gen_new() d2, add jsonlen: %i\n",jsonlen);
 		}
 		cnt++;
 	}
@@ -161,28 +162,39 @@ void t3ch_log_task(void *pt) {
 		//char *text = (char*)malloc( LOG_TEXT_SIZE+1 );
 		char text[LOG_TEXT_SIZE];
 		//
-		if( xQueueReceive( log_qh, &( text ), ( TickType_t ) 500 ) ) {
-			//
-			if( log_cnt<LOG_POS ) {
-				printf("t3ch_log_task() d4 %i - %i\n",log_cnt,LOG_POS);
-			} else {
+		//if( xSemaphoreTake( xSemaphore, 10 ) == pdTRUE ) {
+			if( xQueueReceive( log_qh, &( text ), ( TickType_t ) 500 ) ) {
 				//
-				if( LOG_POS>=(LOG_SIZE-1) ) {
-					t3ch_log_del(0);
+				if( log_cnt<LOG_POS ) {
+					printf("t3ch_log_task() d4 %i - %i\n",log_cnt,LOG_POS);
+				} else {
+					//
+					if( LOG_POS>=(LOG_SIZE-1) ) {
+						t3ch_log_del(0);
+					}
+					//
+					strcpy(log[LOG_POS].text,text);
+					log[LOG_POS].id = log_cnt;
+					LOG_POS++;
+					log_cnt++;
 				}
-				//
-				strcpy(log[LOG_POS].text,text);
-				log[LOG_POS].id = log_cnt;
-				LOG_POS++;
-				log_cnt++;
 			}
-		}
+		//	xSemaphoreGive( xSemaphore );
+		//}
 		//free( text );
 	}
 }
 
 //
 void t3ch_log_init() {
+	//
+	/*xSemaphore = xSemaphoreCreateBinary();
+	if( xSemaphore!=NULL ) {
+		ESP_LOGI(TAG,"t3ch_log_init() xSemaphor created succesfully!\n");
+		if( xSemaphoreGive( xSemaphore ) !=pdTRUE ) {
+			ESP_LOGI(TAG,"t3ch_log_init() xSemaphor xSemaphorGive() Failed!\n");
+		}
+	}*/
 	//
 	//log_qh = xQueueCreate( 10, sizeof( struct AMessage * ) );
 	log_qh = xQueueCreate( 10, sizeof( log_text_arg ));

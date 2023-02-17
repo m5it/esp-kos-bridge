@@ -999,8 +999,8 @@ struct async_task_resp_arg atasks[ATRA_MAX]={0};
 
 //--
 //
-#define WUA_MAX_LAG 10 // 10s
-#define WUA_PING_PER 5 // send PING every 5s
+#define WUA_MAX_LAG 20 // 10s
+#define WUA_PING_PER 10 // send PING every 5s
 #define WUA_MAX 10
 int wua_pos = 0;
 //
@@ -1362,11 +1362,12 @@ void ws_task_infoLoop(void *arg) {
 		tmptask = atasks[tmpid];
 		// get hd&fd
 		int wuai = wua_geti(tmptask.hash);
-		int tmphd = awuausers[wuai].hd;
-		int tmpfd = awuausers[wuai].fd;
-		//
-		json_infoLoop(tmptask.action, tmptask.uid, res);
-	    if( xSemaphoreTake( awuausers[wuai].xSemaphoreSend, 10 ) == pdTRUE ) {
+		if( xSemaphoreTake( awuausers[wuai].xSemaphoreSend, (100 / portTICK_PERIOD_MS) ) == pdTRUE ) {
+			int tmphd = awuausers[wuai].hd;
+			int tmpfd = awuausers[wuai].fd;
+			//
+			json_infoLoop(tmptask.action, tmptask.uid, res);
+	    
 		    esp_err_t ret = t3ch_ws_async_send(wuai, tmphd, tmpfd, res);
 		    if( ret!=ESP_OK ) {
 				ESP_LOGI(TAG,"ws_task_infoLoop() send failed, tmphd: %i, tmpfd: %i\n",tmphd,tmpfd);
@@ -1374,9 +1375,10 @@ void ws_task_infoLoop(void *arg) {
 			}
 			else {
 				awuausers[wuai].last_ts = t3ch_time_ts();
-				xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 			}
+			xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 		}
+		
 	    vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
 	atra_del(task_id);
@@ -1405,8 +1407,8 @@ void ws_task_version(void *arg) {
 		}
 		else {
 			awuausers[wuai].last_ts = t3ch_time_ts();
-			xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 		}
+		xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 	}
 	//
 	atra_del(task_id);
@@ -1435,8 +1437,8 @@ void ws_task_wifiview(void *arg) {
 		}
 		else {
 			awuausers[wuai].last_ts = t3ch_time_ts();
-			xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 		}
+		xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 	}
 	//
 	atra_del(task_id);
@@ -1445,60 +1447,63 @@ void ws_task_wifiview(void *arg) {
 }
 //
 void ws_task_log(void *arg) {
+	ESP_LOGI(TAG,"ws_task_log() STARTING\n");
 	//
 	int task_id = (int*)arg;
 	int tmpid = atra_geti(task_id);
 	struct async_task_resp_arg tmptask = atasks[tmpid];
 	
 	//
-	int fromPos=0, lines = 0, lastid = 0;
+	int fromPos=0, lines = 1, lastid = 0;
 	char res[512]={0};
-	
+	int wuai  = wua_geti(tmptask.hash);
 	//--
 	// Start with old log of lines
 	//lines = json_logold(tmptask.action, tmptask.uid, res, fromPos);
 	//fromPos += lines;
 	do {
-		memset(res,'\0',512);
-		lines = json_logold(tmptask.action, tmptask.uid, res, fromPos);
 		//
-		if( lines>0 ) {
-			fromPos += lines;
-			// get hd&fd
-			int wuai  = wua_geti(tmptask.hash);
-			int tmphd = awuausers[wuai].hd;
-			int tmpfd = awuausers[wuai].fd;
-		    //
-		    if( xSemaphoreTake( awuausers[wuai].xSemaphoreSend, 10 ) == pdTRUE ) {
+	    if( xSemaphoreTake( awuausers[wuai].xSemaphoreSend, 10 ) == pdTRUE ) {
+			memset(res,'\0',512);
+			lines = json_logold(tmptask.action, tmptask.uid, res, fromPos);
+			//
+			if( lines>0 ) {
+				fromPos += lines;
+				// get hd&fd
+				wuai  = wua_geti(tmptask.hash);
+				int tmphd = awuausers[wuai].hd;
+				int tmpfd = awuausers[wuai].fd;
+			    
 			    esp_err_t ret = t3ch_ws_async_send(wuai, tmphd, tmpfd, res);
 			    if( ret!=ESP_OK ) {
-					printf("ws_task_log() send failed d1.\n");
+					ESP_LOGI(TAG,"ws_task_log() oldlog send failed\n");
+					xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 					break;
 				}
 				else {
 					awuausers[wuai].last_ts = t3ch_time_ts();
-					xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 				}
+				
+				int tmpid = json_log_lastid( res );
+				if( tmpid==0 ) {
+					ESP_LOGI(TAG,"ws_task_log() breaking... lastid: %i",lastid);
+					xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
+					break;
+				}
+				if( tmpid>lastid ) {
+				//	printf("ws_task_log() setting new tmpid: %i, old lastid: %i\n",tmpid,lastid);
+					lastid = tmpid;
+				}
+				//else {
+				//	printf("ws_task_log() looks lastid: %i is bigger than tmpid: %i!\n",lastid,tmpid);
+				//}
 			}
-			
-			//printf("ws_task_log() d1 trying to parse lastid...\n");
-			int tmpid = json_log_lastid( res );
-			if( tmpid==0 ) {
-			//	printf("ws_task_log() d1 breaking... lastid: %i\n", lastid);
-				break;
-			}
-			if( tmpid>lastid ) {
-			//	printf("ws_task_log() setting new tmpid: %i, old lastid: %i\n",tmpid,lastid);
-				lastid = tmpid;
-			}
-			//else {
-			//	printf("ws_task_log() looks lastid: %i is bigger than tmpid: %i!\n",lastid,tmpid);
-			//}
+			xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 		}
 	} while( lines>0 );
 	
 	// get hd&fd
-	int wuai = wua_geti(tmptask.hash);
+	wuai = wua_geti(tmptask.hash);
 	int tmphd = awuausers[wuai].hd;
 	int tmpfd = awuausers[wuai].fd;
 	
@@ -1515,43 +1520,51 @@ void ws_task_log(void *arg) {
 		}
 		else {
 			awuausers[wuai].last_ts = t3ch_time_ts();
-			xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 		}
+		xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 	}
-	
+	else {
+		ESP_LOGI(TAG,"ws_task_log() middle fail... lastid: %i",lastid);
+		xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
+	}
 	//--
 	// Continue with new log lines (infinite) or until browser refresh or client lose connection etc.
 	while( true ) {
-		memset(res,'\0',512);
-		lines = json_lognew(tmptask.action, tmptask.uid, res, lastid);
-		
 		//
-		if( lines>0 ) {
-			// get hd&fd
-			wuai = wua_geti(tmptask.hash);
-			tmphd = awuausers[wuai].hd;
-			tmpfd = awuausers[wuai].fd;
+		if( xSemaphoreTake( awuausers[wuai].xSemaphoreSend, 10 ) == pdTRUE ) {
+			memset(res,'\0',512);
+			lines = json_lognew(tmptask.action, tmptask.uid, res, lastid);
+			
 			//
-			if( xSemaphoreTake( awuausers[wuai].xSemaphoreSend, 10 ) == pdTRUE ) {
+			if( lines>0 ) {
+				// get hd&fd
+				wuai = wua_geti(tmptask.hash);
+				tmphd = awuausers[wuai].hd;
+				tmpfd = awuausers[wuai].fd;
+				
 			    esp_err_t ret = t3ch_ws_async_send(wuai, tmphd, tmpfd, res);
 			    if( ret!=ESP_OK ) {
-					ESP_LOGI(TAG,"ws_task_log() send failed d2.\n");
+					ESP_LOGI(TAG,"ws_task_log() newlog send failed.\n");
+					xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 					break;
 				}
 				else {
 					awuausers[wuai].last_ts = t3ch_time_ts();
-					xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
+				}
+				
+				int tmpid = json_log_lastid( res );
+				if( tmpid>lastid ) {
+					lastid = tmpid;
 				}
 			}
-			
-			int tmpid = json_log_lastid( res );
-			if( tmpid>lastid ) {
-				lastid = tmpid;
+			else {
+				vTaskDelay(1000 / portTICK_PERIOD_MS);
 			}
+			xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 		}
-		
-		if( lines<=0 ) {
-			vTaskDelay(1000 / portTICK_PERIOD_MS);
+		else {
+			ESP_LOGI(TAG,"ws_task_log() newlog semaphor failed.\n");
+			xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 		}
 	}
 	//
@@ -1582,8 +1595,12 @@ void ws_task_login(void *arg) {
 		}
 		else {
 			awuausers[wuai].last_ts = t3ch_time_ts();
-			xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 		}
+		xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
+	}
+	else {
+		ESP_LOGI(TAG,"ws_task_login() semaphor failed.\n");
+		//xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 	}
 	//vTaskDelay(1000 / portTICK_PERIOD_MS);
 	//
@@ -1747,6 +1764,8 @@ static esp_err_t wss_handler(httpd_req_t *req) {
 	if      (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"login") == 0) {
 		ESP_LOGI(TAG,"wss_handler() LOGIN STARTED!");
 		char tmphash[8]={0};
+		
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
 		
 		//
 		if( strlen(hash)>0 && wua_geti(hash)>=0 ) {
