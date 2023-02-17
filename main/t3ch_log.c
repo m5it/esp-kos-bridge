@@ -18,7 +18,7 @@ int LOG_CNT_DEL=0;
 //
 int LOG_POS = 0;              // position of log array
 int LOG_CNT = 0;              // increase for id
-char LOG_DATA[LOG_DATA_SIZE]; // generated and auto incremented with t3ch_log_gen(..)
+char LOG_DATA[LOG_DATA_SIZE+1]; // generated and auto incremented with t3ch_log_gen(..)
 //int LAST_ID = 0;
 QueueHandle_t log_qh;
 //
@@ -41,8 +41,8 @@ int t3ch_log_gen_new(int lastId) {
 		return 0;
 	}
 	//
-	LOG_DATA[LOG_DATA_SIZE];
-	memset(LOG_DATA,'\0',LOG_DATA_SIZE);
+	LOG_DATA[LOG_DATA_SIZE+1];
+	memset(LOG_DATA,'\0',LOG_DATA_SIZE+1);
 	int jsonlen=0, cnt=0;
 	// generate json array of objects
 	jsonlen = sprintf(LOG_DATA+jsonlen,"[");
@@ -64,7 +64,7 @@ int t3ch_log_gen_new(int lastId) {
 		myUrlEncode(log[i].text,tmp,tmpsize);
 		
 		//
-		char tmpresult[LOG_DATA_SIZE];
+		char tmpresult[LOG_DATA_SIZE+1]={0};
 		int tmplen = sprintf(tmpresult,"{\"id\":%i,\"text\":\"%s\"}",log[i].id, tmp);
 		
 		//
@@ -100,8 +100,8 @@ int t3ch_log_gen_old(int fromPos) {
 		return 0;
 	}
 	printf("t3ch_log_gen_old() STARTING, startPos: %i\n",startPos);
-	LOG_DATA[LOG_DATA_SIZE];
-	memset(LOG_DATA,'\0',LOG_DATA_SIZE);
+	LOG_DATA[LOG_DATA_SIZE+1];
+	memset(LOG_DATA,'\0',LOG_DATA_SIZE+1);
 	int jsonlen=0, cnt=0;
 	// generate json array of objects
 	jsonlen = sprintf(LOG_DATA+jsonlen,"[");
@@ -113,7 +113,7 @@ int t3ch_log_gen_old(int fromPos) {
 		myUrlEncode(log[i].text,tmp,tmpsize);
 		
 		//
-		char tmpresult[LOG_DATA_SIZE];
+		char tmpresult[LOG_DATA_SIZE+1]={0};
 		int tmplen = sprintf(tmpresult,"{\"id\":%i,\"text\":\"%s\"}",log[i].id, tmp);
 		
 		//

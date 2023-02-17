@@ -1202,9 +1202,16 @@ void atra_del(int id) {
 void atra_del_hash(char *hash) {
 	ESP_LOGI(TAG,"atra_del_hash() STARTED, hash: %s, atra_pos: %i\n",hash,atra_pos);
 	bool swap=false;
+	bool done=false;
+	while(!done) {
 	for(int i=0; i<ATRA_MAX; i++) {
 		//atasks[i] = (atasks[i].id==id?atasks[i+1]:atasks[i]);
-		if( atasks[i].hash==NULL ) {
+		if( atra_pos<=0 ) {
+			ESP_LOGI(TAG,"atra_del_hash() done d1");
+			done=true;
+			break;
+		}
+		else if( atasks[i].hash==NULL ) {
 			ESP_LOGI(TAG,"atra_del_hash() continuing, hash is NULL!\n");
 			continue;
 		}
@@ -1219,15 +1226,22 @@ void atra_del_hash(char *hash) {
 			vTaskDelete( handle );*/
 			ESP_LOGI(TAG,"atra_del_hash() Deleting task: %s\n",atasks[i].action);
 			atra_del( atasks[i].id );
+			break;
 		}
-		else if( swap ) {
+		else if( i>=(ATRA_MAX-1) ) {
+			ESP_LOGI(TAG,"atra_del_hash() done d2");
+			done=true;
+			break;
+		}
+		/*else if( swap ) {
 			ESP_LOGI(TAG,"atra_del_hash() swap.\n");
 			atasks[i] = atasks[i+1];
 		}
 		else {
 			ESP_LOGI(TAG,"atra_del_hash() else.\n");
 			atasks[i] = atasks[i];
-		}
+		}*/
+	}
 	}
 	ESP_LOGI(TAG,"atra_del_hash() DONE, atra_pos: %i\n",atra_pos);
 }
@@ -1297,7 +1311,7 @@ void wua_del(int pos) {
 	//printf("wua_del() STARTED, pos: %i, wua_pos: %i\n",pos,wua_pos);
 	for(int i=0; i<wua_pos; i++) {
 		if( i==pos ) {
-			//ESP_LOGI(TAG,"wua_del() at: %i, hash: %s\n", i, awuausers[i].id);
+			ESP_LOGI(TAG,"wua_del() at: %i, hash: %s\n", i, awuausers[i].id);
 			// remove all atra rows
 			atra_del_hash( awuausers[i].id );
 			// skip row
