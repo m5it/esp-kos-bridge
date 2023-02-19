@@ -1140,13 +1140,6 @@ document.addEventListener("wss_logged",function(e) {
 		console.warn("done async_infoLoop... data",json);
 	    qS("#displayTime>div").innerText = json.time;
 	    qS("#displayFree>div").innerText = json.free;
-	    //
-	    /*wsc.sendMessage({"action":"pong","hash":wsc.hash,"async":"1"},{"uid":"PONG_infoLoop","function":function(json) {
-			console.info("PONG_infoLoop response",json);
-			return true;
-		},});*/
-		//wsc.sendMessage({"action":"success","hash":wsc.hash,"async":"1"});
-	    //return true;
 	},});
 	
 	//
@@ -1171,7 +1164,7 @@ document.addEventListener("wss_logged",function(e) {
 	},});
 	
 	//
-	logLoad();
+	//logLoad();
 	
 });
 //
