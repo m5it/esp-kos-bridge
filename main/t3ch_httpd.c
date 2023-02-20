@@ -174,25 +174,25 @@ int json_lognew(char *action, char *uid, char *out, int lastId) {
 }
 //
 int json_log_lastid( char *strjson ) {
-	printf("json_log_lastid() STARTING!\n");
+	//printf("json_log_lastid() STARTING!\n");
 	int lastid = 0;
 	cJSON *ary = cJSON_Parse( strjson );
 	cJSON *dat = cJSON_GetObjectItemCaseSensitive(ary,"data");
 	int lines = cJSON_GetArraySize( dat );
-	printf("json_log_lastid()  num lines: %i\n", lines);
+	//printf("json_log_lastid()  num lines: %i\n", lines);
 	
 	for(int i=0; i<lines; i++) {
 		cJSON *obj   = cJSON_GetArrayItem(dat,i);
 		cJSON *objID = cJSON_GetObjectItemCaseSensitive(obj,"id");
 		char *cid    = cJSON_Print( objID );
 		int tmpid = getInt( cid );
-		printf("json_log_lastid() got tmpid: %i\n", tmpid);
+		//printf("json_log_lastid() got tmpid: %i\n", tmpid);
 		free(cid);
 		if     ( tmpid>lastid ) lastid=tmpid;
 		else if( tmpid<lastid ) break;
 	}
 	cJSON_Delete(ary);
-	printf("json_log_lastid() DONE lastid: %i\n", lastid);
+	//printf("json_log_lastid() DONE lastid: %i\n", lastid);
 	return lastid;
 }
 
@@ -1057,10 +1057,10 @@ static void async_task(void *arg) {
 	else if( strcmp(resp_arg->action,"wifi_view")==0 ) {
 		xTaskCreate(ws_task_wifiview, "ws_task_wifiview", 4048, (void*)wssa, 4, &awuausers[wuai].atasks[ atra_geti(awuausers[wuai].atasks, atra_id) ].handle);
 	}
-	/*//
+	//
 	else if( strcmp(resp_arg->action,"log_view")==0 ) {
-		xTaskCreate(ws_task_log, "ws_task_log", 4048, (void*)task_id, 2, &atasks[atra_geti(task_id)].handle);
-	}*/
+		xTaskCreate(ws_task_log, "ws_task_log", 4048, (void*)wssa, 2, &awuausers[wuai].atasks[ atra_geti(awuausers[wuai].atasks, atra_id) ].handle);
+	}
 	//
 	else if( strcmp(resp_arg->action,"ping")==0 ) {
 		xTaskCreate(ws_task_ping, "ws_task_ping", 4048, (void*)wssa, 1, &awuausers[wuai].atasks[ atra_geti(awuausers[wuai].atasks, atra_id) ].handle);
@@ -1195,7 +1195,6 @@ void atra_del(struct async_task_resp_arg *atasks, int id) {
 			wuai           = wua_geti(atasks[i].hash);
 			ESP_LOGI(TAG,"atra_del() DELETING HANDLE task at: %i, action: %s, atra_pos: %i",i, atasks[i].action, awuausers[wuai].atra_pos);
 			xSemaphoreAtra = awuausers[wuai].xSemaphoreAtra;
-			//vTaskDelete( atasks[i].handle );
 			xSemaphoreTake( xSemaphoreAtra, 10 );
 			awuausers[wuai].atra_pos -= 1;
 			handle = awuausers[wuai].atasks[i].handle;
@@ -1207,7 +1206,6 @@ void atra_del(struct async_task_resp_arg *atasks, int id) {
 		ESP_LOGI(TAG,"atra_del() setting xSemaphorGive, wuai: %i, atra_pos: %i",wuai, awuausers[wuai].atra_pos);
 		xSemaphoreGive( xSemaphoreAtra );
 		vTaskDelete(handle);
-		//awuausers[wuai].atra_pos -= 1;
 	}
 	ESP_LOGI(TAG,"atra_del() DONE");
 }
@@ -1440,23 +1438,20 @@ void ws_task_wifiview(void *arg) {
 	free(wssa);
 	vTaskDelete(NULL);
 }
-/*
+
 //
 void ws_task_log(void *arg) {
 	ESP_LOGI(TAG,"ws_task_log() STARTING\n");
-	//
-	int task_id = (int*)arg;
-	int tmpid = atra_geti(task_id);
-	struct async_task_resp_arg tmptask = atasks[tmpid];
+	struct wss_arg *wssa = (struct wss_arg*)arg;
+	ESP_LOGI(TAG,"ws_task_log() STARTING with atra_id: %i\n",wssa->atra_id);
+	int tmpid = atra_geti(wssa->wssua.atasks, wssa->atra_id);
+	struct async_task_resp_arg tmptask = wssa->wssua.atasks[tmpid];
 	
 	//
 	int fromPos=0, lines = 1, lastid = 0;
 	char res[512]={0};
 	int wuai  = wua_geti(tmptask.hash);
-	//--
-	// Start with old log of lines
-	//lines = json_logold(tmptask.action, tmptask.uid, res, fromPos);
-	//fromPos += lines;
+	//
 	do {
 		//
 	    if( xSemaphoreTake( awuausers[wuai].xSemaphoreSend, 10 ) == pdTRUE ) {
@@ -1465,12 +1460,7 @@ void ws_task_log(void *arg) {
 			//
 			if( lines>0 ) {
 				fromPos += lines;
-				// get hd&fd
-				wuai  = wua_geti(tmptask.hash);
-				int tmphd = awuausers[wuai].hd;
-				int tmpfd = awuausers[wuai].fd;
-			    
-			    esp_err_t ret = t3ch_ws_async_send(tmphd, tmpfd, res);
+			    esp_err_t ret = t3ch_ws_async_send(wssa->wssua.hd, wssa->wssua.fd, res);
 			    if( ret!=ESP_OK ) {
 					ESP_LOGI(TAG,"ws_task_log() oldlog send failed\n");
 					xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
@@ -1490,18 +1480,10 @@ void ws_task_log(void *arg) {
 				//	printf("ws_task_log() setting new tmpid: %i, old lastid: %i\n",tmpid,lastid);
 					lastid = tmpid;
 				}
-				//else {
-				//	printf("ws_task_log() looks lastid: %i is bigger than tmpid: %i!\n",lastid,tmpid);
-				//}
 			}
 			xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 		}
 	} while( lines>0 );
-	
-	// get hd&fd
-	wuai = wua_geti(tmptask.hash);
-	int tmphd = awuausers[wuai].hd;
-	int tmpfd = awuausers[wuai].fd;
 	
 	//--
 	// Notify client to switch between old and new log data
@@ -1510,7 +1492,7 @@ void ws_task_log(void *arg) {
 	sprintf(res,"{\"success\":false,\"action\":\"%s\",\"uid\":\"%s\"}",tmptask.action, tmptask.uid);
     
     if( xSemaphoreTake( awuausers[wuai].xSemaphoreSend, 10 ) == pdTRUE ) {
-	    esp_err_t ret = t3ch_ws_async_send(tmphd, tmpfd, res);
+	    esp_err_t ret = t3ch_ws_async_send(wssa->wssua.hd, wssa->wssua.fd, res);
 	    if( ret!=ESP_OK ) {
 			ESP_LOGI(TAG,"ws_task_log() send failed d3.\n");
 		}
@@ -1519,10 +1501,7 @@ void ws_task_log(void *arg) {
 		}
 		xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 	}
-	else {
-		ESP_LOGI(TAG,"ws_task_log() middle fail... lastid: %i",lastid);
-		xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
-	}
+	
 	//--
 	// Continue with new log lines (infinite) or until browser refresh or client lose connection etc.
 	while( true ) {
@@ -1535,10 +1514,8 @@ void ws_task_log(void *arg) {
 			if( lines>0 ) {
 				// get hd&fd
 				wuai = wua_geti(tmptask.hash);
-				tmphd = awuausers[wuai].hd;
-				tmpfd = awuausers[wuai].fd;
 				
-			    esp_err_t ret = t3ch_ws_async_send(tmphd, tmpfd, res);
+			    esp_err_t ret = t3ch_ws_async_send(wssa->wssua.hd, wssa->wssua.fd, res);
 			    if( ret!=ESP_OK ) {
 					ESP_LOGI(TAG,"ws_task_log() newlog send failed.\n");
 					xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
@@ -1558,16 +1535,12 @@ void ws_task_log(void *arg) {
 			}
 			xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 		}
-		else {
-			ESP_LOGI(TAG,"ws_task_log() newlog semaphor failed.\n");
-			xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
-		}
 	}
 	//
-	atra_del(task_id);
-	ESP_LOGI(TAG,"ws_task_log() DONE\n");
+	atra_del(wssa->wssua.atasks, wssa->atra_id);
+	free(wssa);
 	vTaskDelete(NULL);
-}*/
+}
 
 //
 void ws_task_login(void *arg) {
@@ -1748,37 +1721,10 @@ static esp_err_t wss_handler(httpd_req_t *req) {
 		ESP_LOGI(TAG,"wss_handler() LOGIN STARTED!");
 		char tmphash[8]={0};
 		
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		//vTaskDelay(1000 / portTICK_PERIOD_MS);
 		
 		//
-		if( strlen(hash)>0 && wua_geti(hash)>=0 ) {
-			ESP_LOGI(TAG,"wss_handler() LOGIN Failed, user exists, hash: %s! Removing user and reinserting...\n",hash);
-			wua_del( wua_geti(hash) );
-			//
-			if( !wua_add( req, tmphash ) ) {
-				ESP_LOGI(TAG,"wss_handler() LOGIN Failed (d2)!\n");
-				char res[128]={0};
-				sprintf(res,"{\"success\":false,\"action\":\"%s\",\"uid\":\"%s\"}",tmpaction,tmpuid);
-				ret = t3ch_ws_send(req,res);
-			}
-			else {
-				ESP_LOGI(TAG,"wss_handler() LOGIN Success (d2), hash: %s\n",tmphash);
-				char res[128]={0};
-				sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"data\":\"%s\"}",tmpaction,tmpuid,tmphash);
-				//
-				int userAt = wua_geti( tmphash );
-				if( userAt<0 ) {
-					ESP_LOGI(TAG,"wss_handler() LOGIN Failed! userAt: %i\n", userAt);
-					ret = trigger_async_task(req->handle, httpd_req_to_sockfd(req), tmphash, "fail", tmpuid);
-				}
-				else {
-					ESP_LOGI(TAG, "wss_handler() LOGIN continue, hash: %s",tmphash);
-					awuausers[userAt].last_ts = t3ch_time_ts();
-					ret = trigger_async_task(req->handle, httpd_req_to_sockfd(req), tmphash, "login", tmpuid);
-				}
-			}
-		}
-		else if( !wua_add( req, tmphash ) ) {
+		if( !wua_add( req, tmphash ) ) {
 			ESP_LOGI(TAG,"wss_handler() LOGIN Failed (d1)!\n");
 			char res[128]={0};
 			sprintf(res,"{\"success\":false,\"action\":\"%s\",\"uid\":\"%s\"}",tmpaction,tmpuid);
@@ -1819,16 +1765,12 @@ static esp_err_t wss_handler(httpd_req_t *req) {
 		ESP_LOGI(TAG,"wss_handler() PONG STARTED!");
 		int userAt = wua_geti( hash );
 		if( userAt<0 ) {
-			//ret = trigger_async_task(req->handle, httpd_req_to_sockfd(req), hash, "fail", tmpuid);
 			ret = ESP_FAIL;
 		}
 		else if( objASYNC ) {
-			//awuausers[userAt].hd      = req->handle; // update handle!
-			//awuausers[userAt].fd      = httpd_req_to_sockfd(req);
 			awuausers[userAt].last_ts = t3ch_time_ts();
 			ESP_LOGI(TAG,"wss_handler() pong at: %i, hd: %i, fd: %i new user ts: %i\n",userAt, awuausers[userAt].hd, awuausers[userAt].fd,  awuausers[userAt].last_ts);
 			ret = ESP_OK;
-			//ret = trigger_async_task(req->handle, httpd_req_to_sockfd(req), hash, "pong", tmpuid);
 		}
 	}
 	//
@@ -1839,8 +1781,6 @@ static esp_err_t wss_handler(httpd_req_t *req) {
 			ret = trigger_async_task(req->handle, httpd_req_to_sockfd(req), hash, "fail", tmpuid);
 		}
 		else if( objASYNC ) {
-			//awuausers[userAt].hd      = req->handle; // update handle!
-			//awuausers[userAt].fd      = httpd_req_to_sockfd(req);
 			awuausers[userAt].last_ts = t3ch_time_ts();
 			ESP_LOGI(TAG,"wss_handler() infoLoop at: %i, hd: %i, fd: %i, new user ts: %i\n",userAt, awuausers[userAt].hd, awuausers[userAt].fd, awuausers[userAt].last_ts);
 			ret = trigger_async_task(req->handle, httpd_req_to_sockfd(req), hash, tmpaction, tmpuid);
@@ -1901,7 +1841,7 @@ static esp_err_t wss_handler(httpd_req_t *req) {
 			ret = t3ch_ws_send(req,res);
 		}
 	}
-	/*
+	
 	//
 	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && 
 		(strcmp(tmpaction,"log_view_old") == 0 || strcmp(tmpaction,"log_view") == 0) ) {
@@ -1914,8 +1854,6 @@ static esp_err_t wss_handler(httpd_req_t *req) {
 			ret = trigger_async_task(req->handle, httpd_req_to_sockfd(req), hash, "fail", tmpuid);
 		}
 		else if( objASYNC ) {
-			awuausers[userAt].hd      = req->handle; // update handle!
-			awuausers[userAt].fd      = httpd_req_to_sockfd(req);
 			awuausers[userAt].last_ts = t3ch_time_ts();
 			ESP_LOGI(TAG,"wss_handler() log_view_old at: %i new user ts: %i\n",userAt, awuausers[userAt].last_ts);
 			ret = trigger_async_task(req->handle, httpd_req_to_sockfd(req), hash, tmpaction, tmpuid);
@@ -1928,7 +1866,7 @@ static esp_err_t wss_handler(httpd_req_t *req) {
 		}
 		free(fromPos);
 	}
-	// (log_view_new) not used with wss async. only witout async is required because then it look like request.
+	/*// (log_view_new) not used with wss async. only witout async is required because then it look like request.
 	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"log_view_new") == 0) {
 		//ESP_LOGI(TAG, "wss_handler() log_view_new STARTED");
 		//
