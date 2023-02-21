@@ -141,6 +141,7 @@ int json_logold(char *action, char *uid, char *out, int fromPos) {
 		cJSON_Delete(ary);
 		//
 		sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"data\":%s}", action, uid, data);
+		printf("json_logold() res( %i ): %s\n",strlen(res),res);
 	}
 	strcpy(out,res);
 	return lines;
@@ -998,14 +999,14 @@ struct async_task_resp_arg {
 
 //--
 //
-#define WUA_MAX_LAG 20 // 10s
-#define WUA_PING_PER 10 // send PING every 5s
+#define WUA_MAX_LAG 20 // x/s
+#define WUA_PING_PER 10 // send PING every x/s
 #define WUA_MAX 10
 int wua_pos = 0;
 //
 struct wss_user_arg {
 	//
-	char id[12];         // crc32b
+	char id[12];         // fd/socks - crc32b
 	httpd_handle_t hd;
     int fd;
     SemaphoreHandle_t xSemaphoreAtra;
@@ -1021,7 +1022,7 @@ struct wss_user_arg {
 struct wss_user_arg awuausers[WUA_MAX]={0};
 
 //--
-//
+// struct to pass data to async tasks
 struct wss_arg {
 	struct wss_user_arg wssua;
 	int atra_id;
@@ -1311,6 +1312,16 @@ void wua_del(int pos) {
 			ESP_LOGI(TAG,"wua_del() at: %i, hash: %s\n", i, awuausers[i].id);
 			// remove all atra rows
 			atra_del_hash( &awuausers[i] );
+			//
+			printf("wua_del() d0\n");
+			httpd_sess_trigger_close(awuausers[i].hd,awuausers[i].fd);
+			//printf("wua_del() d0/1\n");
+			//free( awuausers[i].hd );
+			printf("wua_del() d1\n");
+			free( awuausers[i].xSemaphoreAtra );
+			printf("wua_del() d2\n");
+			free( awuausers[i].xSemaphoreSend );
+			printf("wua_del() d3\n");
 			// skip row
 			awuausers[i] = awuausers[i+1];
 		}
@@ -1332,6 +1343,20 @@ int wua_geti(char *hash) {
 	}
 	ESP_LOGI(TAG,"wua_geti() user not found! hash: %s\n",hash);
 	return -1;
+}
+//
+void wua_debug() {
+	//
+	for(int i=0; i<WUA_MAX; i++) {
+		struct wss_user_arg wua = awuausers[i];
+		ESP_LOGI(TAG, "wss_handler() debug_wua_list at: %i, id: %s",i,wua.id);
+		if(strlen(wua.id)>0) {
+			for(int j=0; j<ATRA_MAX; j++) {
+				struct async_task_resp_arg atra = wua.atasks[j];
+				ESP_LOGI(TAG, "wss_handler() debug_wua_list at: %i, id: %s, atra at: %i, action: %s",i,wua.id,j,atra.action);
+			}
+		}
+	}
 }
 // wua_task() is thread that clean users if they lag off etc...
 void wua_task(void *arg) {
@@ -1467,12 +1492,13 @@ void ws_task_log(void *arg) {
 					break;
 				}
 				else {
+					printf("ws_task_log() oldlog success, lines: %i, fromPos: %i, len res: %i",lines, fromPos, strlen(res));
 					awuausers[wuai].last_ts = t3ch_time_ts();
 				}
 				
 				int tmpid = json_log_lastid( res );
 				if( tmpid==0 ) {
-					ESP_LOGI(TAG,"ws_task_log() breaking... lastid: %i",lastid);
+					printf("ws_task_log() breaking... lastid: %i",lastid);
 					xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 					break;
 				}
@@ -1502,6 +1528,7 @@ void ws_task_log(void *arg) {
 		xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
 	}
 	
+	ESP_LOGI(TAG,"ws_task_log() continuing with new log..., lastid: %i",lastid);
 	//--
 	// Continue with new log lines (infinite) or until browser refresh or client lose connection etc.
 	while( true ) {
@@ -1531,9 +1558,14 @@ void ws_task_log(void *arg) {
 				}
 			}
 			else {
+				printf("ws_task_log() newlog no lines to show...\n");
 				vTaskDelay(1000 / portTICK_PERIOD_MS);
 			}
 			xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
+		}
+		else {
+			printf("ws_task_log() newlog semaphor failed.\n");
+			vTaskDelay(1000 / portTICK_PERIOD_MS);
 		}
 	}
 	//
@@ -1756,6 +1788,12 @@ static esp_err_t wss_handler(httpd_req_t *req) {
 			ret = ESP_OK;
 		}
 		else if( objASYNC ) {
+			ESP_LOGI(TAG,"wss_handler() success - async STARTED");
+			awuausers[userAt].last_ts = t3ch_time_ts();
+			ret = ESP_OK;
+		}
+		else {
+			ESP_LOGI(TAG,"wss_handler() success STARTED");
 			awuausers[userAt].last_ts = t3ch_time_ts();
 			ret = ESP_OK;
 		}
@@ -1841,7 +1879,6 @@ static esp_err_t wss_handler(httpd_req_t *req) {
 			ret = t3ch_ws_send(req,res);
 		}
 	}
-	
 	//
 	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && 
 		(strcmp(tmpaction,"log_view_old") == 0 || strcmp(tmpaction,"log_view") == 0) ) {
@@ -1850,16 +1887,16 @@ static esp_err_t wss_handler(httpd_req_t *req) {
 		char *fromPos     = cJSON_Print( objFromPos );
 		int userAt = wua_geti( hash );
 		if( userAt<0 ) {
-			ESP_LOGI(TAG, "wss_handler() log_view_old FAILED, no userId!");
+			ESP_LOGI(TAG, "wss_handler() log_view FAILED, no userId!");
 			ret = trigger_async_task(req->handle, httpd_req_to_sockfd(req), hash, "fail", tmpuid);
 		}
 		else if( objASYNC ) {
 			awuausers[userAt].last_ts = t3ch_time_ts();
-			ESP_LOGI(TAG,"wss_handler() log_view_old at: %i new user ts: %i\n",userAt, awuausers[userAt].last_ts);
+			ESP_LOGI(TAG,"wss_handler() log_view async STARTED at: %i new user ts: %i\n",userAt, awuausers[userAt].last_ts);
 			ret = trigger_async_task(req->handle, httpd_req_to_sockfd(req), hash, tmpaction, tmpuid);
 		}
 		else {
-			ESP_LOGI(TAG,"wss_handler() log_view_old STARTED");
+			ESP_LOGI(TAG,"wss_handler() log_view STARTED");
 			char res[256]={0};
 			json_logold(tmpaction,tmpuid,res,getInt(fromPos));
 			ret = t3ch_ws_send(req,res);
@@ -1896,6 +1933,32 @@ static esp_err_t wss_handler(httpd_req_t *req) {
 		}
 		free(fromPos);
 	}*/
+	//--
+	// (lets add some DEBUG responses)
+	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"debug_wua_list") == 0) {
+		ESP_LOGI(TAG, "wss_handler() debug_wua_list STARTING! wua_pos: %i",wua_pos);
+		wua_debug();
+		ret = ESP_OK;
+	}
+	//
+	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"debug_wua_del") == 0) {
+		ESP_LOGI(TAG, "wss_handler() debug_wua_del STARTING! wua_pos: %i",wua_pos);
+		//
+		cJSON *objPos = cJSON_GetObjectItemCaseSensitive(json,"pos");
+		if( objPos ) {
+			char *pos     = cJSON_Print( objPos );
+			ESP_LOGI(TAG, "wss_handler() debug_wua_del DELETING pos: %s",pos);
+			wua_del( getInt(pos) );
+			ESP_LOGI(TAG, "wss_handler() debug_wua_del d1");
+			wua_debug();
+			ESP_LOGI(TAG, "wss_handler() debug_wua_del d2");
+			free(pos);
+			ESP_LOGI(TAG, "wss_handler() debug_wua_del d3");
+		}
+		else {
+			ESP_LOGI(TAG, "wss_handler() debug_wua_del REQuIRE key:value => pos:1...");
+		}
+	}
 	//
 	else {
 		ESP_LOGI(TAG, "wss_handler() unknown action STARTED!");

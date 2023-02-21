@@ -30,7 +30,7 @@ struct Log {
 struct Log log[LOG_SIZE]={0};
 //char *log_text_arg;
 char log_text_arg[LOG_TEXT_SIZE]={0};
-SemaphoreHandle_t xSemaphore;
+//SemaphoreHandle_t xSemaphore;
 //
 int t3ch_log_gen_new(int lastId) {
 	//
@@ -115,6 +115,7 @@ int t3ch_log_gen_old(int fromPos) {
 		//
 		char tmpresult[LOG_DATA_SIZE+1]={0};
 		int tmplen = sprintf(tmpresult,"{\"id\":%i,\"text\":\"%s\"}",log[i].id, tmp);
+		printf("t3ch_log_gen_old() t3ch_log_gen_old() at: %i, cnt: %i tmpresult( %i ): %s\n", i, cnt, strlen(tmpresult), tmpresult);
 		
 		//
 		if( cnt==0 ) {
