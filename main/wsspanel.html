@@ -365,7 +365,6 @@ var WSC = function( opts/*={}*/ ) {
 	this.host   = (isDefined(opts,"host")?opts["host"]:window.location.host);
 	this.port   = (isDefined(opts,"port")?":"+opts.port:"");
 	this.path   = (isDefined(opts,"path")?opts["path"]:"/wss");
-	//this.connectto = "wss://"+this.host+":"+this.port+this.path;
 	this.connectto = "wss://"+this.host+this.port+this.path;
 	//
 	this.status          = 0; // 0=disconected, 1=connecting, 2=connected
@@ -510,10 +509,9 @@ var WSC = function( opts/*={}*/ ) {
 		// Check if cmd PING then respond with PONG
 		if( isDefined(json,"action") && json.action=="ping" ) {
 			console.warn("wsc.recvMessage() ping STARTED!");
-			_this.sendMessage({"action":"pong","hash":_this.hash,"async":"1"},{"uid":"PONG","function":function(json) 
-				{
+			_this.sendMessage({"action":"pong","hash":_this.hash,"async":"1"},{"uid":"PONG","function":function(json) {
 					console.info("PONG response",json);
-				},});
+			},});
 			return;
 		}
 		
@@ -1138,8 +1136,10 @@ document.addEventListener("wss_logged",function(e) {
 	//
     wsc.sendMessage({"action":"infoLoop","async":"1","hash":e.detail},{"uid":"infoLoop","function":function(json) {
 		console.warn("done async_infoLoop... data",json);
-	    qS("#displayTime>div").innerText = json.time;
-	    qS("#displayFree>div").innerText = json.free;
+		if( typeof(json.time)!='undefined' ) {
+		    qS("#displayTime>div").innerText = json.time;
+		    qS("#displayFree>div").innerText = json.free;
+		}
 	},});
 	
 	//
@@ -1164,7 +1164,7 @@ document.addEventListener("wss_logged",function(e) {
 	},});
 	
 	//
-	//logLoad();
+	logLoad();
 	
 });
 //
