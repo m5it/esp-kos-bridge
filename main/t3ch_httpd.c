@@ -995,7 +995,7 @@ struct wss_user_arg {
 	char id[12];         // fd/socks - crc32b
 	httpd_handle_t hd;
     int fd;
-    SemaphoreHandle_t xSemaphoreSend;
+    //SemaphoreHandle_t xSemaphoreSend;
     int start_ts; // set on LOGIN
     int last_ts;  // set on every response or PONG
     //--
@@ -1006,7 +1006,7 @@ struct wss_user_arg {
     char uid_infoLoop[64];
 };
 struct wss_user_arg awuausers[WUA_MAX]={0};
-
+SemaphoreHandle_t xSemaphoreSend[WUA_MAX];
 //
 static esp_err_t trigger_async_task(httpd_handle_t hd, int fd, char *id, char *action, char *uid) {
 	ESP_LOGI(TAG,"trigger_async_task() STARTING id/hash: %s, action: %s, uid: %s\n",id,action, uid);
@@ -1104,10 +1104,11 @@ bool wua_add(httpd_req_t *req, char *outhash) {
 	}
 	
 	//
-	awuausers[wua_pos].xSemaphoreSend = xSemaphoreCreateBinary();
-	if( awuausers[wua_pos].xSemaphoreSend!=NULL ) {
+	//awuausers[wua_pos].xSemaphoreSend = xSemaphoreCreateBinary();
+	xSemaphoreSend[wua_pos] = xSemaphoreCreateBinary();
+	if( xSemaphoreSend[wua_pos]!=NULL ) {
 		ESP_LOGI(TAG,"wua_add() xSemaphorSend created succesfully!\n");
-		if( xSemaphoreGive( awuausers[wua_pos].xSemaphoreSend ) !=pdTRUE ) {
+		if( xSemaphoreGive( xSemaphoreSend[wua_pos] ) !=pdTRUE ) {
 			ESP_LOGI(TAG,"wua_add() xSemaphorSend xSemaphorGive() Failed!\n");
 		}
 	}
@@ -1204,7 +1205,7 @@ void infoloop_task(void *arg) {
 			struct wss_user_arg *wuau = &awuausers[i];
 			//
 			if(strlen(wuau->action_infoLoop)<=0) continue;
-			if( xSemaphoreTake( wuau->xSemaphoreSend, (100 / portTICK_PERIOD_MS) ) == pdTRUE ) {
+			if( xSemaphoreTake( xSemaphoreSend[i], (100 / portTICK_PERIOD_MS) ) == pdTRUE ) {
 			//xSemaphoreTake( wuau->xSemaphoreSend, (100 / portTICK_PERIOD_MS) );
 			char res[128]={0};
 			json_infoLoop(wuau->action_infoLoop, wuau->uid_infoLoop, res);
@@ -1218,7 +1219,7 @@ void infoloop_task(void *arg) {
 			}
 			//xSemaphoreGive( wuau->xSemaphoreSend );
 			}
-			xSemaphoreGive( wuau->xSemaphoreSend );
+			xSemaphoreGive( xSemaphoreSend[i] );
 		}
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
@@ -1241,12 +1242,12 @@ void log_task(void *arg) {
 					lines = json_logold("log_view", "log_view", res, fromPos);
 					//
 					if( lines>0 ) {
-						if( xSemaphoreTake( wuau->xSemaphoreSend, 10 ) == pdTRUE ) {
+						if( xSemaphoreTake( xSemaphoreSend[i], 10 ) == pdTRUE ) {
 							fromPos += lines;
 						    esp_err_t ret = t3ch_ws_async_send(wuau->hd, wuau->fd, res);
 						    if( ret!=ESP_OK ) {
 								ESP_LOGI(TAG,"ws_task_log() oldlog send failed\n");
-								xSemaphoreGive( wuau->xSemaphoreSend );
+								xSemaphoreGive( xSemaphoreSend[i] );
 								break;
 							}
 							else {
@@ -1257,7 +1258,7 @@ void log_task(void *arg) {
 							int tmpid = json_log_lastid( res );
 							if( tmpid==0 ) {
 								printf("ws_task_log() breaking... lastid: %i\n",wuau->log_lastid);
-								xSemaphoreGive( wuau->xSemaphoreSend );
+								xSemaphoreGive( xSemaphoreSend[i] );
 								break;
 							}
 							if( tmpid>wuau->log_lastid ) {
@@ -1265,7 +1266,7 @@ void log_task(void *arg) {
 								wuau->log_lastid = tmpid;
 							}
 						}
-						xSemaphoreGive( wuau->xSemaphoreSend );
+						xSemaphoreGive( xSemaphoreSend[i] );
 					}
 				} while( lines>0 );
 				
@@ -1275,7 +1276,7 @@ void log_task(void *arg) {
 				memset(res,'\0',512);
 				sprintf(res,"{\"success\":false,\"action\":\"%s\",\"uid\":\"%s\"}","log_view", "log_view");
 			    
-			    if( xSemaphoreTake( wuau->xSemaphoreSend, 10 ) == pdTRUE ) {
+			    if( xSemaphoreTake( xSemaphoreSend[i], 10 ) == pdTRUE ) {
 				    esp_err_t ret = t3ch_ws_async_send(wuau->hd, wuau->fd, res);
 				    if( ret!=ESP_OK ) {
 						ESP_LOGI(TAG,"ws_task_log() send failed d3.\n");
@@ -1283,7 +1284,7 @@ void log_task(void *arg) {
 					else {
 						wuau->last_ts = t3ch_time_ts();
 					}
-					xSemaphoreGive( wuau->xSemaphoreSend );
+					xSemaphoreGive( xSemaphoreSend[i] );
 				}
 			}
 			
@@ -1297,11 +1298,11 @@ void log_task(void *arg) {
 				//
 				if( lines>0 ) {
 					//
-					if( xSemaphoreTake( wuau->xSemaphoreSend, 10 ) == pdTRUE ) {
+					if( xSemaphoreTake( xSemaphoreSend[i], 10 ) == pdTRUE ) {
 					    esp_err_t ret = t3ch_ws_async_send(wuau->hd, wuau->fd, res);
 					    if( ret!=ESP_OK ) {
 							ESP_LOGI(TAG,"ws_task_log() newlog send failed.\n");
-							xSemaphoreGive( wuau->xSemaphoreSend );
+							xSemaphoreGive( xSemaphoreSend[i] );
 							break;
 						}
 						else {
@@ -1313,7 +1314,7 @@ void log_task(void *arg) {
 							wuau->log_lastid = tmpid;
 						}
 					}
-					xSemaphoreGive( wuau->xSemaphoreSend );
+					xSemaphoreGive( xSemaphoreSend[i] );
 				}
 				else {
 					//printf("ws_task_log() newlog no lines to show...\n");
@@ -1335,7 +1336,7 @@ void ws_task_version(void *arg) {
 	//
 	char res[128]={0};
 	json_version(resp_arg->action, resp_arg->uid, res);
-    if( xSemaphoreTake( awuausers[wuai].xSemaphoreSend, (100 / portTICK_PERIOD_MS) ) == pdTRUE ) {
+    if( xSemaphoreTake( xSemaphoreSend[wuai], (100 / portTICK_PERIOD_MS) ) == pdTRUE ) {
 	    esp_err_t ret = t3ch_ws_async_send(awuausers[wuai].hd, awuausers[wuai].fd, res);
 	    if( ret!=ESP_OK ) {
 			ESP_LOGI(TAG,"ws_task_version() Failed.");
@@ -1343,7 +1344,7 @@ void ws_task_version(void *arg) {
 		else {
 			awuausers[wuai].last_ts = t3ch_time_ts();
 		}
-		xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
+		xSemaphoreGive( xSemaphoreSend[wuai] );
 	}
 	free(resp_arg);
 }
@@ -1357,7 +1358,7 @@ void ws_task_wifiview(void *arg) {
 	//
 	char res[256]={0};
 	json_wifiview(resp_arg->action, resp_arg->uid, res);
-	if( xSemaphoreTake( awuausers[wuai].xSemaphoreSend, (100 / portTICK_PERIOD_MS) ) == pdTRUE ) {
+	if( xSemaphoreTake( xSemaphoreSend[wuai], (100 / portTICK_PERIOD_MS) ) == pdTRUE ) {
 	    esp_err_t ret = t3ch_ws_async_send(awuausers[wuai].hd, awuausers[wuai].fd, res);
 	    if( ret!=ESP_OK ) {
 			ESP_LOGI(TAG,"ws_task_wifiview() Failed.");
@@ -1365,7 +1366,7 @@ void ws_task_wifiview(void *arg) {
 		else {
 			awuausers[wuai].last_ts = t3ch_time_ts();
 		}
-		xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
+		xSemaphoreGive( xSemaphoreSend[wuai] );
 	}
 	free(resp_arg);
 }
@@ -1379,7 +1380,7 @@ void ws_task_login(void *arg) {
 	char res[128]={0};
 	sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"data\":\"%s\"}", resp_arg->action, resp_arg->uid, resp_arg->id);
     //
-    if( xSemaphoreTake( awuausers[wuai].xSemaphoreSend, 10 ) == pdTRUE ) {
+    if( xSemaphoreTake( xSemaphoreSend[wuai], 10 ) == pdTRUE ) {
 	    ESP_LOGI(TAG,"ws_task_login() Sending data: %s",res);
 	    esp_err_t ret = t3ch_ws_async_send(awuausers[wuai].hd, awuausers[wuai].fd, res);
 	    if( ret!=ESP_OK ) {
@@ -1389,7 +1390,7 @@ void ws_task_login(void *arg) {
 			ESP_LOGI(TAG,"ws_task_login() Success.");
 			awuausers[wuai].last_ts = t3ch_time_ts();
 		}
-		xSemaphoreGive( awuausers[wuai].xSemaphoreSend );
+		xSemaphoreGive( xSemaphoreSend[wuai] );
 	}
 	else {
 		ESP_LOGI(TAG,"ws_task_login() Failed semaphor.\n");
