@@ -1133,9 +1133,12 @@ void wua_del(int pos) {
 		if( i==pos ) {
 			ESP_LOGI(TAG,"wua_del() at: %i, hash: %s\n", i, awuausers[i].id);
 			httpd_sess_trigger_close(awuausers[i].hd,awuausers[i].fd);
-			free( awuausers[i].xSemaphoreSend );
+			//free( awuausers[i].xSemaphoreSend );
+			//vSemaphoreDelete( awuausers[i].xSemaphoreSend );
 			// skip row
-			awuausers[i] = awuausers[i+1];
+			if((i+1)<WUA_MAX) {
+				awuausers[i] = awuausers[i+1];
+			}
 		}
 		else {
 			awuausers[i] = awuausers[i];
