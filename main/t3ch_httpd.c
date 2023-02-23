@@ -1227,17 +1227,17 @@ void log_task(void *arg) {
 			struct wss_user_arg *wuau = &awuausers[i];
 			if(strlen(wuau->action_log)<=0) continue;
 			//
-			int lines=1, fromPos=wuau->log_lastid;
+			int lines=0, fromPos=wuau->log_lastid;
 			char res[512]={0};
 			// check if we should retrive old logs
 			if( wuau->log_lastid==0 ) {
 				do {
 					//
-				    if( xSemaphoreTake( wuau->xSemaphoreSend, 10 ) == pdTRUE ) {
-						memset(res,'\0',512);
-						lines = json_logold("log_view", "log_view", res, fromPos);
-						//
-						if( lines>0 ) {
+					memset(res,'\0',512);
+					lines = json_logold("log_view", "log_view", res, fromPos);
+					//
+					if( lines>0 ) {
+						if( xSemaphoreTake( wuau->xSemaphoreSend, 10 ) == pdTRUE ) {
 							fromPos += lines;
 						    esp_err_t ret = t3ch_ws_async_send(wuau->hd, wuau->fd, res);
 						    if( ret!=ESP_OK ) {
@@ -1246,13 +1246,13 @@ void log_task(void *arg) {
 								break;
 							}
 							else {
-								printf("ws_task_log() oldlog success, lines: %i, fromPos: %i, len res: %i",lines, fromPos, strlen(res));
+								printf("ws_task_log() oldlog success, lines: %i, fromPos: %i, len res: %i\n",lines, fromPos, strlen(res));
 								wuau->last_ts = t3ch_time_ts();
 							}
 							
 							int tmpid = json_log_lastid( res );
 							if( tmpid==0 ) {
-								printf("ws_task_log() breaking... lastid: %i",wuau->log_lastid);
+								printf("ws_task_log() breaking... lastid: %i\n",wuau->log_lastid);
 								xSemaphoreGive( wuau->xSemaphoreSend );
 								break;
 							}
