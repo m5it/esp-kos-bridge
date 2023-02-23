@@ -1202,7 +1202,7 @@ void infoloop_task(void *arg) {
 			//
 			if(strlen(wuau->action_infoLoop)<=0) continue;
 			if( xSemaphoreTake( wuau->xSemaphoreSend, (100 / portTICK_PERIOD_MS) ) == pdTRUE ) {
-			xSemaphoreTake( wuau->xSemaphoreSend, (100 / portTICK_PERIOD_MS) );
+			//xSemaphoreTake( wuau->xSemaphoreSend, (100 / portTICK_PERIOD_MS) );
 			char res[128]={0};
 			json_infoLoop(wuau->action_infoLoop, wuau->uid_infoLoop, res);
 	    	esp_err_t ret = t3ch_ws_async_send(wuau->hd, wuau->fd, res);
@@ -1213,8 +1213,9 @@ void infoloop_task(void *arg) {
 			else {
 				wuau->last_ts = t3ch_time_ts();
 			}
-			xSemaphoreGive( wuau->xSemaphoreSend );
+			//xSemaphoreGive( wuau->xSemaphoreSend );
 			}
+			xSemaphoreGive( wuau->xSemaphoreSend );
 		}
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
@@ -1312,7 +1313,7 @@ void log_task(void *arg) {
 					xSemaphoreGive( wuau->xSemaphoreSend );
 				}
 				else {
-					printf("ws_task_log() newlog no lines to show...\n");
+					//printf("ws_task_log() newlog no lines to show...\n");
 					vTaskDelay(1000 / portTICK_PERIOD_MS);
 				}
 			} while(lines>0);
