@@ -1181,24 +1181,50 @@ void wua_task(void *arg) {
 	//
 	while(true) {
 		for(int i=0; i<wua_pos; i++) {
+			//--
+			//
+			struct wss_user_arg *wuau = &awuausers[i];
+			
+			//--
+			//
 			int ts        = t3ch_time_ts();
 			int chklagts  = (ts-WUA_MAX_LAG);
 			int chkpingts = (ts-WUA_PING_PER);
 			//printf("wua_task() checking user at %i, last_ts: %i, curts: %i vs chkts: %i vs pngts: %i\n",i, awuausers[i].last_ts, ts, chklagts, chkpingts);
-			if( awuausers[i].last_ts<=chklagts ) {
+			if( wuau->last_ts<=chklagts ) {
 				ESP_LOGI(TAG,"wua_task() max lag detected! removing user at %i\n",i);
 				wua_del( i );
 			}
-			else if( awuausers[i].last_ts<=chkpingts ) {
+			else if( wuau->last_ts<=chkpingts ) {
 				ESP_LOGI(TAG,"wua_task() sending PING at %i\n",i);
-				trigger_async_task(awuausers[i].hd, awuausers[i].fd, awuausers[i].id, "ping", "PING");
+				trigger_async_task(wuau->hd, wuau->fd, wuau->id, "ping", "PING");
 			}
+			
+			//--
+			//
+			if( strlen(wuau->action_infoLoop)>0 && 
+				xSemaphoreTake( xSemaphoreSend[i], (100 / portTICK_PERIOD_MS) ) == pdTRUE ) {
+				//
+				//xSemaphoreTake( wuau->xSemaphoreSend, (100 / portTICK_PERIOD_MS) );
+				char res[128]={0};
+				json_infoLoop(wuau->action_infoLoop, wuau->uid_infoLoop, res);
+		    	esp_err_t ret = t3ch_ws_async_send(wuau->hd, wuau->fd, res);
+			    if( ret!=ESP_OK ) {
+					ESP_LOGI(TAG,"ws_task_infoLoop() send Failed");
+					break;
+				}
+				else {
+					wuau->last_ts = t3ch_time_ts();
+				}
+			}
+			//
+			xSemaphoreGive( xSemaphoreSend[i] );
 		}
-		vTaskDelay(2500 / portTICK_PERIOD_MS);
+		vTaskDelay(500 / portTICK_PERIOD_MS);
 	}
 }
 // infoloop_task is a thread that send info to connected clients (time,free) by second
-void infoloop_task(void *arg) {
+/*void infoloop_task(void *arg) {
 	ESP_LOGI(TAG,"infoloop_task() STARTING");
 	while( true ) {
 		for(int i=0; i<wua_pos; i++) {
@@ -1223,7 +1249,7 @@ void infoloop_task(void *arg) {
 		}
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
-}
+}*/
 // log_task is a thread that send log info to connected clients if there is any new log
 void log_task(void *arg) {
 	ESP_LOGI(TAG,"log_task() STARTING");
@@ -1794,8 +1820,8 @@ bool StartHTTPS(void) {
 	// start wua_task() to clean old connections
 	ESP_LOGI(TAG, "StartHTTPS() starting wua_task()...");
 	xTaskCreate(wua_task, "wua_task", 4048, NULL, 1, NULL);
-	ESP_LOGI(TAG, "StartHTTPS() starting infoloop_task()...");
-	xTaskCreate(infoloop_task, "infoloop_task", 4048, NULL, 3, NULL);
+	//ESP_LOGI(TAG, "StartHTTPS() starting infoloop_task()...");
+	//xTaskCreate(infoloop_task, "infoloop_task", 4048, NULL, 3, NULL);
 	ESP_LOGI(TAG, "StartHTTPS() starting log_task()...");
 	xTaskCreate(log_task, "log_task", 4048, NULL, 2, NULL);
 #else
