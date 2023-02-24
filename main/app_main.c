@@ -134,6 +134,27 @@ static void esp_bridge_create_button(void)
 }
 */
 
+//
+void start_after_wifi() {
+	ESP_LOGI(TAG,"start_after_wifi() STARTING!");
+	
+	t3ch_time_sntp_init();
+    if( t3ch_time_sntp_updated()==false ) {
+		ESP_LOGI(TAG, "Time is not set yet. Updating trough NTP.");
+		t3ch_time_sntp_update();
+	}
+}
+//
+void start_after_gotip() {
+    //
+	#ifdef ENABLE_HTTPS
+	    StartHTTPS();
+	#else
+		StartHTTP();
+	#endif
+}
+//--
+//
 void app_main(void)
 {
 	//
@@ -160,6 +181,10 @@ void app_main(void)
     //nvs_flash_erase();
     //--
     
+    //
+	esp_bridge_wifi_set_events_ap_start( start_after_wifi );
+	esp_bridge_wifi_set_events_sta_gotip( start_after_gotip );
+	
     //
     ESP_LOGI(TAG,"Initializing network interfaces.");
     ESP_ERROR_CHECK(esp_netif_init());
@@ -205,6 +230,15 @@ void app_main(void)
     t3ch_wifi_start_ap();
     t3ch_wifi_start_sta();
     
+    ///-- This things below should start after station is connected to X ap and AP is created or similar!
+    ///------------------------------------------------––------------------------------------------------
+    //--
+    /*t3ch_time_sntp_init();
+    if( t3ch_time_sntp_updated()==false ) {
+		ESP_LOGI(TAG, "Time is not set yet. Updating trough NTP.");
+		t3ch_time_sntp_update();
+	}
+	
     //--
     //
 #ifdef ENABLE_HTTPS
@@ -212,11 +246,5 @@ void app_main(void)
 #else
 	StartHTTP();
 #endif
-    
-    //--
-    t3ch_time_sntp_init();
-    if( t3ch_time_sntp_updated()==false ) {
-		ESP_LOGI(TAG, "Time is not set yet. Updating trough NTP.");
-		t3ch_time_sntp_update();
-	}
+    */
 }

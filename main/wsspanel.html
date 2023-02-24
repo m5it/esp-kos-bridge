@@ -1138,6 +1138,7 @@ document.addEventListener("wss_logged",function(e) {
 		console.warn("done async_infoLoop... data",json);
 		if( typeof(json.time)!='undefined' ) {
 		    qS("#displayTime>div").innerText = json.time;
+		    qS("#displayUptime>div").innerText = json.uptime;
 		    qS("#displayFree>div").innerText = json.free;
 		}
 	},});
@@ -1177,7 +1178,16 @@ window.onbeforeunload = function(e) {
 <body>
 
 <div class="header">
-	<div id="displayTime" class="trifield" style="float:left;" align="center"><label>Server Time</label><div></div></div>
+	<div class="trifield" style="float:left;" align="center">
+		<div id="displayTime">
+			<label>Server Time</label>
+			<div></div>
+		</div>
+		<div id="displayUptime">
+			<label>Server Uptime</label>
+			<div></div>
+		</div>
+	</div>
 	<div class="trifield" style="float:right;" align="center">
 		<div id="displayFree">
 			<label>Server Free</label>

@@ -39,7 +39,9 @@ int myt_pos = 0;
 bool myt_running = false;
 TaskHandle_t h_myt;
 static uint8_t ucptp_myt;
-
+//
+//int t3ch_time_events_count = 0;
+//void (*t3ch_time_events)() = NULL;
 //-- TIMER
 //
 void time_timer(void * pvp) {
@@ -269,11 +271,22 @@ void time_timer_init(void) {
 //-- UPDATE TIME TROUGH NET
 //
 void time_sync_notification_cb(struct timeval *tv) {
-    ESP_LOGI(TAG, "Notification of a time synchronization event");
+    ESP_LOGI(TAG, "time_sync_notification_cb() Notification of a time synchronization");
+    //
+    /*if( t3ch_time_events_count==0 && t3ch_time_events!=NULL ) {
+		ESP_LOGI(TAG, "time_sync_notification_cb()  Starting t3ch_time_events() %i",t3ch_time_events_count);
+		vTaskDelay(2000 / portTICK_PERIOD_MS);
+		t3ch_time_events();
+		t3ch_time_events_count++;
+	}*/
 }
 
 //-- here up have forgot to add t3ch_... :) lol
-
+//
+/*void t3ch_time_events_set(void *ptr) {
+	t3ch_time_events = ptr;
+}*/
+//
 void t3ch_time_sntp_init(void) {
 	ESP_LOGI(TAG, "t3ch_time_sntp_init() starting.");
 	setenv("TZ", "CST-0", 1);
@@ -298,11 +311,21 @@ void t3ch_time_sntp_update(void) {
         time(&now);
 	    localtime_r(&now, &timeinfo);
 	    //ti = localtime(&now);
-	    if( t3ch_time_sntp_updated() ) break;
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
+	    if( t3ch_time_sntp_updated() ) {
+			break;
+		}
+        vTaskDelay(500 / portTICK_PERIOD_MS);
     }
+    //
     time(&now);
     localtime_r(&now, &timeinfo);
+    //
+    /*if( t3ch_time_events!=NULL ) {
+		ESP_LOGI(TAG, "t3ch_time_sntp_update()  Starting t3ch_time_events() %i",t3ch_time_events_count);
+		vTaskDelay(2000 / portTICK_PERIOD_MS);
+		t3ch_time_events();
+		t3ch_time_events_count++;
+	}*/
 }
 
 bool t3ch_time_sntp_updated(void) {

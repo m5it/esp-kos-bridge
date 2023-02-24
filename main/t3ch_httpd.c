@@ -22,15 +22,15 @@
 //--
 static const char *TAG = "T3CH_HTTPD";
 static nvs_handle_t nvsh;
-httpd_handle_t server = NULL;
+
 //
 static struct tm timeinfo;
 //
-static struct stats {
-    int restart_count;
-    char *start_time;
-    char *restart_time;
-} s;
+httpd_handle_t server = NULL;
+static struct server_stats {
+    int start_ts;
+};
+struct server_stats ss;
 
 //-- FUnctioNS
 //-------------
@@ -63,12 +63,14 @@ size_t t3ch_httpd_get_param(httpd_req_t *req, const char *key, char *paramout) {
 //
 void json_infoLoop(char *action, char *uid, char *out) {
 	//
-	char strftime_buf[64]={0};
-	char res[128]={0};
+	char curtime[64]={0};
+	char uptime[64]={0};
+	char res[256]={0};
 	//
-	t3ch_time_get(&strftime_buf);
-	sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"time\":\"%s\",\"free\":\"%d\"}",
-		action, uid, strftime_buf, heap_caps_get_free_size(MALLOC_CAP_8BIT));
+	t3ch_time_get(&curtime);
+	int cts = t3ch_time_ts();
+	sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"time\":\"%s\",\"uptime\":\"%i\",\"free\":\"%d\"}",
+		action, uid, curtime, (cts-ss.start_ts), heap_caps_get_free_size(MALLOC_CAP_8BIT));
 	strcpy(out,res);
 	//return res;
 }
@@ -1134,8 +1136,6 @@ void wua_del(int pos) {
 		if( i==pos ) {
 			ESP_LOGI(TAG,"wua_del() at: %i, hash: %s\n", i, awuausers[i].id);
 			httpd_sess_trigger_close(awuausers[i].hd,awuausers[i].fd);
-			//free( awuausers[i].xSemaphoreSend );
-			//vSemaphoreDelete( awuausers[i].xSemaphoreSend );
 			// skip row
 			if((i+1)<WUA_MAX) {
 				awuausers[i] = awuausers[i+1];
@@ -1185,7 +1185,7 @@ void wua_task(void *arg) {
 			//
 			struct wss_user_arg *wuau = &awuausers[i];
 			
-			//--
+			//-- CLEENER
 			//
 			int ts        = t3ch_time_ts();
 			int chklagts  = (ts-WUA_MAX_LAG);
@@ -1200,13 +1200,13 @@ void wua_task(void *arg) {
 				trigger_async_task(wuau->hd, wuau->fd, wuau->id, "ping", "PING");
 			}
 			
-			//--
+			//-- INFO LOOP
 			//
 			if( strlen(wuau->action_infoLoop)>0 && 
 				xSemaphoreTake( xSemaphoreSend[i], (100 / portTICK_PERIOD_MS) ) == pdTRUE ) {
 				//
 				//xSemaphoreTake( wuau->xSemaphoreSend, (100 / portTICK_PERIOD_MS) );
-				char res[128]={0};
+				char res[256]={0};
 				json_infoLoop(wuau->action_infoLoop, wuau->uid_infoLoop, res);
 		    	esp_err_t ret = t3ch_ws_async_send(wuau->hd, wuau->fd, res);
 			    if( ret!=ESP_OK ) {
@@ -1216,46 +1216,13 @@ void wua_task(void *arg) {
 				else {
 					wuau->last_ts = t3ch_time_ts();
 				}
+			
+				//
+				xSemaphoreGive( xSemaphoreSend[i] );
 			}
+			
+			//-- LOG
 			//
-			xSemaphoreGive( xSemaphoreSend[i] );
-		}
-		vTaskDelay(500 / portTICK_PERIOD_MS);
-	}
-}
-// infoloop_task is a thread that send info to connected clients (time,free) by second
-/*void infoloop_task(void *arg) {
-	ESP_LOGI(TAG,"infoloop_task() STARTING");
-	while( true ) {
-		for(int i=0; i<wua_pos; i++) {
-			struct wss_user_arg *wuau = &awuausers[i];
-			//
-			if(strlen(wuau->action_infoLoop)<=0) continue;
-			if( xSemaphoreTake( xSemaphoreSend[i], (100 / portTICK_PERIOD_MS) ) == pdTRUE ) {
-			//xSemaphoreTake( wuau->xSemaphoreSend, (100 / portTICK_PERIOD_MS) );
-			char res[128]={0};
-			json_infoLoop(wuau->action_infoLoop, wuau->uid_infoLoop, res);
-	    	esp_err_t ret = t3ch_ws_async_send(wuau->hd, wuau->fd, res);
-		    if( ret!=ESP_OK ) {
-				ESP_LOGI(TAG,"ws_task_infoLoop() send Failed");
-				break;
-			}
-			else {
-				wuau->last_ts = t3ch_time_ts();
-			}
-			//xSemaphoreGive( wuau->xSemaphoreSend );
-			}
-			xSemaphoreGive( xSemaphoreSend[i] );
-		}
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
-	}
-}*/
-// log_task is a thread that send log info to connected clients if there is any new log
-void log_task(void *arg) {
-	ESP_LOGI(TAG,"log_task() STARTING");
-	while( true ) {
-		for(int i=0; i<wua_pos; i++) {
-			struct wss_user_arg *wuau = &awuausers[i];
 			if(strlen(wuau->action_log)<=0) continue;
 			//
 			int lines=0, fromPos=wuau->log_lastid;
@@ -1302,7 +1269,7 @@ void log_task(void *arg) {
 				memset(res,'\0',512);
 				sprintf(res,"{\"success\":false,\"action\":\"%s\",\"uid\":\"%s\"}","log_view", "log_view");
 			    
-			    if( xSemaphoreTake( xSemaphoreSend[i], 10 ) == pdTRUE ) {
+			    if( xSemaphoreTake( xSemaphoreSend[i], (100 / portTICK_PERIOD_MS) ) == pdTRUE ) {
 				    esp_err_t ret = t3ch_ws_async_send(wuau->hd, wuau->fd, res);
 				    if( ret!=ESP_OK ) {
 						ESP_LOGI(TAG,"ws_task_log() send failed d3.\n");
@@ -1324,7 +1291,7 @@ void log_task(void *arg) {
 				//
 				if( lines>0 ) {
 					//
-					if( xSemaphoreTake( xSemaphoreSend[i], 10 ) == pdTRUE ) {
+					if( xSemaphoreTake( xSemaphoreSend[i], (100 / portTICK_PERIOD_MS) ) == pdTRUE ) {
 					    esp_err_t ret = t3ch_ws_async_send(wuau->hd, wuau->fd, res);
 					    if( ret!=ESP_OK ) {
 							ESP_LOGI(TAG,"ws_task_log() newlog send failed.\n");
@@ -1348,7 +1315,7 @@ void log_task(void *arg) {
 				}
 			} while(lines>0);
 		}
-		//vTaskDelay(1000 / portTICK_PERIOD_MS);
+		vTaskDelay(50 / portTICK_PERIOD_MS);
 	}
 }
 
@@ -1817,13 +1784,9 @@ bool StartHTTPS(void) {
 	conf.httpd.uri_match_fn     = httpd_uri_match_wildcard;
 #ifdef ENABLE_WSS
 	conf.httpd.max_uri_handlers = 4;
-	// start wua_task() to clean old connections
+	// start wua_task() to clean old connections, infoLoop and log if enabled! ;D bip
 	ESP_LOGI(TAG, "StartHTTPS() starting wua_task()...");
 	xTaskCreate(wua_task, "wua_task", 4048, NULL, 1, NULL);
-	//ESP_LOGI(TAG, "StartHTTPS() starting infoloop_task()...");
-	//xTaskCreate(infoloop_task, "infoloop_task", 4048, NULL, 3, NULL);
-	ESP_LOGI(TAG, "StartHTTPS() starting log_task()...");
-	xTaskCreate(log_task, "log_task", 4048, NULL, 2, NULL);
 #else
 	conf.httpd.max_uri_handlers = 8;
 #endif
@@ -1862,6 +1825,9 @@ bool StartHTTPS(void) {
 #endif
 	//
 	httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, httpd_error);
+	//
+	ss.start_ts = t3ch_time_ts();
+	
     return true;
 }
 #endif
@@ -1896,7 +1862,7 @@ bool StartHTTP(void) {
     
     //-- Save some data into nvs for statistics
     //
-    esp_err_t err = nvs_open("httpd_storage",NVS_READWRITE,&nvsh);
+    /*esp_err_t err = nvs_open("httpd_storage",NVS_READWRITE,&nvsh);
     if( err!=ESP_OK ) return false;
     //
     char nvsout[128];
@@ -1940,6 +1906,6 @@ bool StartHTTP(void) {
 		nvs_set_str(nvsh,"restart_count",tmp);
 	}
 	nvs_commit( nvsh );
-	nvs_close( nvsh );
+	nvs_close( nvsh );*/
 }
 #endif

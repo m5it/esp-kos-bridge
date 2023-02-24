@@ -331,7 +331,17 @@ void ltrim(char *in, int len, char *out) {
 	memcpy(out, in+len, (strlen(in)-(len)) );
 }
 
+void tpf() {
+	printf("tpf() STARTING!\n");
+}
+
 void main() {
+	//--
+	void (*sometpf)() = NULL;
+	if( sometpf==NULL ) printf("sometpf is NULL!\n");
+	sometpf = tpf;
+	sometpf();
+	/*//--
 	struct pstru {
 		char buf[20];
 	};
@@ -373,7 +383,7 @@ void main() {
 	
 	//for(int i=0; i<30; i++) {
 	//	printf("DEBUG hex at: %i - %x\n",i,i);
-	//}
+	//}*/
 	/*//
 	addStruct("test 1", "test 1 description...");
 	addStruct("test 2", "test 2 description...");

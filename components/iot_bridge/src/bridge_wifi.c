@@ -37,8 +37,10 @@
 static const char *TAG = "bridge_wifi";
 static bool esp_bridge_softap_dhcps = false;
 static EventGroupHandle_t s_wifi_event_group = NULL;
-//<<<<<<< HEAD
-//
+
+void (*t3ch_wifi_events_ap_start)() = NULL;
+void (*t3ch_wifi_events_sta_gotip)() = NULL;
+
 OVERRIDE_AP_SSID[128]={0};
 OVERRIDE_AP_PWD[128]={0};
 //
@@ -98,6 +100,12 @@ esp_err_t esp_bridge_wifi_set(wifi_mode_t mode,
     return ESP_OK;
 }
 
+esp_err_t esp_bridge_wifi_set_events_ap_start(void *ptr) {
+	t3ch_wifi_events_ap_start = ptr;
+}
+esp_err_t esp_bridge_wifi_set_events_sta_gotip(void *ptr) {
+	t3ch_wifi_events_sta_gotip = ptr;
+}
 /* Event handler for catching system events */
 static void wifi_event_sta_disconnected_handler(void *arg, esp_event_base_t event_base,
                                                 int32_t event_id, void *event_data)
@@ -114,7 +122,13 @@ static void ip_event_sta_got_ip_handler(void *arg, esp_event_base_t event_base,
                                         int32_t event_id, void *event_data)
 {
     ip_event_got_ip_t *event = (ip_event_got_ip_t *) event_data;
-    ESP_LOGI(TAG, "Connected with IP Address:" IPSTR, IP2STR(&event->ip_info.ip));
+    ESP_LOGI(TAG, "ip_event_sta_got_ip_handler() Connected with IP Address:" IPSTR, IP2STR(&event->ip_info.ip));
+
+	//
+    if( t3ch_wifi_events_sta_gotip != NULL ) {
+		ESP_LOGI(TAG,"ip_event_sta_got_ip_handler() STARTING t3ch_wifi_events_sta_gotip");
+		t3ch_wifi_events_sta_gotip();
+	}
 
     esp_bridge_netif_network_segment_conflict_update(event->esp_netif);
     xEventGroupSetBits(s_wifi_event_group, BRIDGE_EVENT_STA_CONNECTED);
@@ -151,6 +165,15 @@ static void wifi_event_ap_start_handler(void *arg, esp_event_base_t event_base, 
 	}
 	else {
 		ESP_LOGI(TAG,"wifi_event_ap_start_handler() Unknown event_id: %i",event_id);
+	}
+	
+	if( event_id==4 ) {
+		ESP_LOGI(TAG,"wifi_event_ap_start_handler() before t3ch_wifi_events_ap_start");
+	    //
+	    if( t3ch_wifi_events_ap_start != NULL ) {
+			ESP_LOGI(TAG,"wifi_event_ap_start_handler() STARTING t3ch_wifi_events_ap_start");
+			t3ch_wifi_events_ap_start();
+		}
 	}
 }
 

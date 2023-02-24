@@ -18,6 +18,8 @@
 #include "esp_wifi_types.h"
 
 //
+//static void (*t3ch_wifi_events)() = NULL;
+//
 static char OVERRIDE_AP_SSID[128]={0};
 static char OVERRIDE_AP_PWD[128]={0};
 
@@ -26,6 +28,8 @@ esp_err_t esp_bridge_wifi_set(wifi_mode_t mode,
                               const char *ssid,
                               const char *password,
                               const char *bssid);
+esp_err_t esp_bridge_wifi_set_events_ap_start(void *ptr);
+esp_err_t esp_bridge_wifi_set_events_sta_gotip(void *ptr);
 #endif
 
 #if defined(CONFIG_BRIDGE_EXTERNAL_NETIF_MODEM)
