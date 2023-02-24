@@ -124,17 +124,17 @@ void json_wifiview(char *action, char *uid, char *out) {
 int json_logold(char *action, char *uid, char *out, int fromPos) {
 	printf("json_logold() STARTING\n");
 	// generate log and get size
-	int size      = t3ch_log_gen_old(fromPos), lines=0;
-	char res[128+size];
-	memset(res,'\0',(128+size));
+	int size      = t3ch_log_gen_old(fromPos), lines=0, nsize=(size+128);
+	char res[nsize];
+	memset(res,'\0',nsize);
 	// No more results or just there is no results.
 	if( size<=0 ) {
 		sprintf(res,"{\"success\":false,\"action\":\"%s\",\"uid\":\"%s\"}",action,uid);
 	}
 	else {
 		// Looks we got results
-		char data[size];
-		memset(data,'\0',size);
+		char data[size+1];
+		memset(data,'\0',size+1);
 		// get log
 		t3ch_log_get(data);
 		// get num lines
@@ -142,8 +142,8 @@ int json_logold(char *action, char *uid, char *out, int fromPos) {
 		lines = cJSON_GetArraySize( ary );
 		cJSON_Delete(ary);
 		//
-		sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"data\":%s}", action, uid, data);
-		printf("json_logold() res( %i ): %s\n",strlen(res),res);
+		sprintf(res,"{\"success\":true,\"d\":\"1\",\"action\":\"%s\",\"uid\":\"%s\",\"data\":%s}", action, uid, data);
+		printf("json_logold() res( %i - %i - %i ): %s\n",strlen(res),nsize,size,res);
 	}
 	strcpy(out,res);
 	return lines;
@@ -151,22 +151,22 @@ int json_logold(char *action, char *uid, char *out, int fromPos) {
 //
 int json_lognew(char *action, char *uid, char *out, int lastId) {
 	//
-	int size = t3ch_log_gen_new( lastId ), lines = 0;
+	int size = t3ch_log_gen_new( lastId ), lines = 0, nsize=(size+128);
 	//
-	char res[size+128];
-	memset(res,'\0',size+128);
+	char res[nsize];
+	memset(res,'\0',nsize);
 	//
 	if( size>0 ) {
 		//
-		char data[size];
-		memset(data,'\0',size);
+		char data[size+1];
+		memset(data,'\0',size+1);
 		t3ch_log_get(data);
 		// get num lines
 		cJSON *ary = cJSON_Parse( data );
 		lines = cJSON_GetArraySize( ary );
 		cJSON_Delete(ary);
 		//
-		sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"data\":%s}",action, uid, data);
+		sprintf(res,"{\"success\":true,\"d\":\"2\",\"action\":\"%s\",\"uid\":\"%s\",\"data\":%s}",action, uid, data);
 	}
 	else {
 		//
