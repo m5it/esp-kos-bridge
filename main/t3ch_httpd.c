@@ -436,8 +436,9 @@ static const httpd_uri_t timer_get = {
 
 //-- WIFI INFO
 //
-static esp_err_t wifi_get_handler(httpd_req_t *req)
-{
+static esp_err_t wifi_get_handler(httpd_req_t *req) {
+	ESP_LOGI(TAG,"wifi_get_handler() STARTING!");
+	//
 	char out_sta[128]={0}, out_ap[128]={0}, 
 		out_scan_start[4]={0}, out_scan_get[4]={0};
 	char res[128]={0};
@@ -458,11 +459,6 @@ static esp_err_t wifi_get_handler(httpd_req_t *req)
 	chk_setsta = t3ch_httpd_get_param(req, "setsta", &out_sta);
 	t3ch_httpd_get_param(req, "scan_start", &out_scan_start);
 	t3ch_httpd_get_param(req, "scan_get", &out_scan_get);
-	//
-	printf("DEBUG wifi_get_handler() out_ap: %s, chk_setap: %d\n", out_ap, chk_setap);
-	printf("DEBUG wifi_get_handler() out_sta: %s, chk_setsta: %d\n", out_sta, chk_setsta);
-	printf("DEBUG wifi_get_handler() out_scan_start: %s\n", out_scan_start);
-	printf("DEBUG wifi_get_handler() out_scan_get: %s\n", out_scan_start);
 	
 	// set new settings
 	if     ( strlen(out_ap)>0 ) {
@@ -1174,7 +1170,7 @@ void wua_debug() {
 	}
 }
 
-//-- TASKS that are created only once and used for all connected clients --//
+//--
 // wua_task() is thread that clean users if they lag off etc...
 void wua_task(void *arg) {
 	ESP_LOGI(TAG,"wua_task() STARTING");
