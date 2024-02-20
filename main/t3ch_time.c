@@ -18,10 +18,14 @@
 #define TIMER_DATA_SIZE 256
 //--
 static const char *TAG = "T3CH_TIME";
+
+//--
 //
 static time_t now;
 static struct tm timeinfo;
 char strftime_buf[64];
+
+//--
 //
 char timer_data[TIMER_DATA_SIZE];
 //
@@ -303,15 +307,20 @@ void t3ch_time_sntp_init(void) {
 }
 
 void t3ch_time_sntp_update(void) {
-	ESP_LOGI(TAG, "t3ch_time_sntp_update() starting.");
+	ESP_LOGI(TAG, "t3ch_time_sntp_update() STARTING.");
 	int retry = 0;
     const int retry_count = 15;
+    //
+    //timeinfo.tm_year = 0;
+    //t3ch_time_set_tm( timeinfo );
+    //
     while (sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && ++retry < retry_count) {
-        ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d/%d)", retry, retry_count,timeinfo.tm_year);
+        ESP_LOGI(TAG, "t3ch_time_sntp_update() Waiting for system time to be set... (%d/%d/%d)", retry, retry_count,timeinfo.tm_year);
         time(&now);
 	    localtime_r(&now, &timeinfo);
 	    //ti = localtime(&now);
 	    if( t3ch_time_sntp_updated() ) {
+			ESP_LOGI(TAG, "t3ch_time_sntp_update() Looks time is updated!");
 			break;
 		}
         vTaskDelay(500 / portTICK_PERIOD_MS);
@@ -320,12 +329,7 @@ void t3ch_time_sntp_update(void) {
     time(&now);
     localtime_r(&now, &timeinfo);
     //
-    /*if( t3ch_time_events!=NULL ) {
-		ESP_LOGI(TAG, "t3ch_time_sntp_update()  Starting t3ch_time_events() %i",t3ch_time_events_count);
-		vTaskDelay(2000 / portTICK_PERIOD_MS);
-		t3ch_time_events();
-		t3ch_time_events_count++;
-	}*/
+    ESP_LOGI(TAG, "t3ch_time_sntp_update() DONE!");
 }
 
 bool t3ch_time_sntp_updated(void) {
@@ -341,6 +345,19 @@ bool t3ch_time_sntp_updated(void) {
 void t3ch_time_get_tm( struct tm TimeInfo ) {
 	time(&now);
     localtime_r(&now, &TimeInfo);
+}
+//
+struct tm t3ch_time_ret_tm() {
+	struct tm TimeInfo;
+	time(&now);
+    localtime_r(&now, &TimeInfo);
+    return TimeInfo;
+}
+//
+void t3ch_time_reset() {
+	now=NULL;
+	//timeinfo;
+	memset(&timeinfo,'\0',sizeof(timeinfo));
 }
 //
 void t3ch_time_set_tm( struct tm TimeInfo ) {

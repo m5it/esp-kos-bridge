@@ -29,6 +29,7 @@ static struct tm timeinfo;
 httpd_handle_t server = NULL;
 static struct server_stats {
     int start_ts;
+    struct tm start_tm;
 };
 struct server_stats ss;
 
@@ -197,6 +198,30 @@ int json_log_lastid( char *strjson ) {
 	cJSON_Delete(ary);
 	//printf("json_log_lastid() DONE lastid: %i\n", lastid);
 	return lastid;
+}
+
+//--
+//
+bool t3ch_httpd_set_time(cJSON *objData) {
+	ESP_LOGI(TAG,"t3ch_httpd_set_time() STARTING!");
+	//
+	struct tm tm;
+	if( !cJSON_GetObjectItemCaseSensitive(objData,"tm_year") ) return false;
+    tm.tm_year = getInt( cJSON_GetObjectItemCaseSensitive(objData,"tm_year")->valuestring ) - 1900;
+    if( !cJSON_GetObjectItemCaseSensitive(objData,"tm_mon") ) return false;
+    tm.tm_mon  = getInt( cJSON_GetObjectItemCaseSensitive(objData,"tm_mon")->valuestring );
+    if( !cJSON_GetObjectItemCaseSensitive(objData,"tm_mday") ) return false;
+    tm.tm_mday = getInt( cJSON_GetObjectItemCaseSensitive(objData,"tm_mday")->valuestring );
+    if( !cJSON_GetObjectItemCaseSensitive(objData,"tm_hour") ) return false;
+    tm.tm_hour = getInt( cJSON_GetObjectItemCaseSensitive(objData,"tm_hour")->valuestring );
+    if( !cJSON_GetObjectItemCaseSensitive(objData,"tm_min") ) return false;
+    tm.tm_min  = getInt( cJSON_GetObjectItemCaseSensitive(objData,"tm_min")->valuestring );
+    if( !cJSON_GetObjectItemCaseSensitive(objData,"tm_sec") ) return false;
+    tm.tm_sec  = getInt( cJSON_GetObjectItemCaseSensitive(objData,"tm_sec")->valuestring );
+	ESP_LOGI(TAG,"t3ch_httpd_set_time() Setting time!");
+	t3ch_time_set_tm( tm );
+	ESP_LOGI(TAG,"t3ch_httpd_set_time() DONE!");
+	return true;
 }
 
 //-- REQUESTS - RESPONSES
@@ -967,11 +992,11 @@ esp_err_t httpd_error(httpd_req_t *req, httpd_err_code_t err)
 //void ws_task_infoLoop(void *arg);
 void ws_task_version(void *arg);
 void ws_task_wifiview(void *arg);
-void ws_task_log(void *arg);
-void ws_task_ping(void *arg);
-void ws_task_pong(void *arg);
-void ws_task_fail(void *arg);
 void ws_task_login(void *arg);
+void ws_task_any(void *arg);
+//void ws_task_ping(void *arg);
+//void ws_task_pong(void *arg);
+//void ws_task_fail(void *arg);
 
 //--
 //
@@ -979,6 +1004,7 @@ struct async_resp_arg {
     char id[12];
     char uid[64];
     char action[64];
+    bool success;
 };
 
 //--
@@ -1030,14 +1056,21 @@ static esp_err_t trigger_async_task(httpd_handle_t hd, int fd, char *id, char *a
     else if( strcmp(action,"login")==0 ) {
 	    ret = httpd_queue_work( hd, ws_task_login, resp_arg );
 	}
+	else if( strcmp(action,"success")==0 ) {
+		resp_arg->success = true;
+	    ret = httpd_queue_work( hd, ws_task_any, resp_arg );
+	}
 	else if( strcmp(action,"ping")==0 ) {
-	    ret = httpd_queue_work( hd, ws_task_ping, resp_arg );
+		resp_arg->success = true;
+	    ret = httpd_queue_work( hd, ws_task_any, resp_arg );
 	}
 	else if( strcmp(action,"pong")==0 ) {
-	    ret = httpd_queue_work( hd, ws_task_pong, resp_arg );
+		resp_arg->success = true;
+	    ret = httpd_queue_work( hd, ws_task_any, resp_arg );
 	}
 	else if( strcmp(action,"fail")==0 ) {
-	    ret = httpd_queue_work( hd, ws_task_fail, resp_arg );
+		resp_arg->success = false;
+	    ret = httpd_queue_work( hd, ws_task_any, resp_arg );
 	}
 	else {
 		ESP_LOGI(TAG,"trigger_async_task() Failed, action: %s",action);
@@ -1369,7 +1402,7 @@ void ws_task_login(void *arg) {
 	char res[128]={0};
 	sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"data\":\"%s\"}", resp_arg->action, resp_arg->uid, resp_arg->id);
     //
-    if( xSemaphoreTake( xSemaphoreSend[wuai], 10 ) == pdTRUE ) {
+    if( xSemaphoreTake( xSemaphoreSend[wuai], (100 / portTICK_PERIOD_MS) ) == pdTRUE ) {
 	    ESP_LOGI(TAG,"ws_task_login() Sending data: %s",res);
 	    esp_err_t ret = t3ch_ws_async_send(awuausers[wuai].hd, awuausers[wuai].fd, res);
 	    if( ret!=ESP_OK ) {
@@ -1387,46 +1420,30 @@ void ws_task_login(void *arg) {
 	free(resp_arg);
 	ESP_LOGI(TAG,"ws_task_login() DONE\n");
 }
-void ws_task_ping(void *arg) {
+//
+void ws_task_any(void *arg) {
 	struct async_resp_arg *resp_arg = (struct async_resp_arg*)arg;
 	int wuai = wua_geti( resp_arg->id );
-	ESP_LOGI(TAG,"ws_task_ping() STARTING, wuai: %i, hash: %s", wuai, resp_arg->id);
+	ESP_LOGI(TAG,"ws_task_any() STARTING, action: %s, wuai: %i, hash: %s", resp_arg->action, wuai, resp_arg->id);
 	//
-	char res[128]={0};
-	sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\"}", resp_arg->action, resp_arg->uid);
-    esp_err_t ret = t3ch_ws_async_send(awuausers[wuai].hd, awuausers[wuai].fd, res);
-	//
-	free(resp_arg);
-}
-void ws_task_pong(void *arg) {
-	struct async_resp_arg *resp_arg = (struct async_resp_arg*)arg;
-	int wuai = wua_geti( resp_arg->id );
-	ESP_LOGI(TAG,"ws_task_pong() STARTING, wuai: %i, hash: %s", wuai, resp_arg->id);
-	//
-	char res[128]={0};
-	sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\"}", resp_arg->action, resp_arg->uid);
-    esp_err_t ret = t3ch_ws_async_send(awuausers[wuai].hd, awuausers[wuai].fd, res);
-    if( ret!=ESP_OK ) {
-		ESP_LOGI(TAG,"ws_task_pong() send failed\n",ret);
+	if( xSemaphoreTake( xSemaphoreSend[wuai], (100 / portTICK_PERIOD_MS) ) == pdTRUE ) {
+		//
+		char res[128]={0};
+		sprintf(res,"{\"success\":%s,\"action\":\"%s\",\"uid\":\"%s\"}",
+			(resp_arg->success!=NULL&&resp_arg->success?"true":"false"), resp_arg->action, resp_arg->uid);
+		//
+	    esp_err_t ret = t3ch_ws_async_send(awuausers[wuai].hd, awuausers[wuai].fd, res);
+	    if( ret!=ESP_OK ) {
+			ESP_LOGI(TAG,"ws_task_any() Failed send. Action: %s\n",resp_arg->action);
+		}
+		xSemaphoreGive( xSemaphoreSend[wuai] );
+	}
+	else {
+		ESP_LOGI(TAG,"ws_task_any() Failed semaphor, Action: %s\n",resp_arg->action);
 	}
 	//
 	free(resp_arg);
 }
-void ws_task_fail(void *arg) {
-	struct async_resp_arg *resp_arg = (struct async_resp_arg*)arg;
-	int wuai = wua_geti( resp_arg->id );
-	ESP_LOGI(TAG,"ws_task_fail() STARTING, wuai: %i, hash: %s", wuai, resp_arg->id);
-	//
-	char res[128]={0};
-	sprintf(res,"{\"success\":false,\"action\":\"%s\",\"uid\":\"%s\"}", resp_arg->action, resp_arg->uid);
-    esp_err_t ret = t3ch_ws_async_send(awuausers[wuai].hd, awuausers[wuai].fd, res);
-    if( ret!=ESP_OK ) {
-		ESP_LOGI(TAG,"ws_task_fail() send failed.\n");
-	}
-	//
-	free(resp_arg);
-}
-
 
 //
 static esp_err_t wss_handler(httpd_req_t *req) {
@@ -1607,6 +1624,47 @@ static esp_err_t wss_handler(httpd_req_t *req) {
 		ret = ESP_OK;
 	}
 	//
+	else if (strlen(hash)==8 && ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"time_sync") == 0) {
+		ESP_LOGI(TAG,"wss_handler() time_sync STARTING!");
+		//t3ch_time_sntp_init();
+		t3ch_time_reset();
+		sntp_set_sync_mode(SNTP_SYNC_MODE_SMOOTH);
+		sntp_init();
+		t3ch_time_sntp_update();
+		//
+		ret = trigger_async_task(req->handle, httpd_req_to_sockfd(req), hash, "success", tmpuid);
+	}
+	//
+	else if (strlen(hash)==8 && ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"time_set") == 0) {
+		ESP_LOGI(TAG,"wss_handler() time_set STARTING!");
+		//
+		cJSON *objData  = cJSON_GetObjectItemCaseSensitive(json,"data");
+		//
+		int userAt = wua_geti( hash );
+		if( userAt<0 ) {
+			ESP_LOGI(TAG,"wss_handler() time_set Failed, no user found.");
+			//ret = ESP_FAIL;
+			ret = trigger_async_task(req->handle, httpd_req_to_sockfd(req), hash, "fail", tmpuid);
+		}
+		else {
+			ESP_LOGI(TAG,"wss_handler() time_set STARTED");
+			//
+			if( objData && t3ch_httpd_set_time(objData) ) {
+				ESP_LOGI(TAG,"wss_handler() time_set Success!");
+				//
+				ret = trigger_async_task(req->handle, httpd_req_to_sockfd(req), hash, "success", tmpuid);
+			}
+			else {
+				ESP_LOGI(TAG,"wss_handler() time_set Failed!");
+				ret = trigger_async_task(req->handle, httpd_req_to_sockfd(req), hash, "fail", tmpuid);
+			}
+			//
+			awuausers[userAt].last_ts = t3ch_time_ts();
+			//ret = ESP_OK;
+		}
+		ESP_LOGI(TAG,"wss_handler() time_set DONE");
+	}
+	//
 	else if (strlen(hash)==8 && ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"version") == 0) {
 		int userAt = wua_geti( hash );
 		if( userAt<0 ) {
@@ -1648,8 +1706,7 @@ static esp_err_t wss_handler(httpd_req_t *req) {
 		}
 	}
 	//
-	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && 
-		(strcmp(tmpaction,"log_view_old") == 0 || strcmp(tmpaction,"log_view") == 0) ) {
+	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"log_view") == 0) {
 		//
 		cJSON *objFromPos = cJSON_GetObjectItemCaseSensitive(json,"fromPos");
 		char *fromPos     = cJSON_Print( objFromPos );
@@ -1674,36 +1731,6 @@ static esp_err_t wss_handler(httpd_req_t *req) {
 		}
 		free(fromPos);
 	}
-	/*// (log_view_new) not used with wss async. only witout async is required because then it look like request.
-	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"log_view_new") == 0) {
-		//ESP_LOGI(TAG, "wss_handler() log_view_new STARTED");
-		//
-		cJSON *objFromPos = cJSON_GetObjectItemCaseSensitive(json,"fromPos");
-		char *fromPos     = cJSON_Print( objFromPos );
-		
-		int size = t3ch_log_gen_new(getInt(fromPos));
-		if( size>0 ) {
-			//
-			char data[size];
-			memset(data,'\0',size);
-			t3ch_log_get(data);
-			//
-			char res[size+128];
-			memset(res,'\0',size+128);
-			//
-			sprintf(res,"{\"success\":true,\"action\":\"%s\",\"uid\":\"%s\",\"data\":%s}",
-				tmpaction, tmpuid, data);
-			ret = t3ch_ws_send(req,res);
-		}
-		else {
-			char res[128];
-			//
-			sprintf(res,"{\"success\":false,\"action\":\"%s\",\"uid\":\"%s\"}",
-				tmpaction, tmpuid);
-			ret = t3ch_ws_send(req,res);
-		}
-		free(fromPos);
-	}*/
 	//--
 	// (lets add some DEBUG responses)
 	else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT && strcmp(tmpaction,"debug_wua_list") == 0) {
@@ -1822,8 +1849,21 @@ bool StartHTTPS(void) {
 	//
 	httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, httpd_error);
 	//
-	ss.start_ts = t3ch_time_ts();
-	
+	//struct tm tmptm;
+	//
+	int tmpcnt=0;
+	do {
+		ESP_LOGI(TAG, "StartHTTPS() waiting to set start_ts...");
+		ss.start_ts = t3ch_time_ts();
+		//localtime_r(&ss.start_ts,&tmptm);
+		//ESP_LOGI(TAG, "StartHTTPS() DEBUG tmptm->tm_year: %i",tmptm.tm_year);
+		vTaskDelay(500 / portTICK_PERIOD_MS);
+		tmpcnt++;
+	} while( ss.start_ts<1000 && tmpcnt<10 );
+	//
+	//memcpy(&ss.start_tm,&tmptm, sizeof(tmptm));
+	//ESP_LOGI(TAG, "StartHTTPS() DONE, ss.start_ts: %i, ss.start_tm.tm_year: %i",ss.start_ts, ss.start_tm.tm_year);
+	ESP_LOGI(TAG, "StartHTTPS() DONE, ss.start_ts: %i",ss.start_ts);
     return true;
 }
 #endif

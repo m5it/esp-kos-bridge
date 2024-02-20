@@ -854,25 +854,47 @@ function ready() {
 	//timerGet({loop:true});
 	//timerStat();
 	
-	// Update server time
+	// Sync server time from net
+	qS("#tm_sync_time").addEventListener("click",function(e) {
+		e.preventDefault();
+		loadingStart();
+		console.info("#tm_sync_time clicked.");
+		//
+		wsc.sendMessage({"action":"time_sync","hash":wsc.hash},{"uid":"time_sync","function":function(json) {
+			console.info("time_sync, data",json);
+			loadingStop();
+		    return true; // return true to remove function from WSC! if false then it stay there for ASYNC or X
+		},});
+		return false;
+	});
+	
+	// Set server time manualy
 	qS("#tm_submit").addEventListener("click",function(e) {
 		e.preventDefault();
 		loadingStart();
 		console.info("#tm_submit clicked.");
-		var q = document.location.origin+"/time/?settm=1"+
-		    "&tm_hour="+qS("#tm input[name='tm_hour']").value+
-		    "&tm_min="+qS("#tm input[name='tm_min']").value+
-		    "&tm_sec="+qS("#tm input[name='tm_sec']").value+
-		    //
-		    "&tm_year="+qS("#tm input[name='tm_year']").value+
-		    "&tm_mday="+qS("#tm input[name='tm_mday']").value+
-		    "&tm_mon="+qS("#tm input[name='tm_mon']").value;
 		//
-		Fetch({href:q,onDone:function(json){
-			console.info("timetm response",json);
+	    wsc.sendMessage(
+		    //
+		    {"action":"time_set","hash":wsc.hash,
+				//
+				"data":{
+					'tm_hour':qS("#tm input[name='tm_hour']").value,
+					'tm_min':qS("#tm input[name='tm_min']").value,
+					'tm_sec':qS("#tm input[name='tm_sec']").value,
+					'tm_year':qS("#tm input[name='tm_year']").value,
+					'tm_mday':qS("#tm input[name='tm_mday']").value,
+					'tm_mon':qS("#tm input[name='tm_mon']").value,
+				},
+			},
+			//
+			{"uid":"time_set","function":function(json) {
+			//
+			console.warn("done time_set, data",json);
+			//
 			loadingStop();
+			return true; // if return true then function is removed and message/response can be received only once.
 		},});
-		
 		return false;
 	});
 	
@@ -882,7 +904,7 @@ function ready() {
 		console.info("#updateAP clicked.");
 		if( !confirm("Are you sure?") ) return;
 		loadingStart();
-		Fetch({href:document.location.origin+"/wifi/?setap=1"+
+		/*Fetch({href:document.location.origin+"/wifi/?setap=1"+
 			"&ssid="+qS("input[name='displayAPSSID']").value+
 			"&pwd="+qS("input[name='displayAPPWD']").value,
 			onDone:function(json) {
@@ -895,6 +917,15 @@ function ready() {
 				alert("Update of AP Failed!");
 			}
 			loadingStop();
+		},});*/
+		//
+		wsc.sendMessage({"action":"wifi_setap","hash":wsc.hash,"data":{
+				"ssid":qS("input[name='displayAPSSID']").value,
+				"pwd" :qS("input[name='displayAPPWD']").value,
+			}},{"uid":"time_sync","function":function(json) {
+			console.info("wifi_setap done, data",json);
+			loadingStop();
+		    return true; // return true to remove function from WSC! if false then it stay there for ASYNC or X
 		},});
 		return false;
 	});
@@ -1286,7 +1317,11 @@ window.onbeforeunload = function(e) {
 		<div><label>TM MON</label><input type="text" name="tm_mon" value=""></div>
 		<div><label>TM ISDST</label><input type="text" name="tm_isdst" value="" disabled=disabled></div>
 		<br>
-		<div align="center"><button name="submit" id="tm_submit">Set</button></div>
+		<div>
+			<button name="tm_submit" id="tm_submit">Set time manualy</button>
+			 Or 
+			<button name="tm_sync_time" id="tm_sync_time">Try sync time from net</button>
+		</div>
 	</form></div>
 </div>
 </div>
